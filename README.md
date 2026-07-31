@@ -1,21 +1,68 @@
-# Ember & Brew — Full Stack (Node.js + Express + MongoDB)
+# Ember & Brew — Café Ordering & Operations Platform
 
-This project already had a complete Node/Express/MongoDB backend (`server.js`, `src/Routes`,
-`src/models`) sitting alongside the frontend — it just wasn't wired up. The frontend was
-running entirely on hardcoded/mock data. It's now connected end-to-end:
+A full-stack Node.js/Express/MongoDB app for a café: customers order online, the
+kitchen sees a live prep board, riders manage deliveries, and admins run the
+whole thing — with a built-in AI chatbot on every screen that can answer
+questions and walk people through the UI.
 
-- **Menu** — the page loads items and categories from `GET /api/menu` and
-  `GET /api/menu/categories` instead of a hardcoded array.
-- **Cart & Checkout** — placing an order calls `POST /api/orders`, which saves a real
-  order document in MongoDB and returns an order number (e.g. `EB-1041`).
-- **Order tracking** — the tracking page polls `GET /api/orders/:id` every 5 seconds, so it
-  reflects real status changes made from the admin board (no more fake auto-progress timer).
-- **Admin login** — `POST /api/auth/login` checks credentials against the `AdminUser`
-  collection and returns a JWT, used to authorize the orders API.
-- **Admin board** — fetches real orders via `GET /api/orders` (JWT-protected) and updates
-  status via `PUT /api/orders/:id/status`.
-- **"Frequently Paired" upsell** — now calls `GET /api/recommendations/:itemId`, which reads
-  co-occurrence counts stored on each menu item in MongoDB, instead of a static lookup table.
+## Portals
+
+| Portal | URL | Who it's for |
+|---|---|---|
+| Storefront | `/` | Anyone — browse the menu, add to cart, check out |
+| Customer account | `/customer` | Logged-in customers — order history, live tracking, complaints |
+| Admin dashboard | `/admin` | Restaurant admin — orders, menu, riders, complaints, revenue |
+| Kitchen display | `/kitchen` | Chef/kitchen staff — live ticket board |
+| Delivery portal | `/delivery` | Delivery riders — assigned drop-offs, live map |
+
+`/admin`, `/kitchen`, and `/delivery` all share one login page
+(`/admin/login`) backed by the same `AdminUser` collection — the `role` field
+(`admin` / `chef` / `delivery`) decides which dashboard you land on after
+signing in.
+
+## Features
+
+- **Live menu & ordering** — menu loads from `GET /api/menu`; checkout calls
+  `POST /api/orders`, which creates a real order (e.g. `EB-1041`) in MongoDB.
+- **Real-time updates everywhere** — Socket.IO pushes new orders, status
+  changes, and rider location straight to the kitchen board, delivery map,
+  and customer tracking view with no polling/refresh needed.
+- **Order lifecycle** — `received → preparing → ready → out-for-delivery →
+  delivered/completed` (plus `cancelled`), driven by the kitchen and delivery
+  portals and reflected live everywhere else.
+- **Kitchen display** — a live ticket board grouped by station, with
+  `Start Preparing → Ready For Service → BUMP — Served` per ticket, a
+  `Bump All Ready` shortcut, and category filter pills.
+- **Delivery portal** — shows each rider only their own assigned orders
+  (`Out for Delivery` / `Delivered Today`), a live map, and a
+  `✅ Mark as Delivered` action. Riders are pinned to one region (see
+  `src/data/regions.js`) and auto-assigned orders placed in it.
+- **Admin dashboard** — orders, menu management, delivery riders, complaints,
+  and revenue/popular-dish stats, all JWT-protected.
+- **Complaints** — customers can file complaints from their account; admins
+  track and resolve them.
+- **"Frequently Paired" upsell** — `GET /api/recommendations/:itemId` reads
+  live co-occurrence counts stored on each menu item.
+- **AI chatbot on every portal** — a floating chat widget (bottom-right)
+  scoped to whoever is logged in:
+  - **Customers** — menu/price/availability questions, their own order status
+    and history, delivery regions, who's delivering their order.
+  - **Chef** — what's next to cook, full prep queue, special instructions
+    per order, kitchen busyness.
+  - **Delivery riders** — their assigned deliveries, a specific order's
+    address, how many they've delivered today — never another rider's data.
+  - **Admin** — revenue, pending orders, popular dishes, rider status,
+    complaints, region-scoped order lookups (e.g. "what was delivered in D
+    Ground?").
+  - **"How do I…?" questions are answered with real, numbered UI steps**
+    (actual sidebar labels and button text for that portal — e.g. "how can I
+    track my order?" walks the customer through the real *Track Order*
+    button), not vague explanations.
+  - When `ANTHROPIC_API_KEY` is set, the bot is powered by the Claude API
+    (`src/Routes/chatbot.js`), grounded on live MongoDB data so it can't
+    invent menu items, prices, or order info. **Without a key, it falls back
+    automatically to a deterministic keyword-matching engine** — the bot
+    never goes silent, it just gets a bit less flexible with phrasing.
 
 ## 1. Install dependencies
 
@@ -31,34 +78,82 @@ You need a MongoDB instance — either:
 - **Atlas** (free, no local install): create a free cluster at
   https://www.mongodb.com/cloud/atlas and grab its connection string.
 
-Edit `.env` and set `MONGODB_URI` accordingly (a local default is already filled in).
+Edit `.env` and set `MONGODB_URI` accordingly.
 
-## 3. Seed the database
+## 3. Configure `.env`
 
-This creates the 24 menu items, an admin user, and some starter "pair count" data so
-recommendations work right away:
+```env
+PORT=3000
+MONGODB_URI=your-mongodb-connection-string
+JWT_SECRET=a-long-random-string        # never reuse an API key here
+ANTHROPIC_API_KEY=                     # optional — see below
+ANTHROPIC_CHATBOT_MODEL=claude-haiku-4-5-20251001
+```
+
+- `JWT_SECRET` signs login tokens for all four portals — must be a private,
+  random string, not something reused elsewhere.
+- `ANTHROPIC_API_KEY` powers the full natural-language chatbot. Get one at
+  https://console.anthropic.com (**Plans & Billing → add credits** — this is
+  a separate pay-as-you-go balance from a claude.ai subscription; a
+  `"credit balance is too low"` error means that balance is empty, not that
+  anything is misconfigured). Leave it blank to run on the rule-based
+  fallback instead.
+
+## 4. Seed the database
+
+Creates the menu items and starter "pair count" data for recommendations:
 
 ```bash
 npm run seed
 ```
 
-Admin login created: **username `admin`, password `ember2024`** — change this in
-production.
-
-## 4. Run the server
+## 5. Run the server
 
 ```bash
 npm start
 ```
 
-Then open http://localhost:3000 (or whatever `PORT` you set). The Express server serves
-the frontend from `ember-and-brew/public` *and* the API from `/api/*` on the same port.
+Then open http://localhost:3000 (or whatever `PORT` you set). Express serves
+the frontend from `ember-and-brew/public` and the API from `/api/*` on the
+same port, with Socket.IO attached to the same HTTP server for live updates.
+
+### Default logins
+
+On first connect to MongoDB, the server auto-creates one account per role if
+it doesn't already exist (see `src/models/AdminUser.js`). **Change all of
+these before going anywhere near production:**
+
+| Role | Username | Password | Notes |
+|---|---|---|---|
+| Admin | `admin` | `ember2024` | Full dashboard access |
+| Chef | `chef` | `chef123` | Kitchen display only |
+| Delivery | `delivery` | `delivery123` | Pinned to the "Gulberg" region by default |
+
+Customers register their own accounts from `/customer`.
+
+## Project structure
+
+```
+server.js                    Express app, static routes, Socket.IO, DB connect
+src/Routes/                  API endpoints (menu, orders, auth, chatbot, ...)
+src/models/                  Mongoose schemas (Order, MenuItem, AdminUser, ...)
+src/data/regions.js          Fixed list of delivery regions
+src/seeds.js                 Menu + starter data seeder (npm run seed)
+ember-and-brew/public/       Frontend — one folder per portal
+  index.html / customer.*    Storefront + customer account
+  admin/                     Admin dashboard
+  kitchen/                   Kitchen display
+  delivery/                  Delivery portal
+  chatbot-widget.js          Shared chat widget, dropped into every portal
+```
 
 ## Notes
 
-- `JWT_SECRET` in `.env` should be changed to a long random string for anything beyond
-  local testing.
-- The order status flow is `received → preparing → ready → completed` (there's also a
-  `cancelled` state in the schema, not currently exposed in the UI).
-- If `npm run seed` is re-run, it wipes and re-inserts menu items and the admin user
-  (not orders).
+- The order status flow is `received → preparing → ready → out-for-delivery
+  → delivered → completed` (`cancelled` also exists in the schema).
+- `npm run seed` wipes and re-inserts menu items (not orders or accounts).
+- Delivery regions are defined in `src/data/regions.js` — only an admin can
+  add new ones or reassign a rider's region.
+- If you see `Socket connected: <id>` / `Socket disconnected: <id>` in the
+  server logs, that's just Socket.IO logging each portal tab that opens or
+  closes a live-update connection — normal, not an error.
