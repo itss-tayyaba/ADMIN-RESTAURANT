@@ -434,8 +434,24 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <div class="form-error" data-error="cr-name"></div>
         </div>
         <div class="mb-4">
-          <input type="tel" name="phone" class="form-input" placeholder="Phone number" autocomplete="tel">
+          <input type="tel" name="phone" id="cr-phone-input" class="form-input" placeholder="Phone number" autocomplete="tel" inputmode="numeric" maxlength="11" pattern="\d{11}">
           <div class="form-error" data-error="cr-phone"></div>
+          <script>
+            (function () {
+              var el = document.getElementById('cr-phone-input');
+              el.addEventListener('input', function () {
+                var cursorFromEnd = el.value.length - el.selectionStart;
+                var v = el.value;
+                // auto-correct common lookalike characters (O/o -> 0, l/I -> 1)
+                v = v.replace(/[oO]/g, '0').replace(/[lI]/g, '1');
+                // strip anything that still isn't a digit
+                v = v.replace(/\D/g, '').slice(0, 11);
+                el.value = v;
+                var pos = Math.max(0, v.length - cursorFromEnd);
+                el.setSelectionRange(pos, pos);
+              });
+            })();
+          </script>
         </div>
         <div class="mb-4">
           <input type="email" name="email" class="form-input" placeholder="Email (optional, recommended)" autocomplete="email">
@@ -796,7 +812,7 @@ async function handleCustomerRegister(e) {
 
   let valid = true;
   if (name.length < 2) { showFieldError('cr-name', 'Please enter your name.'); valid = false; }
-  if (!/^[\d\s\-\(\)\+]{7,}$/.test(phone)) { showFieldError('cr-phone', 'Please enter a valid phone number.'); valid = false; }
+  if (!/^\d{11}$/.test(phone)) { showFieldError('cr-phone', 'Phone number must be exactly 11 digits.'); valid = false; }
   if (password.length < 6) { showFieldError('cr-password', 'At least 6 characters.'); valid = false; }
   if (!valid) return;
 

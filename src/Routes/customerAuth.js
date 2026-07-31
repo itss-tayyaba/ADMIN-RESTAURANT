@@ -73,6 +73,12 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    if (!/^\d{11}$/.test(phone)) {
+      return res.status(400).json({
+        error: 'Phone number must be exactly 11 digits.'
+      });
+    }
+
     if (email) {
       const existing = await Customer.findOne({
         email: email.toLowerCase()

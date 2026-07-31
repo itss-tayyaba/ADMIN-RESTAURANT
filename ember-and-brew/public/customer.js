@@ -174,7 +174,7 @@ function renderRegisterForm() {
         <div class="field-error" id="error-name"></div>
       </div>
       <div>
-        <input name="phone" class="form-input" placeholder="Phone number" autocomplete="off" value="">
+        <input name="phone" class="form-input" placeholder="Phone number" autocomplete="off" value="" inputmode="numeric" maxlength="11" pattern="\d{11}">
         <div class="field-error" id="error-phone"></div>
       </div>
       <div>
@@ -201,6 +201,20 @@ function bindAuthEvents() {
   switchAuthMode(customerState.authMode);
 }
 
+function sanitizePhoneInput(el) {
+  el.addEventListener('input', () => {
+    const cursorFromEnd = el.value.length - el.selectionStart;
+    let v = el.value;
+    // auto-correct common lookalike characters (O/o -> 0, l/I -> 1)
+    v = v.replace(/[oO]/g, '0').replace(/[lI]/g, '1');
+    // strip anything that still isn't a digit
+    v = v.replace(/\D/g, '').slice(0, 11);
+    el.value = v;
+    const pos = Math.max(0, v.length - cursorFromEnd);
+    el.setSelectionRange(pos, pos);
+  });
+}
+
 function switchAuthMode(mode) {
   customerState.authMode = mode;
   document.getElementById('auth-login-tab').classList.toggle('active', mode === 'login');
@@ -212,6 +226,8 @@ function switchAuthMode(mode) {
     document.getElementById('login-form').addEventListener('submit', handleLogin);
   } else {
     document.getElementById('register-form').addEventListener('submit', handleRegister);
+    const phoneInput = document.querySelector('#register-form input[name="phone"]');
+    if (phoneInput) sanitizePhoneInput(phoneInput);
   }
   // Ensure fields aren't autofilled and are empty after rendering
   setTimeout(() => {
@@ -271,7 +287,7 @@ async function handleRegister(event) {
   let valid = true;
 
   if (name.length < 2) { showFieldError('error-name', 'Please enter your name.'); valid = false; }
-  if (!/^[\d\s\-\(\)\+]{7,}$/.test(phone)) { showFieldError('error-phone', 'Please enter a valid phone number.'); valid = false; }
+  if (!/^\d{11}$/.test(phone)) { showFieldError('error-phone', 'Phone number must be exactly 11 digits.'); valid = false; }
   if (password.length < 6) { showFieldError('error-password', 'Use at least 6 characters.'); valid = false; }
   if (!valid) return;
 
