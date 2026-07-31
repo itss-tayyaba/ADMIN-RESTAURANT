@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ember & Brew — Artisan Café</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{brand:{50:'#FDF8EF',100:'#F5F0E8',200:'#E8DFD0',300:'#D4C4A8',400:'#D4A853',500:'#C4923A',600:'#A87832',700:'#8A5F2A',800:'#3D3830',900:'#1A1917',950:'#0F0E0C'},terra:{300:'#D9A58A',400:'#C67D5A',500:'#B56A45',600:'#9A5638'},sage:{300:'#A3B496',400:'#7A8B6F',500:'#657558'}},fontFamily:{display:['"Playfair Display"','serif'],body:['"DM Sans"','sans-serif']}}}}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--accent:#D4A853;--accent2:#C67D5A;--bg:#0F0E0C;--surface:#1A1917;--surface-light:#242220;--text:#F5F0E8;--muted:#8A8478;--border:#2E2C28}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradient(var(--text) 0.00005%,transparent 0.0005%) 50% 50%/2500px 2500px,linear-gradient(rgba(212,168,83,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.04) 1px,transparent 1px);background-size:2500px 2500px,60px 60px,60px 60px;opacity:.018;pointer-events:none;z-index:9999}
+#particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.view{display:none;opacity:0;transition:opacity .4s ease}
+.view.active{display:block;opacity:1}
+
+/* Navigation */
+#main-nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .3s,backdrop-filter .3s,box-shadow .3s}
+#main-nav.scrolled{background:rgba(15,14,12,.85);backdrop-filter:blur(16px);box-shadow:0 1px 0 var(--border)}
+
+/* Cart panel */
+#cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
+#cart-overlay.open{opacity:1;pointer-events:all}
+#cart-panel{position:fixed;top:0;right:0;bottom:0;width:min(420px,90vw);background:var(--surface);z-index:201;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;border-left:1px solid var(--border)}
+#cart-panel.open{transform:translateX(0)}
+
+/* Menu card */
+.menu-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:transform .3s,box-shadow .3s,border-color .3s}
+.menu-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(212,168,83,.08);border-color:rgba(212,168,83,.2)}
+.menu-card img{transition:transform .5s}
+.menu-card:hover img{transform:scale(1.05)}
+.menu-card .add-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;transition:all .25s;font-family:inherit;font-size:14px}
+.menu-card .add-btn:hover{background:var(--accent);color:var(--bg)}
+
+/* Category pill */
+.cat-pill{padding:8px 20px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .25s;font-family:inherit;font-size:14px;font-weight:500;white-space:nowrap}
+.cat-pill:hover{border-color:var(--accent);color:var(--text)}
+.cat-pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+
+/* Order Journey (animated tracking) */
+.order-journey{position:relative;padding:54px 0 10px}
+.journey-track{position:relative;height:3px;background:var(--border);border-radius:3px;margin:0 27px}
+.journey-progress{position:absolute;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px;transition:width 1.2s cubic-bezier(.65,0,.35,1);box-shadow:0 0 14px rgba(212,168,83,.55)}
+.journey-progress::after{content:'';position:absolute;top:0;right:0;bottom:0;width:24px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55));filter:blur(2px);opacity:.8;animation:shimmer-sweep 1.6s ease-in-out infinite}
+.journey-mover{position:absolute;top:50%;transform:translate(-50%,-50%);transition:left 1.2s cubic-bezier(.65,0,.35,1);z-index:6;animation:mover-arrive .5s ease both}
+.mover-box{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:14px;box-shadow:0 6px 18px rgba(212,168,83,.45);animation:mover-bounce 1s ease-in-out infinite;transform-origin:center}
+.journey-mover.arrived .mover-box{animation:mover-settle .6s ease both}
+.mover-shadow{width:22px;height:5px;background:rgba(0,0,0,.4);border-radius:50%;margin:5px auto 0;filter:blur(1.5px);animation:mover-shadow-pulse 1s ease-in-out infinite}
+.journey-stop{position:absolute;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:88px}
+.stop-icon{width:50px;height:50px;border-radius:50%;background:var(--bg);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--muted);transition:all .5s;position:relative}
+.journey-stop.done .stop-icon{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.journey-stop.active .stop-icon{border-color:var(--accent);color:var(--accent);background:rgba(212,168,83,.09);animation:pulse-ring 1.8s infinite}
+.journey-stop.active .stop-icon i{animation:icon-pop .55s ease}
+.journey-stop.done .stop-icon i{animation:icon-pop .45s ease}
+.stop-label{font-size:11px;margin-top:42px;font-weight:600;text-align:center;color:var(--muted);transition:color .4s;line-height:1.3}
+.journey-stop.done .stop-label,.journey-stop.active .stop-label{color:var(--text)}
+.stop-time{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* Steam wisps while preparing */
+.steam{position:absolute;bottom:100%;width:4px;height:4px;border-radius:50%;background:rgba(212,168,83,.65);animation:steam-rise 1.8s ease-in infinite}
+.steam.s1{left:12px;animation-delay:0s}
+.steam.s2{left:24px;animation-delay:.5s}
+.steam.s3{left:36px;animation-delay:1s}
+
+/* Completion celebration */
+.celebrate{position:relative;text-align:center;margin-top:30px;padding:22px 16px;border-radius:14px;background:rgba(212,168,83,.07);border:1px solid rgba(212,168,83,.25);overflow:hidden}
+.celebrate-emoji{font-size:26px;display:block;margin-bottom:6px;animation:icon-pop .6s ease both}
+.celebrate-text{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--accent);animation:celebrate-pop .6s ease .1s both}
+.celebrate-sub{font-size:12px;color:var(--muted);margin-top:4px;animation:celebrate-pop .6s ease .2s both}
+.confetti-wrap{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti-piece{position:absolute;top:-12px;width:7px;height:12px;opacity:.95;animation:confetti-fall linear forwards}
+
+/* Toast */
+.toast{padding:14px 20px;border-radius:10px;background:var(--surface-light);border:1px solid var(--border);color:var(--text);font-size:14px;display:flex;align-items:center;gap:10px;animation:toast-in .35s ease;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:360px}
+.toast.removing{animation:toast-out .3s ease forwards}
+.toast .toast-icon{font-size:16px}
+.toast.success .toast-icon{color:#7A8B6F}
+.toast.info .toast-icon{color:var(--accent)}
+.toast.error .toast-icon{color:#C67D5A}
+
+/* Upsell modal */
+#upsell-modal{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#upsell-modal.open{opacity:1;pointer-events:all}
+#upsell-modal .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+#upsell-modal .modal-content{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:520px;width:90%;transform:translateY(20px) scale(.96);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+#upsell-modal.open .modal-content{transform:translateY(0) scale(1)}
+
+/* Complaint modal */
+#complaint-modal{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#complaint-modal.open{opacity:1;pointer-events:all}
+#complaint-modal .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+#complaint-modal .modal-content{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:480px;width:90%;max-height:88vh;overflow-y:auto;transform:translateY(20px) scale(.96);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+#complaint-modal.open .modal-content{transform:translateY(0) scale(1)}
+.complaint-fab{position:fixed;left:20px;bottom:20px;z-index:150;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:100px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:border-color .2s,transform .2s}
+.complaint-fab:hover{border-color:var(--accent2);transform:translateY(-2px)}
+.complaint-fab i{color:var(--accent2)}
+
+/* Admin Kanban */
+.kanban-col{background:var(--bg);border:1px solid var(--border);border-radius:12px;min-height:300px;display:flex;flex-direction:column}
+.kanban-col .col-header{padding:16px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:space-between}
+.kanban-col .col-body{padding:12px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.order-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;transition:border-color .2s}
+.order-card:hover{border-color:rgba(212,168,83,.25)}
+
+/* Form inputs */
+.form-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:inherit;font-size:14px;transition:border-color .2s;outline:none}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--muted)}
+.form-error{color:var(--accent2);font-size:12px;margin-top:4px;min-height:18px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* Animations */
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(212,168,83,.4)}70%{box-shadow:0 0 0 10px rgba(212,168,83,0)}100%{box-shadow:0 0 0 0 rgba(212,168,83,0)}}
+@keyframes toast-in{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes toast-out{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+@keyframes fade-up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bounce-in{0%{transform:scale(0)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
+@keyframes float-slow{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.animate-fade-up{animation:fade-up .5s ease both}
+.badge-bounce{animation:bounce-in .35s ease}
+.float-slow{animation:float-slow 5s ease-in-out infinite}
+.hover-lift{transition:transform .35s ease,box-shadow .35s ease}
+.hover-lift:hover{transform:translateY(-6px)}
+
+@keyframes mover-bounce{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-9px) rotate(4deg)}}
+@keyframes mover-settle{0%{transform:scale(1.4) rotate(0deg)}60%{transform:scale(.85) rotate(-8deg)}100%{transform:scale(1) rotate(0deg)}}
+@keyframes mover-shadow-pulse{0%,100%{transform:scaleX(1);opacity:.4}50%{transform:scaleX(.65);opacity:.15}}
+@keyframes mover-arrive{0%{opacity:0;transform:translate(-50%,-140%) scale(.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes icon-pop{0%{transform:scale(.4)}55%{transform:scale(1.35)}100%{transform:scale(1)}}
+@keyframes steam-rise{0%{transform:translateY(0) scale(1);opacity:.75}100%{transform:translateY(-28px) scale(.2);opacity:0}}
+@keyframes shimmer-sweep{0%,100%{opacity:.3}50%{opacity:.9}}
+@keyframes celebrate-pop{0%{opacity:0;transform:scale(.7) translateY(10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes confetti-fall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(200px) rotate(600deg);opacity:0}}
+
+/* Reduced motion */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body class="font-body min-h-screen relative">
+
+<!-- Particle canvas -->
+<canvas id="particles-canvas" aria-hidden="true"></canvas>
+
+<!-- Navigation -->
+<nav id="main-nav" role="navigation" aria-label="Main navigation">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <a href="#" onclick="navigate('menu');return false" class="font-display text-xl font-bold tracking-wide text-brand-100 hover:text-brand-400 transition-colors" aria-label="Home">
+      Ember <span class="text-brand-400">&</span> Brew
+    </a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#" onclick="navigate('menu');return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Menu</a>
+      <a href="#" onclick="openComplaintModal();return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Complaint</a>
+      <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Customer Portal</a>
+      <a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Staff Login</a>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="cart-btn" onclick="toggleCart()" class="relative p-2 text-brand-300 hover:text-brand-400 transition-colors" aria-label="Open cart">
+        <i class="fa-solid fa-bag-shopping text-lg"></i>
+        <span id="cart-badge" class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-brand-400 text-brand-950 text-[11px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+      </button>
+      <button id="mobile-menu-btn" onclick="toggleMobileNav()" class="md:hidden p-2 text-brand-300 hover:text-brand-100 transition-colors" aria-label="Toggle menu">
+        <i class="fa-solid fa-bars text-lg"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile nav dropdown -->
+<div id="mobile-nav" class="fixed top-16 left-0 right-0 bg-brand-900/95 backdrop-blur-lg border-b border-brand-800 z-99 hidden md:hidden" style="z-index:99">
+  <div class="px-6 py-4 flex flex-col gap-3">
+    <a href="#" onclick="navigate('menu');closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Menu</a>
+    <a href="#" onclick="openComplaintModal();closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Complaint</a>
+    <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Customer Portal</a>
+    <a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Staff Login</a>
+  </div>
+</div>
+
+<!-- Main content -->
+<main id="app" class="relative z-10 pt-16">
+
+  <!-- MENU VIEW -->
+  <section id="view-menu" class="view active" aria-label="Menu">
+    <!-- Hero -->
+    <div id="hero-section" class="relative overflow-hidden border-b border-brand-800" style="background:radial-gradient(ellipse at 30% 20%,rgba(212,168,83,.1) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(198,125,90,.06) 0%,transparent 50%)">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16 relative z-10">
+        <div class="grid lg:grid-cols-2 gap-14 lg:gap-10 items-start">
+
+          <!-- Copy -->
+          <div class="text-center lg:text-left animate-fade-up flex flex-col justify-start min-h-[520px]">
+            <div class="pt-10 lg:pt-20">
+              <p class="text-brand-400 text-xs sm:text-sm tracking-[.3em] uppercase font-medium mb-6 inline-flex items-center gap-2 justify-center lg:justify-start">
+                <span class="w-6 h-px bg-brand-400"></span> Est. 2019 — Artisan Coffee &amp; Kitchen
+              </p>
+              <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-900 leading-[1.08] mb-6">Crafted with Care,<br>Served with <span class="text-brand-400">Soul</span></h1>
+              <p class="text-brand-300 text-base sm:text-lg max-w-lg mx-auto lg:mx-0 mb-9">Hand-roasted single-origin coffee, seasonal pastries, and plates made from locally sourced ingredients — poured and plated fresh, every morning.</p>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-10">
+                <button onclick="document.getElementById('menu-section').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 bg-brand-400 text-brand-950 font-semibold px-8 py-3.5 rounded-full hover:bg-brand-500 transition-colors text-sm">
+                  Browse Menu <i class="fa-solid fa-arrow-down text-xs"></i>
+                </button>
+                <a href="#" onclick="navigate('tracking');return false" class="inline-flex items-center gap-2 border border-brand-800 text-brand-100 font-medium px-8 py-3.5 rounded-full hover:border-brand-400 transition-colors text-sm">Track an Order</a>
+              </div>
+              <div class="flex items-center justify-center lg:justify-start gap-8 text-sm">
+                <div><span class="font-display text-2xl font-bold text-brand-100">4.9</span><span class="text-brand-800"> / 5 · 2,300+ reviews</span></div>
+                <div class="w-px h-8 bg-brand-800"></div>
+                <div><span class="font-display text-2xl font-bold text-brand-100">24</span><span class="text-brand-800"> menu favorites</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Image collage -->
+          <div class="relative mx-auto max-w-sm lg:max-w-none w-full animate-fade-up" style="animation-delay:.15s;transform:translateY(-12px)">
+            <div class="absolute -inset-8 rounded-[2rem] opacity-50 pointer-events-none" style="background:radial-gradient(circle at 50% 40%,rgba(212,168,83,.35),transparent 70%);filter:blur(30px)"></div>
+            <div class="relative rounded-[2rem] overflow-hidden border border-brand-800 shadow-2xl aspect-[4/5]">
+              <img src="images/Avacado toast.jpeg" alt="Avocado toast, freshly plated" class="w-full h-full object-cover">
+            </div>
+            <!-- floating circular inset -->
+            <div class="float-slow absolute -left-4 sm:-left-10 bottom-12 sm:bottom-14 w-24 h-24 sm:w-36 sm:h-36 rounded-full border-4 shadow-xl hidden sm:block overflow-hidden" style="border-color:var(--bg)">
+              <img src="images/Cappuccino.jpeg" alt="Cappuccino" class="w-full h-full object-cover">
+            </div>
+            <!-- floating review badge -->
+            <div class="float-slow absolute -top-2 right-2 sm:top-6 sm:-right-8 bg-brand-900/95 backdrop-blur border border-brand-800 rounded-2xl px-5 py-4 shadow-xl max-w-[180px]" style="animation-delay:.6s">
+              <div class="flex items-center gap-0.5 text-brand-400 text-xs mb-1.5">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+              </div>
+              <p class="text-xs text-brand-300 leading-snug">"Best cappuccino in the neighborhood."</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Philosophy / feature section -->
+    <div class="border-b border-brand-800" style="background:var(--surface)">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div class="relative order-2 lg:order-1">
+            <div class="rounded-[2rem] overflow-hidden border border-brand-800 shadow-xl aspect-[5/4]">
+              <img src="images/harvest salad.jpeg" alt="Harvest bowl, ready to serve" class="w-full h-full object-cover">
+            </div>
+          </div>
+          <div class="order-1 lg:order-2 text-center lg:text-left">
+            <p class="text-brand-400 text-xs tracking-[.3em] uppercase font-medium mb-4">Our Philosophy</p>
+            <h2 class="font-display text-3xl sm:text-4xl font-bold leading-tight mb-5">Small batches.<br>Never rushed.</h2>
+            <p class="text-brand-300 text-base leading-relaxed mb-8 max-w-md mx-auto lg:mx-0">Every bean is roasted in-house within 48 hours of brewing. Every plate uses produce sourced from growers within 50 miles. We believe good food takes patience — so we don't cut corners, we just start earlier.</p>
+            <ul class="space-y-3 mb-9 inline-block text-left">
+              <li class="flex items-center gap-3 text-sm text-brand-200"><i class="fa-solid fa-check text-brand-400"></i> Beans roasted weekly, in-house</li>
+              <li class="flex items-center gap-3 text-sm text-brand-200"><i class="fa-solid fa-check text-brand-400"></i> Produce from local growers</li>
+              <li class="flex items-center gap-3 text-sm text-brand-200"><i class="fa-solid fa-check text-brand-400"></i> Made to order, every time</li>
+            </ul>
+            <div>
+              <button onclick="document.getElementById('menu-section').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 border border-brand-400 text-brand-400 font-semibold px-7 py-3 rounded-full hover:bg-brand-400 hover:text-brand-950 transition-colors text-sm">
+                Explore the Menu <i class="fa-solid fa-arrow-right text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fan favorites gallery -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+      <div class="text-center mb-12">
+        <p class="text-brand-400 text-xs tracking-[.3em] uppercase font-medium mb-4">Fan Favorites</p>
+        <h2 class="font-display text-3xl sm:text-4xl font-bold">Regulars Keep Coming Back For</h2>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="hover-lift menu-card">
+          <div class="aspect-[4/5] overflow-hidden"><img src="images/tiramusu.jpeg" alt="Tiramisu" class="w-full h-full object-cover"></div>
+          <div class="p-4">
+            <h3 class="font-display font-semibold text-brand-100">Tiramisu</h3>
+            <p class="text-brand-800 text-sm mt-0.5">$7.50</p>
+          </div>
+        </div>
+        <div class="hover-lift menu-card">
+          <div class="aspect-[4/5] overflow-hidden"><img src="images/creme brulee.jpeg" alt="Creme Brulee" class="w-full h-full object-cover"></div>
+          <div class="p-4">
+            <h3 class="font-display font-semibold text-brand-100">Crème Brûlée</h3>
+            <p class="text-brand-800 text-sm mt-0.5">$7.75</p>
+          </div>
+        </div>
+        <div class="hover-lift menu-card">
+          <div class="aspect-[4/5] overflow-hidden"><img src="images/turkey club sandwich.jpeg" alt="Turkey Club" class="w-full h-full object-cover"></div>
+          <div class="p-4">
+            <h3 class="font-display font-semibold text-brand-100">Turkey Club</h3>
+            <p class="text-brand-800 text-sm mt-0.5">$9.75</p>
+          </div>
+        </div>
+        <div class="hover-lift menu-card">
+          <div class="aspect-[4/5] overflow-hidden"><img src="images/iced lemonade.jpeg" alt="Iced Lemonade" class="w-full h-full object-cover"></div>
+          <div class="p-4">
+            <h3 class="font-display font-semibold text-brand-100">Iced Lemonade</h3>
+            <p class="text-brand-800 text-sm mt-0.5">$4.00</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu section -->
+    <div id="menu-section" class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 border-t border-brand-800">
+      <div class="text-center mb-10">
+        <p class="text-brand-400 text-xs tracking-[.3em] uppercase font-medium mb-4">The Full Menu</p>
+        <h2 class="font-display text-3xl sm:text-4xl font-bold">Order Ahead, Skip the Line</h2>
+      </div>
+      <!-- Search -->
+      <div class="max-w-md mx-auto mb-8">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-brand-800 text-sm"></i>
+          <input type="text" id="menu-search" placeholder="Search our menu..." class="form-input pl-11" oninput="filterMenu()">
+        </div>
+      </div>
+      <!-- Category pills -->
+      <div id="category-pills" class="flex gap-2 mb-10 overflow-x-auto pb-2 justify-center flex-wrap" role="tablist" aria-label="Menu categories"></div>
+      <!-- Menu grid -->
+      <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+      <p id="menu-empty" class="hidden text-center text-brand-800 py-16 text-sm">No items match your search.</p>
+    </div>
+  </section>
+
+  <!-- CHECKOUT VIEW -->
+  <section id="view-checkout" class="view" aria-label="Checkout">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+      <h2 class="font-display text-3xl sm:text-4xl font-bold mb-2">Checkout</h2>
+      <p class="text-brand-800 text-sm mb-10">Complete your order below.</p>
+      <form id="checkout-form" onsubmit="handleCheckout(event)" novalidate>
+        <div id="checkout-account-card" class="mb-6 bg-brand-900 border border-brand-800 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div>
+            <span class="text-brand-800 text-xs block mb-0.5">Ordering as</span>
+            <span id="checkout-account-name" class="font-medium text-sm"></span>
+          </div>
+          <a href="#" onclick="navigate('account');return false" class="text-xs text-brand-400 hover:text-brand-300">Not you?</a>
+        </div>
+        <div class="mb-6">
+          <label class="text-xs font-medium text-brand-300 mb-2 block">Order Type</label>
+          <div class="flex gap-3 flex-wrap">
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+              <input type="radio" name="orderType" value="dine-in" class="accent-[#D4A853]" checked> <span class="text-sm">Dine In</span>
+            </label>
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+              <input type="radio" name="orderType" value="takeaway" class="accent-[#D4A853]"> <span class="text-sm">Takeaway</span>
+            </label>
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+              <input type="radio" name="orderType" value="delivery" class="accent-[#D4A853]"> <span class="text-sm">Delivery</span>
+            </label>
+          </div>
+          <div class="form-error" data-error="orderType"></div>
+        </div>
+        <div id="address-field" class="mb-6 hidden">
+          <label class="text-xs font-medium text-brand-300 mb-1.5 block">Delivery Region</label>
+          <select name="region" class="form-input mb-3">
+            <option value="">Select your region…</option>
+          </select>
+          <div class="form-error" data-error="region"></div>
+          <label class="text-xs font-medium text-brand-300 mb-1.5 block">Delivery Address</label>
+          <input type="text" name="address" class="form-input" placeholder="123 Main St, Apt 4B">
+          <div class="form-error" data-error="address"></div>
+        </div>
+        <div class="mb-8">
+          <label class="text-xs font-medium text-brand-300 mb-1.5 block">Special Instructions</label>
+          <textarea name="notes" class="form-input" rows="3" placeholder="Allergies, extra napkins, ring the bell..."></textarea>
+        </div>
+        <!-- Order summary -->
+        <div class="bg-brand-900 border border-brand-800 rounded-xl p-5 mb-6">
+          <h3 class="font-semibold text-sm mb-3 text-brand-300">Order Summary</h3>
+          <div id="checkout-items"></div>
+          <div class="border-t border-brand-800 mt-3 pt-3 flex justify-between text-sm">
+            <span class="text-brand-300">Subtotal</span><span id="checkout-subtotal" class="font-medium">$0.00</span>
+          </div>
+          <div class="flex justify-between text-sm mt-1">
+            <span class="text-brand-300">Tax (8%)</span><span id="checkout-tax" class="font-medium">$0.00</span>
+          </div>
+          <div class="flex justify-between text-base mt-3 pt-3 border-t border-brand-800 font-bold">
+            <span>Total</span><span id="checkout-total" class="text-brand-400">$0.00</span>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-brand-400 text-brand-950 font-semibold py-3.5 rounded-xl hover:bg-brand-500 transition-colors text-sm">Place Order</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- TRACKING VIEW -->
+  <section id="view-tracking" class="view" aria-label="Order Tracking">
+    <div id="tracking-content" class="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-20"></div>
+  </section>
+
+  <!-- CUSTOMER LOGIN / REGISTER VIEW -->
+  <section id="view-customer-login" class="view" aria-label="Sign In">
+    <div class="max-w-sm mx-auto px-4 sm:px-6 py-20 sm:py-28">
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 rounded-2xl bg-brand-400/10 border border-brand-400/20 flex items-center justify-center mx-auto mb-4">
+          <i class="fa-solid fa-user text-brand-400"></i>
+        </div>
+        <h2 class="font-display text-2xl font-bold mb-1" id="customer-auth-title">Sign In</h2>
+        <p class="text-brand-800 text-sm">Track your orders and complaints in one place.</p>
+      </div>
+
+      <div class="flex mb-6 rounded-xl border border-brand-800 overflow-hidden">
+        <button type="button" id="tab-login" onclick="setCustomerAuthMode('login')" class="flex-1 py-2.5 text-sm font-semibold transition-colors">Sign In</button>
+        <button type="button" id="tab-register" onclick="setCustomerAuthMode('register')" class="flex-1 py-2.5 text-sm font-semibold transition-colors">Create Account</button>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="customer-login-form" onsubmit="handleCustomerLogin(event)" novalidate>
+        <div class="mb-4">
+          <input type="text" name="identifier" class="form-input" placeholder="Email or phone number" autocomplete="username">
+          <div class="form-error" data-error="cl-identifier"></div>
+        </div>
+        <div class="mb-2">
+          <input type="password" name="password" class="form-input" placeholder="Password" autocomplete="current-password">
+          <div class="form-error" data-error="cl-password"></div>
+        </div>
+        <div id="customer-login-error" class="text-terra-400 text-sm mb-4 hidden"></div>
+        <button type="submit" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm mt-3">Sign In</button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="customer-register-form" class="hidden" onsubmit="handleCustomerRegister(event)" novalidate>
+        <div class="mb-4">
+          <input type="text" name="name" class="form-input" placeholder="Full name" autocomplete="name">
+          <div class="form-error" data-error="cr-name"></div>
+        </div>
+        <div class="mb-4">
+          <input type="tel" name="phone" class="form-input" placeholder="Phone number" autocomplete="tel">
+          <div class="form-error" data-error="cr-phone"></div>
+        </div>
+        <div class="mb-4">
+          <input type="email" name="email" class="form-input" placeholder="Email (optional, recommended)" autocomplete="email">
+          <div class="form-error" data-error="cr-email"></div>
+        </div>
+        <div class="mb-2">
+          <input type="password" name="password" class="form-input" placeholder="Password (min 6 characters)" autocomplete="new-password">
+          <div class="form-error" data-error="cr-password"></div>
+        </div>
+        <div id="customer-register-error" class="text-terra-400 text-sm mb-4 hidden"></div>
+        <button type="submit" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm mt-3">Create Account</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- CUSTOMER ACCOUNT DASHBOARD VIEW -->
+  <section id="view-account" class="view" aria-label="My Account">
+    <div id="account-content" class="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16"></div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="relative z-10 border-t border-brand-800 mt-10" style="background:var(--surface)">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 pt-14 pb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
+
+      <!-- Brand -->
+      <div class="lg:col-span-4">
+        <div class="flex items-center gap-2 mb-4">
+          <i class="fa-solid fa-mug-hot text-brand-400 text-xl"></i>
+          <span class="font-display text-xl font-bold">Ember &amp; Brew</span>
+        </div>
+        <p class="text-brand-300 text-sm leading-relaxed mb-5 max-w-xs">Small-batch coffee, seasonal plates, and a warm room to slow down in. Roasted, baked, and plated with care — every single day.</p>
+        <div class="flex items-center gap-3">
+          <a href="#" onclick="return false" aria-label="Instagram" class="w-9 h-9 rounded-full border border-brand-800 flex items-center justify-center text-brand-300 hover:text-brand-950 hover:bg-brand-400 hover:border-brand-400 transition-all"><i class="fa-brands fa-instagram text-sm"></i></a>
+          <a href="#" onclick="return false" aria-label="Facebook" class="w-9 h-9 rounded-full border border-brand-800 flex items-center justify-center text-brand-300 hover:text-brand-950 hover:bg-brand-400 hover:border-brand-400 transition-all"><i class="fa-brands fa-facebook-f text-sm"></i></a>
+          <a href="#" onclick="return false" aria-label="X / Twitter" class="w-9 h-9 rounded-full border border-brand-800 flex items-center justify-center text-brand-300 hover:text-brand-950 hover:bg-brand-400 hover:border-brand-400 transition-all"><i class="fa-brands fa-x-twitter text-sm"></i></a>
+          <a href="#" onclick="return false" aria-label="TikTok" class="w-9 h-9 rounded-full border border-brand-800 flex items-center justify-center text-brand-300 hover:text-brand-950 hover:bg-brand-400 hover:border-brand-400 transition-all"><i class="fa-brands fa-tiktok text-sm"></i></a>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="lg:col-span-2">
+        <h3 class="font-display text-sm font-bold uppercase tracking-wider text-brand-100 mb-4">Explore</h3>
+        <ul class="space-y-2.5 text-sm text-brand-300">
+          <li><a href="#" onclick="navigate('menu');return false" class="hover:text-brand-400 transition-colors">Menu</a></li>
+          <li><a href="#" onclick="navigate('tracking');return false" class="hover:text-brand-400 transition-colors">Track an Order</a></li>
+          <li><a href="/customer.html" class="hover:text-brand-400 transition-colors">Customer Portal</a></li>
+          <li><a href="#" onclick="toggleCart();return false" class="hover:text-brand-400 transition-colors">View Cart</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div class="lg:col-span-3">
+        <h3 class="font-display text-sm font-bold uppercase tracking-wider text-brand-100 mb-4">Visit Us</h3>
+        <ul class="space-y-3 text-sm text-brand-300">
+          <li class="flex items-start gap-2.5"><i class="fa-solid fa-location-dot text-brand-400 mt-0.5 w-4"></i><span>214 Maple &amp; 5th, Downtown Historic District</span></li>
+          <li class="flex items-center gap-2.5"><i class="fa-solid fa-phone text-brand-400 w-4"></i><span>(555) 018-2947</span></li>
+          <li class="flex items-center gap-2.5"><i class="fa-solid fa-envelope text-brand-400 w-4"></i><span>hello@emberandbrew.co</span></li>
+        </ul>
+      </div>
+
+      <!-- Hours + Newsletter -->
+      <div class="lg:col-span-3">
+        <h3 class="font-display text-sm font-bold uppercase tracking-wider text-brand-100 mb-4">Hours</h3>
+        <ul class="space-y-1.5 text-sm text-brand-300 mb-6">
+          <li class="flex justify-between gap-4"><span>Mon – Fri</span><span class="text-brand-100">7am – 8pm</span></li>
+          <li class="flex justify-between gap-4"><span>Sat – Sun</span><span class="text-brand-100">8am – 9pm</span></li>
+        </ul>
+        <form onsubmit="handleNewsletterSignup(event)" class="flex items-center gap-2">
+          <input type="email" required placeholder="Your email" class="form-input !py-2.5 !text-xs flex-1">
+          <button type="submit" class="bg-brand-400 text-brand-950 font-semibold text-xs px-4 py-2.5 rounded-lg hover:bg-brand-500 transition-colors whitespace-nowrap">Join</button>
+        </form>
+      </div>
+
+    </div>
+
+    <div class="h-px my-9" style="background:linear-gradient(90deg,transparent,var(--border) 15%,var(--border) 85%,transparent)"></div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-brand-800">
+      <p>&copy; <span id="footer-year"></span> Ember &amp; Brew Café. All rights reserved.</p>
+      <p class="flex items-center gap-1.5">Brewed with <i class="fa-solid fa-heart text-terra-400 text-[10px]"></i> for people who love good coffee.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Cart overlay -->
+<div id="cart-overlay" onclick="toggleCart()" aria-hidden="true"></div>
+
+<!-- Cart panel -->
+<aside id="cart-panel" role="dialog" aria-label="Shopping cart">
+  <div class="flex items-center justify-between p-5 border-b border-brand-800">
+    <h2 class="font-display text-lg font-bold">Your Cart</h2>
+    <button onclick="toggleCart()" class="text-brand-800 hover:text-brand-100 transition-colors p-1" aria-label="Close cart"><i class="fa-solid fa-xmark text-lg"></i></button>
+  </div>
+  <div id="cart-items" class="flex-1 overflow-y-auto p-5"></div>
+  <div id="cart-footer" class="border-t border-brand-800 p-5">
+    <div class="flex justify-between mb-1 text-sm"><span class="text-brand-300">Subtotal</span><span id="cart-subtotal" class="font-medium">$0.00</span></div>
+    <div class="flex justify-between mb-4 text-sm"><span class="text-brand-300">Tax (8%)</span><span id="cart-tax" class="font-medium">$0.00</span></div>
+    <div class="flex justify-between mb-5 font-bold"><span>Total</span><span id="cart-total" class="text-brand-400">$0.00</span></div>
+    <button onclick="goToCheckout()" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm">Checkout</button>
+  </div>
+</aside>
+
+<!-- Upsell modal -->
+<div id="upsell-modal" role="dialog" aria-label="Frequently paired items">
+  <div class="modal-backdrop" onclick="closeUpsell()"></div>
+  <div class="modal-content">
+    <button onclick="closeUpsell()" class="absolute top-4 right-4 text-brand-800 hover:text-brand-100 transition-colors" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    <div id="upsell-body"></div>
+  </div>
+</div>
+
+<!-- Floating complaint button -->
+<button class="complaint-fab" onclick="openComplaintModal()" aria-label="Report an issue">
+  <i class="fa-solid fa-comment-dots"></i> Complaint / Feedback
+</button>
+
+<!-- Complaint modal -->
+<div id="complaint-modal" role="dialog" aria-label="Submit a complaint">
+  <div class="modal-backdrop" onclick="closeComplaintModal()"></div>
+  <div class="modal-content">
+    <button onclick="closeComplaintModal()" class="absolute top-4 right-4 text-brand-800 hover:text-brand-100 transition-colors" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    <h2 class="font-display text-xl font-bold mb-1">We're listening</h2>
+    <p class="text-brand-800 text-sm mb-5">Tell us what went wrong — it goes straight to the manager's dashboard.</p>
+    <form id="complaint-form" onsubmit="submitComplaint(event)" class="flex flex-col gap-3">
+      <p id="complaint-account-note" class="text-brand-800 text-xs -mt-1"></p>
+      <input class="form-input" type="text" name="orderNumber" placeholder="Order number, e.g. EB-1041 (optional)">
+      <select class="form-input" name="subject">
+        <option value="Food Quality">Food Quality</option>
+        <option value="Order Accuracy">Order Accuracy</option>
+        <option value="Service">Service</option>
+        <option value="Delivery / Wait Time">Delivery / Wait Time</option>
+        <option value="Other">Other</option>
+      </select>
+      <div>
+        <textarea class="form-input" name="message" rows="4" placeholder="Describe the issue…" required></textarea>
+        <div class="form-error" data-error="c-message"></div>
+      </div>
+      <button type="submit" id="complaint-submit-btn" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm mt-1">Submit Complaint</button>
+    </form>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[400] flex flex-col gap-3" aria-live="polite"></div>
+
+<script>
+// ============================================
+// MENU DATA
+// ============================================
+// MENU is now loaded live from MongoDB via GET /api/menu — whatever the
+// admin adds/edits/removes in the dashboard shows up here automatically.
+// We normalize {_id, description, category, image} -> {id, desc, cat, img}
+// so the rest of the file (cart, checkout, upsell, etc.) doesn't need to change.
+let MENU = [];
+let CATEGORIES = ['All'];
+
+async function loadPublicMenu() {
+  const grid = document.getElementById('menu-grid');
+  if (grid) grid.innerHTML = '<p class="text-center text-brand-800 py-16 text-sm col-span-full">Loading menu…</p>';
+  try {
+    const [items, cats] = await Promise.all([
+      fetch('/api/menu').then(r => r.json()),
+      fetch('/api/menu/categories').then(r => r.json())
+    ]);
+    MENU = (Array.isArray(items) ? items : []).map(i => ({
+      id: i._id, name: i.name, desc: i.description, price: i.price, cat: i.category, img: i.image
+    }));
+    CATEGORIES = Array.isArray(cats) && cats.length ? cats : ['All'];
+  } catch (err) {
+    MENU = [];
+    CATEGORIES = ['All'];
+    if (grid) grid.innerHTML = '<div class="text-center py-16 col-span-full"><p class="text-terra-400 text-sm mb-3">Could not load the menu. Is the server running and connected to the database?</p><button onclick="loadPublicMenu()" class="text-brand-400 text-sm underline">Try again</button></div>';
+  }
+  if (state.currentView === 'menu') renderMenu();
+}
+
+// AI "Frequently Paired" data — in production this comes from MongoDB order history analysis
+const PAIRINGS = {
+  1:[7,8],2:[9,10],3:[7,11],4:[19,12],5:[18,10],6:[8,16],
+  7:[1,2],8:[3,6],9:[2,21],10:[5,24],11:[3,21],12:[4,23],
+  13:[22,17],14:[23,15],15:[14,23],16:[6,21],17:[14,22],
+  18:[1,5],19:[4,2],20:[24,1],21:[16,11],22:[17,13],23:[14,15],24:[10,20]
+};
+
+const STATUS_FLOWS = {
+  delivery: ['received','preparing','ready','out-for-delivery','delivered'],
+  default: ['received','preparing','ready','completed']
+};
+function getStatusFlow(order) {
+  return order.orderType === 'delivery' ? STATUS_FLOWS.delivery : STATUS_FLOWS.default;
+}
+const STATUS_LABELS = {received:'Order Received',preparing:'Preparing',ready:'Ready for Pickup','out-for-delivery':'Out for Delivery',delivered:'Delivered',completed:'Completed'};
+const STATUS_TIMES = {received:0,preparing:8,ready:16,completed:24};
+const STATUS_ICONS = {received:'fa-receipt',preparing:'fa-fire-burner',ready:'fa-bag-shopping','out-for-delivery':'fa-truck-fast',delivered:'fa-box-open',completed:'fa-champagne-glasses'};
+const CONFETTI_COLORS = ['#D4A853','#C67D5A','#A3B496','#F5F0E8','#D4C4A8','#9A5638'];
+function makeConfetti(count = 32) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    const left = Math.random() * 100;
+    const delay = (Math.random() * 0.6).toFixed(2);
+    const duration = (2 + Math.random() * 1.2).toFixed(2);
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    const rot = Math.floor(Math.random() * 360);
+    const round = Math.random() > 0.5 ? 'border-radius:50%' : 'border-radius:2px';
+    html += `<span class="confetti-piece" style="left:${left}%;background:${color};animation-delay:${delay}s;animation-duration:${duration}s;transform:rotate(${rot}deg);${round}"></span>`;
+  }
+  return html;
+}
+
+// ============================================
+// STATE
+// ============================================
+const state = {
+  currentView: 'menu',
+  cart: [],          // {item, qty}
+  activeCategory: 'All',
+  searchQuery: '',
+  // Real customer session — restored from localStorage on load
+  customerToken: localStorage.getItem('eb_customer_token') || null,
+  customer: JSON.parse(localStorage.getItem('eb_customer') || 'null'), // {id, name, email, phone}
+  trackingPoll: null, // interval id for polling an order's live status
+};
+
+// ============================================
+// API HELPER
+// ============================================
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+  return data;
+}
+function authHeaders(token) {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+}
+
+function updateAccountNavLabel() {
+  const label = state.customer ? state.customer.name.split(' ')[0] : 'Sign In';
+  const desktop = document.getElementById('nav-account-link');
+  if (desktop) desktop.textContent = label;
+  const mobile = document.getElementById('nav-account-link-mobile');
+  if (mobile) mobile.textContent = label;
+}
+
+// ============================================
+// NAVIGATION
+// ============================================
+function navigate(view, data) {
+  // Close cart if open
+  closeCart();
+  // Send customer login/account views to the dedicated portal page
+  if (view === 'customer-login' || view === 'account') {
+    window.location.href = '/customer.html';
+    return;
+  }
+  // Gate views that require a logged-in customer
+  if ((view === 'checkout') && !state.customer) {
+    showToast('Please sign in to continue.', 'info');
+    window.location.href = '/customer.html';
+    return;
+  }
+  // Hide all views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  // Show target
+  const target = document.getElementById('view-' + view);
+  if (target) {
+    target.classList.add('active');
+    state.currentView = view;
+  }
+  // Stop any live-tracking poll when leaving the tracking view
+  if (view !== 'tracking' && state.trackingPoll) {
+    clearInterval(state.trackingPoll);
+    state.trackingPoll = null;
+  }
+  // View-specific setup
+  if (view === 'menu') renderMenu();
+  if (view === 'checkout') renderCheckout();
+  if (view === 'tracking') renderTracking(data);
+  if (view === 'customer-login') setCustomerAuthMode('login');
+  if (view === 'account') renderAccount();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ============================================
+// CUSTOMER ACCOUNT — real signup/login backed by MongoDB
+// ============================================
+function setCustomerAuthMode(mode) {
+  const isLogin = mode === 'login';
+  document.getElementById('customer-auth-title').textContent = isLogin ? 'Sign In' : 'Create Account';
+  document.getElementById('customer-login-form').classList.toggle('hidden', !isLogin);
+  document.getElementById('customer-register-form').classList.toggle('hidden', isLogin);
+  document.getElementById('tab-login').className = 'flex-1 py-2.5 text-sm font-semibold transition-colors ' + (isLogin ? 'bg-brand-400 text-brand-950' : 'text-brand-300');
+  document.getElementById('tab-register').className = 'flex-1 py-2.5 text-sm font-semibold transition-colors ' + (!isLogin ? 'bg-brand-400 text-brand-950' : 'text-brand-300');
+  clearErrors();
+}
+
+function setCustomerSession(token, customer) {
+  state.customerToken = token;
+  state.customer = customer;
+  localStorage.setItem('eb_customer_token', token);
+  localStorage.setItem('eb_customer', JSON.stringify(customer));
+  updateAccountNavLabel();
+}
+
+function logoutCustomer() {
+  state.customerToken = null;
+  state.customer = null;
+  localStorage.removeItem('eb_customer_token');
+  localStorage.removeItem('eb_customer');
+  updateAccountNavLabel();
+  showToast('Signed out.', 'info');
+  navigate('menu');
+}
+
+async function handleCustomerLogin(e) {
+  e.preventDefault();
+  clearErrors();
+  const form = e.target;
+  const identifier = form.identifier.value.trim();
+  const password = form.password.value;
+  const errBox = document.getElementById('customer-login-error');
+  errBox.classList.add('hidden');
+  if (!identifier || !password) { showFieldError('cl-identifier', !identifier ? 'Required' : ''); return; }
+
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const data = await apiFetch('/api/customer-auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password })
+    });
+    setCustomerSession(data.token, data.customer);
+    form.reset();
+    showToast(`Welcome back, ${data.customer.name.split(' ')[0]}!`, 'success');
+    navigate('account');
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+
+async function handleCustomerRegister(e) {
+  e.preventDefault();
+  clearErrors();
+  const form = e.target;
+  const name = form.name.value.trim();
+  const phone = form.phone.value.trim();
+  const email = form.email.value.trim();
+  const password = form.password.value;
+  const errBox = document.getElementById('customer-register-error');
+  errBox.classList.add('hidden');
+
+  let valid = true;
+  if (name.length < 2) { showFieldError('cr-name', 'Please enter your name.'); valid = false; }
+  if (!/^[\d\s\-\(\)\+]{7,}$/.test(phone)) { showFieldError('cr-phone', 'Please enter a valid phone number.'); valid = false; }
+  if (password.length < 6) { showFieldError('cr-password', 'At least 6 characters.'); valid = false; }
+  if (!valid) return;
+
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try {
+    const data = await apiFetch('/api/customer-auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, email, password })
+    });
+    setCustomerSession(data.token, data.customer);
+    form.reset();
+    showToast(`Welcome, ${data.customer.name.split(' ')[0]}!`, 'success');
+    navigate('account');
+  } catch (err) {
+    errBox.textContent = err.message;
+    errBox.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+}
+
+async function renderAccount() {
+  if (!state.customer) { navigate('customer-login'); return; }
+  const container = document.getElementById('account-content');
+  container.innerHTML = `<div class="text-center py-20 text-brand-800"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+
+  let orders = [], complaints = [];
+  try {
+    [orders, complaints] = await Promise.all([
+      apiFetch('/api/orders/mine/list', { headers: authHeaders(state.customerToken) }),
+      apiFetch('/api/complaints/mine/list', { headers: authHeaders(state.customerToken) })
+    ]);
+  } catch (err) {
+    container.innerHTML = `<div class="text-center py-16"><p class="text-terra-400 text-sm">${err.message}</p></div>`;
+    return;
+  }
+
+  const complaintStatusColor = { new: 'text-terra-400', 'in-progress': 'text-brand-400', resolved: 'text-sage-400' };
+
+  container.innerHTML = `
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold">Welcome back, ${state.customer.name.split(' ')[0]}</h2>
+        <p class="text-brand-800 text-sm mt-1">${state.customer.email ? state.customer.email + ' · ' : ''}${state.customer.phone}</p>
+      </div>
+      <button onclick="logoutCustomer()" class="text-sm text-brand-800 hover:text-terra-400 transition-colors flex items-center gap-1.5"><i class="fa-solid fa-arrow-right-from-bracket text-xs"></i> Sign Out</button>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1.25fr_auto] mb-10">
+      <section class="bg-brand-900 border border-brand-800 rounded-3xl p-6">
+        <div class="flex items-center justify-between gap-3 mb-5">
+          <div>
+            <p class="text-brand-400 text-xs uppercase tracking-[.3em] font-semibold mb-2">Customer Portal</p>
+            <h3 class="font-display text-xl font-bold">My Orders & Tracking</h3>
+          </div>
+          <span class="inline-flex items-center gap-2 rounded-full bg-brand-800 px-3 py-1 text-xs text-brand-100 uppercase tracking-[.2em]"><i class="fa-solid fa-user-check"></i> Signed in</span>
+        </div>
+        <p class="text-brand-300 text-sm leading-relaxed">View your orders, open live tracking for delivery status, and file complaints. Rider details appear inside delivery order summaries so the contact is not exposed in the main navbar.</p>
+      </section>
+      <aside class="bg-brand-900 border border-brand-800 rounded-3xl p-6 text-sm text-brand-300">
+        <p class="text-brand-400 text-xs uppercase tracking-[.3em] font-semibold mb-3">What you can do</p>
+        <div class="space-y-4">
+          <div class="rounded-2xl border border-brand-800 bg-brand-950/70 p-4">
+            <p class="text-brand-100 font-semibold mb-2">Track orders</p>
+            <p>Open live tracking to watch your order’s status and delivery progress.</p>
+          </div>
+          <div class="rounded-2xl border border-brand-800 bg-brand-950/70 p-4">
+            <p class="text-brand-100 font-semibold mb-2">Rider contact</p>
+            <p>Assigned delivery rider name and phone are shown only inside the customer portal.</p>
+          </div>
+          <div class="rounded-2xl border border-brand-800 bg-brand-950/70 p-4">
+            <p class="text-brand-100 font-semibold mb-2">Complaints</p>
+            <p>Send feedback to the manager and read responses on this dashboard.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="mb-10">
+      <div class="flex items-center justify-between mb-5 gap-3">
+        <h3 class="font-display text-lg font-bold">My Orders</h3>
+        <button onclick="navigate('tracking')" class="rounded-full border border-brand-800 bg-brand-950/70 px-4 py-2 text-xs font-semibold text-brand-300 hover:border-brand-400 hover:text-brand-100 transition-colors">Track an Order</button>
+      </div>
+      ${orders.length === 0 ? `<p class="text-brand-800 text-sm">No orders yet. <a href="#" onclick="navigate('menu');return false" class="text-brand-400">Browse the menu</a> to place your first order.</p>` : `
+      <div class="grid gap-4">
+        ${orders.map(o => `
+          <article class="bg-brand-900 border border-brand-800 rounded-3xl p-5 hover:border-brand-400 transition-colors">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+              <div>
+                <div class="text-brand-400 text-xs uppercase tracking-[.3em] font-semibold mb-2">${o.orderType.replace('-', ' ')}</div>
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="font-semibold text-base text-brand-100">${o.orderNumber}</span>
+                  <span class="text-xs text-brand-300">${new Date(o.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <div class="inline-flex items-center gap-2 rounded-full bg-brand-800 px-3 py-2 text-xs font-semibold uppercase tracking-[.2em] text-brand-100">${o.status}</div>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-3 text-sm text-brand-300 mb-4">
+              <div>
+                <p class="text-brand-400 text-[11px] uppercase tracking-[.25em] mb-1">Items</p>
+                <p>${o.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
+              </div>
+              <div>
+                <p class="text-brand-400 text-[11px] uppercase tracking-[.25em] mb-1">Total</p>
+                <p class="font-semibold text-brand-100">$${o.total.toFixed(2)}</p>
+              </div>
+              <div>
+                <p class="text-brand-400 text-[11px] uppercase tracking-[.25em] mb-1">Delivery</p>
+                <p class="text-brand-300">${o.deliveryAddress ? o.deliveryAddress : 'Pickup / dine-in'}</p>
+              </div>
+            </div>
+            ${o.deliveryBoyName ? `
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 rounded-3xl border border-brand-800 bg-brand-950/50 p-4">
+              <div>
+                <p class="text-brand-400 text-[11px] uppercase tracking-[.25em] mb-1">Delivery Rider</p>
+                <p class="font-semibold text-brand-100">${o.deliveryBoyName}</p>
+                ${o.deliveryBoyPhone ? `<p class="text-brand-300 text-sm">${o.deliveryBoyPhone}</p>` : ''}
+              </div>
+              ${o.deliveryBoyPhone ? `<a href="tel:${o.deliveryBoyPhone}" class="inline-flex items-center gap-2 rounded-full bg-brand-400 text-brand-950 px-4 py-2 text-xs font-semibold hover:bg-brand-500 transition-colors"><i class="fa-solid fa-phone"></i> Call Rider</a>` : ''}
+            </div>` : ''}
+            <div class="flex flex-wrap gap-3 justify-between items-center">
+              <a href="#" onclick="navigate('tracking','${o.orderNumber}');return false" class="rounded-full border border-brand-800 bg-brand-950/80 px-4 py-2 text-xs font-semibold text-brand-100 hover:border-brand-400 hover:text-brand-100 transition-colors">View Tracking</a>
+              <span class="text-xs text-brand-300">${o.items.length} product${o.items.length === 1 ? '' : 's'}</span>
+            </div>
+          </article>
+        `).join('')}
+      </div>`}
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-5 gap-3">
+        <h3 class="font-display text-lg font-bold">Your Complaints</h3>
+        <button onclick="openComplaintModal()" class="rounded-full border border-brand-800 bg-brand-950/70 px-4 py-2 text-xs font-semibold text-brand-100 hover:border-brand-400 hover:text-brand-100 transition-colors">File a Complaint</button>
+      </div>
+      ${complaints.length === 0 ? `<p class="text-brand-800 text-sm">No complaints filed yet. Use the button above to send a message to the manager.</p>` : `
+      <div class="grid gap-4">
+        ${complaints.map(c => `
+          <article class="bg-brand-900 border border-brand-800 rounded-3xl p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+              <div>
+                <p class="font-semibold text-brand-100">${c.subject}</p>
+                ${c.orderNumber ? `<p class="text-brand-800 text-xs mt-1">Order ${c.orderNumber}</p>` : ''}
+              </div>
+              <span class="text-xs font-semibold capitalize ${complaintStatusColor[c.status]}">${c.status.replace('-', ' ')}</span>
+            </div>
+            <p class="text-sm text-brand-300 mb-3">${c.message}</p>
+            ${c.adminNote ? `<div class="rounded-3xl border border-brand-800 bg-brand-950/70 p-4 text-sm text-brand-300"><p class="text-[11px] uppercase tracking-[.25em] font-semibold text-brand-400 mb-2">Manager Response</p><p>${c.adminNote}</p></div>` : `<p class="text-xs text-brand-800 italic">Awaiting a response from the manager.</p>`}
+          </article>
+        `).join('')}
+      </div>`}
+    </section>
+  `;
+}
+
+// ============================================
+// MENU RENDERING
+// ============================================
+function renderCategoryPills() {
+  const container = document.getElementById('category-pills');
+  container.innerHTML = CATEGORIES.map(c =>
+    `<button class="cat-pill ${state.activeCategory===c?'active':''}" onclick="setCategory('${c}')" role="tab" aria-selected="${state.activeCategory===c}">${c}</button>`
+  ).join('');
+}
+
+function setCategory(cat) {
+  state.activeCategory = cat;
+  renderCategoryPills();
+  filterMenu();
+}
+
+function filterMenu() {
+  state.searchQuery = (document.getElementById('menu-search')?.value || '').toLowerCase();
+  const grid = document.getElementById('menu-grid');
+  const empty = document.getElementById('menu-empty');
+  let items = MENU;
+  if (state.activeCategory !== 'All') items = items.filter(i => i.cat === state.activeCategory);
+  if (state.searchQuery) items = items.filter(i => i.name.toLowerCase().includes(state.searchQuery) || i.desc.toLowerCase().includes(state.searchQuery));
+  if (items.length === 0) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  grid.innerHTML = items.map((item, idx) => `
+    <article class="menu-card animate-fade-up" style="animation-delay:${Math.min(idx*60,400)}ms">
+      <div class="relative overflow-hidden aspect-[4/3]">
+        <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover" loading="lazy">
+        <span class="absolute top-3 left-3 bg-brand-950/70 backdrop-blur-sm text-brand-300 text-[11px] font-medium px-2.5 py-1 rounded-full">${item.cat}</span>
+      </div>
+      <div class="p-4">
+        <div class="flex items-start justify-between gap-3 mb-1.5">
+          <h3 class="font-display font-bold text-base leading-snug">${item.name}</h3>
+          <span class="text-brand-400 font-semibold text-sm whitespace-nowrap">$${item.price.toFixed(2)}</span>
+        </div>
+        <p class="text-brand-800 text-xs leading-relaxed mb-4 line-clamp-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${item.desc}</p>
+        <button class="add-btn w-full" onclick="addToCart('${item.id}')" aria-label="Add ${item.name} to cart">
+          <i class="fa-solid fa-plus text-xs mr-1"></i> Add to Cart
+        </button>
+      </div>
+    </article>
+  `).join('');
+}
+
+function renderMenu() {
+  renderCategoryPills();
+  filterMenu();
+}
+
+// ============================================
+// CART
+// ============================================
+function addToCart(itemId) {
+  const item = MENU.find(i => i.id === itemId);
+  if (!item) {
+    showToast('Menu did not load properly. Please refresh the page.', 'error');
+    return;
+  }
+  const existing = state.cart.find(c => c.item.id === itemId);
+  if (existing) {
+    existing.qty++;
+  } else {
+    state.cart.push({item, qty:1});
+  }
+  updateCartBadge();
+  showToast(`${item.name} added to cart`, 'success');
+  // Show AI upsell
+  const paired = PAIRINGS[itemId];
+  if (paired && paired.length > 0) {
+    setTimeout(() => showUpsell(item, paired), 400);
+  }
+}
+
+function removeFromCart(index) {
+  state.cart.splice(index, 1);
+  renderCartItems();
+  updateCartBadge();
+}
+
+function updateQty(index, delta) {
+  state.cart[index].qty += delta;
+  if (state.cart[index].qty <= 0) state.cart.splice(index, 1);
+  renderCartItems();
+  updateCartBadge();
+}
+
+function getCartSubtotal() {
+  return state.cart.reduce((s, c) => s + c.item.price * c.qty, 0);
+}
+
+function updateCartBadge() {
+  const badge = document.getElementById('cart-badge');
+  const count = state.cart.reduce((s, c) => s + c.qty, 0);
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.remove('hidden');
+    badge.classList.add('badge-bounce');
+    setTimeout(() => badge.classList.remove('badge-bounce'), 350);
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function renderCartItems() {
+  const container = document.getElementById('cart-items');
+  const footer = document.getElementById('cart-footer');
+  if (state.cart.length === 0) {
+    container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center"><i class="fa-solid fa-bag-shopping text-3xl text-brand-800 mb-3"></i><p class="text-brand-800 text-sm">Your cart is empty</p><p class="text-brand-800 text-xs mt-1">Browse the menu to add items</p></div>`;
+    footer.style.display = 'none';
+    return;
+  }
+  footer.style.display = 'block';
+  container.innerHTML = state.cart.map((c, i) => `
+    <div class="flex gap-3 mb-4 pb-4 border-b border-brand-800 last:border-0 last:mb-0 last:pb-0">
+      <img src="${c.item.img}" alt="${c.item.name}" class="w-14 h-14 rounded-lg object-cover flex-shrink-0">
+      <div class="flex-1 min-w-0">
+        <h4 class="text-sm font-semibold truncate">${c.item.name}</h4>
+        <p class="text-brand-400 text-sm font-medium">$${(c.item.price * c.qty).toFixed(2)}</p>
+        <div class="flex items-center gap-2 mt-1.5">
+          <button onclick="updateQty(${i},-1)" class="w-6 h-6 rounded bg-brand-800 text-brand-300 text-xs flex items-center justify-center hover:bg-brand-700 transition-colors" aria-label="Decrease quantity"><i class="fa-solid fa-minus text-[9px]"></i></button>
+          <span class="text-sm font-medium w-5 text-center">${c.qty}</span>
+          <button onclick="updateQty(${i},1)" class="w-6 h-6 rounded bg-brand-800 text-brand-300 text-xs flex items-center justify-center hover:bg-brand-700 transition-colors" aria-label="Increase quantity"><i class="fa-solid fa-plus text-[9px]"></i></button>
+          <button onclick="removeFromCart(${i})" class="ml-auto text-brand-800 hover:text-terra-400 transition-colors text-xs" aria-label="Remove item"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  const sub = getCartSubtotal();
+  const tax = sub * 0.08;
+  document.getElementById('cart-subtotal').textContent = '$' + sub.toFixed(2);
+  document.getElementById('cart-tax').textContent = '$' + tax.toFixed(2);
+  document.getElementById('cart-total').textContent = '$' + (sub + tax).toFixed(2);
+}
+
+function toggleCart() {
+  const overlay = document.getElementById('cart-overlay');
+  const panel = document.getElementById('cart-panel');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) closeCart();
+  else openCart();
+}
+
+function openCart() {
+  renderCartItems();
+  document.getElementById('cart-overlay').classList.add('open');
+  document.getElementById('cart-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCart() {
+  document.getElementById('cart-overlay').classList.remove('open');
+  document.getElementById('cart-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function goToCheckout() {
+  if (state.cart.length === 0) { showToast('Your cart is empty', 'error'); return; }
+  closeCart();
+  navigate('checkout');
+}
+
+// ============================================
+// AI UPSELL
+// ============================================
+function showUpsell(addedItem, pairedIds) {
+  const paired = pairedIds.map(id => MENU.find(m => m.id === id)).filter(Boolean).slice(0, 3);
+  if (paired.length === 0) return;
+  const body = document.getElementById('upsell-body');
+  body.innerHTML = `
+    <div class="flex items-center gap-2 mb-1">
+      <i class="fa-solid fa-wand-magic-sparkles text-brand-400 text-sm"></i>
+      <span class="text-xs text-brand-400 font-medium uppercase tracking-wider">Frequently Paired</span>
+    </div>
+    <p class="text-sm text-brand-300 mb-5">Customers who ordered <strong class="text-brand-100">${addedItem.name}</strong> also love:</p>
+    <div class="flex flex-col gap-3">
+      ${paired.map(p => `
+        <div class="flex items-center gap-3 p-2.5 rounded-lg bg-brand-950/50 border border-brand-800 hover:border-brand-400/30 transition-colors">
+          <img src="${p.img}" alt="${p.name}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+          <div class="flex-1 min-w-0">
+            <h4 class="text-sm font-semibold truncate">${p.name}</h4>
+            <p class="text-brand-400 text-sm">$${p.price.toFixed(2)}</p>
+          </div>
+          <button onclick="addToCart('${p.id}');closeUpsell()" class="px-3 py-1.5 rounded-lg bg-brand-400/10 border border-brand-400/30 text-brand-400 text-xs font-semibold hover:bg-brand-400 hover:text-brand-950 transition-all flex-shrink-0">
+            Add
+          </button>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('upsell-modal').classList.add('open');
+  // Auto close after 6 seconds
+  clearTimeout(state.upsellTimer);
+  state.upsellTimer = setTimeout(closeUpsell, 6000);
+}
+
+function closeUpsell() {
+  document.getElementById('upsell-modal').classList.remove('open');
+  clearTimeout(state.upsellTimer);
+}
+
+// ============================================
+// COMPLAINT BOX — posts to the real backend so
+// it shows up immediately on the admin dashboard
+// ============================================
+function openComplaintModal() {
+  if (!state.customer) {
+    showToast('Please sign in to file a complaint.', 'info');
+    navigate('customer-login');
+    return;
+  }
+  document.getElementById('complaint-account-note').textContent =
+    `Filing as ${state.customer.name} — you'll see the manager's response on your account page.`;
+  document.getElementById('complaint-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeComplaintModal() {
+  document.getElementById('complaint-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function submitComplaint(e) {
+  e.preventDefault();
+  const form = e.target;
+  clearErrors();
+  const orderNumber = form.orderNumber.value.trim();
+  const subject = form.subject.value;
+  const message = form.message.value.trim();
+
+  if (message.length < 5) { showFieldError('c-message', 'Please describe the issue.'); return; }
+
+  const btn = document.getElementById('complaint-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    await apiFetch('/api/complaints', {
+      method: 'POST',
+      headers: authHeaders(state.customerToken),
+      body: JSON.stringify({ orderNumber, subject, message })
+    });
+    form.reset();
+    closeComplaintModal();
+    showToast('Thanks — your complaint was sent to the manager. Check your account page for updates.', 'success');
+    if (state.currentView === 'account') renderAccount();
+  } catch (err) {
+    showToast(err.message || 'Could not reach the server. Please try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit Complaint';
+  }
+}
+
+
+// ============================================
+// CHECKOUT
+// ============================================
+let cachedRegions = null;
+async function loadRegionsIntoSelect() {
+  const select = document.querySelector('select[name="region"]');
+  if (!select) return;
+  if (!cachedRegions) {
+    try {
+      const data = await apiFetch('/api/orders/meta/regions');
+      cachedRegions = data.regions || [];
+    } catch (e) {
+      cachedRegions = [];
+    }
+  }
+  select.innerHTML = '<option value="">Select your region…</option>' +
+    cachedRegions.map(r => `<option value="${r}">${r}</option>`).join('');
+}
+
+function renderCheckout() {
+  const container = document.getElementById('checkout-items');
+  container.innerHTML = state.cart.map(c => `
+    <div class="flex justify-between text-sm mb-1.5">
+      <span class="text-brand-300">${c.qty}x ${c.item.name}</span>
+      <span class="font-medium">$${(c.item.price * c.qty).toFixed(2)}</span>
+    </div>
+  `).join('');
+  const sub = getCartSubtotal();
+  const tax = sub * 0.08;
+  document.getElementById('checkout-subtotal').textContent = '$' + sub.toFixed(2);
+  document.getElementById('checkout-tax').textContent = '$' + tax.toFixed(2);
+  document.getElementById('checkout-total').textContent = '$' + (sub + tax).toFixed(2);
+  loadRegionsIntoSelect();
+  // Toggle address field
+  document.querySelectorAll('input[name="orderType"]').forEach(r => r.onchange = () => {
+    document.getElementById('address-field').classList.toggle('hidden', r.value !== 'delivery' || !r.checked);
+  });
+  // Show who's ordering (checkout is gated behind login, so this is always set)
+  if (state.customer) {
+    document.getElementById('checkout-account-name').textContent = `${state.customer.name} · ${state.customer.phone}`;
+  }
+}
+
+async function handleCheckout(e) {
+  e.preventDefault();
+  const form = e.target;
+  const orderType = form.orderType.value;
+  const address = form.address?.value.trim() || '';
+  const region = form.region?.value || '';
+  const notes = form.notes?.value.trim() || '';
+  // Validate
+  let valid = true;
+  clearErrors();
+  if (orderType === 'delivery' && !region) { showFieldError('region', 'Please select your region.'); valid = false; }
+  if (orderType === 'delivery' && address.length < 5) { showFieldError('address', 'Please enter a delivery address.'); valid = false; }
+  if (state.cart.length === 0) { showToast('Your cart is empty.', 'error'); valid = false; }
+  if (!valid) return;
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Placing order…';
+
+  try {
+    const items = state.cart.map(c => ({ menuItemId: c.item.id, name: c.item.name, qty: c.qty, price: c.item.price }));
+    const order = await apiFetch('/api/orders', {
+      method: 'POST',
+      headers: authHeaders(state.customerToken),
+      body: JSON.stringify({ items, orderType, deliveryAddress: address, region, notes })
+    });
+    state.cart = [];
+    updateCartBadge();
+    form.reset();
+    showToast(`Order ${order.orderNumber} placed successfully!`, 'success');
+    navigate('tracking', order.orderNumber);
+  } catch (err) {
+    showToast(err.message || 'Could not place your order. Please try again.', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Place Order';
+  }
+}
+
+function showFieldError(field, msg) {
+  const el = document.querySelector(`[data-error="${field}"]`);
+  if (el) el.textContent = msg;
+}
+function clearErrors() {
+  document.querySelectorAll('.form-error').forEach(e => e.textContent = '');
+  document.getElementById('admin-login-error')?.classList.add('hidden');
+}
+
+// ============================================
+// ORDER TRACKING
+// ============================================
+async function renderTracking(orderNumber) {
+  const container = document.getElementById('tracking-content');
+  const lookupId = orderNumber || localStorage.getItem('eb_last_order');
+
+  if (!lookupId) {
+    container.innerHTML = `
+      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+      <div class="text-center py-16">
+        <i class="fa-solid fa-receipt text-4xl text-brand-800 mb-4"></i>
+        <h2 class="font-display text-2xl font-bold mb-2">Track an Order</h2>
+        <p class="text-brand-800 text-sm mb-6">Enter your order number to see live status.</p>
+        <form onsubmit="event.preventDefault();navigate('tracking', event.target.orderNumber.value.trim())" class="flex gap-2 max-w-xs mx-auto">
+          <input name="orderNumber" class="form-input" placeholder="EB-1041">
+          <button class="bg-brand-400 text-brand-950 font-semibold px-5 rounded-xl text-sm hover:bg-brand-500 transition-colors">Go</button>
+        </form>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="text-center py-20 text-brand-800"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>`;
+
+  let order;
+  try {
+    order = await apiFetch('/api/orders/' + encodeURIComponent(lookupId));
+  } catch (err) {
+    container.innerHTML = `
+      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+      <div class="text-center py-16">
+        <i class="fa-solid fa-circle-exclamation text-4xl text-terra-400 mb-4"></i>
+        <h2 class="font-display text-2xl font-bold mb-2">Order Not Found</h2>
+        <p class="text-brand-800 text-sm mb-6">${err.message || 'Double check the order number and try again.'}</p>
+        <button onclick="localStorage.removeItem('eb_last_order');navigate('tracking')" class="bg-brand-400 text-brand-950 font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-brand-500 transition-colors">Try Again</button>
+      </div>`;
+    return;
+  }
+
+  localStorage.setItem('eb_last_order', order.orderNumber);
+  const statusFlow = getStatusFlow(order);
+  const statusIdx = statusFlow.indexOf(order.status);
+  const isArrived = order.status === statusFlow[statusFlow.length - 1];
+  const placedAt = new Date(order.createdAt);
+  container.innerHTML = `
+    <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+    <div class="text-center mb-10">
+      <p class="text-brand-400 text-xs tracking-[.2em] uppercase font-medium mb-1">Order</p>
+      <h2 class="font-display text-3xl sm:text-4xl font-bold">${order.orderNumber}</h2>
+      <p class="text-brand-800 text-sm mt-1">Placed at ${placedAt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>
+    </div>
+    ${order.status === 'cancelled' ? `
+    <div class="text-center py-6 mb-6 bg-terra-400/10 border border-terra-400/20 rounded-xl">
+      <p class="font-semibold text-terra-400">This order was cancelled.</p>
+    </div>` : `
+    <!-- Animated Order Journey -->
+    <div class="order-journey mb-6">
+      <div class="journey-track">
+        <div class="journey-progress" style="width:${(statusIdx/(statusFlow.length-1))*100}%"></div>
+        <div class="journey-mover ${isArrived ? 'arrived' : ''}" style="left:${(statusIdx/(statusFlow.length-1))*100}%">
+          <div class="mover-box"><i class="fa-solid ${STATUS_ICONS[order.status]}"></i></div>
+          <div class="mover-shadow"></div>
+        </div>
+        ${statusFlow.map((s, i) => {
+          const cls = i < statusIdx ? 'done' : i === statusIdx ? 'active' : '';
+          const icon = i < statusIdx ? '<i class="fa-solid fa-check"></i>' : `<i class="fa-solid ${STATUS_ICONS[s]}"></i>`;
+          const log = order.statusLog.find(l=>l.status===s);
+          return `<div class="journey-stop ${cls}" style="left:${(i/(statusFlow.length-1))*100}%">
+            <div class="stop-icon">${icon}${cls==='active' && s==='preparing' ? '<span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span>' : ''}</div>
+            <span class="stop-label">${STATUS_LABELS[s]}</span>
+            ${log ? `<span class="stop-time">${new Date(log.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${order.status === 'completed' ? `
+      <div class="celebrate">
+        <div class="confetti-wrap">${makeConfetti()}</div>
+        <span class="celebrate-emoji">🎉</span>
+        <p class="celebrate-text">Hurrah! Order Complete</p>
+        <p class="celebrate-sub">Enjoy your meal, ${(order.customerName || '').split(' ')[0]}!</p>
+      </div>` : ''}
+    </div>`}
+    <!-- Order details -->
+    <div class="bg-brand-900 border border-brand-800 rounded-xl p-5 mb-6">
+      <h3 class="font-semibold text-sm mb-3 text-brand-300">Items</h3>
+      ${order.items.map(it => `
+        <div class="flex justify-between text-sm mb-1.5">
+          <span class="text-brand-300">${it.qty}x ${it.name}</span>
+          <span>$${(it.price * it.qty).toFixed(2)}</span>
+        </div>
+      `).join('')}
+      <div class="border-t border-brand-800 mt-3 pt-3 flex justify-between font-bold">
+        <span>Total</span><span class="text-brand-400">$${order.total.toFixed(2)}</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div class="bg-brand-900 border border-brand-800 rounded-xl p-4">
+        <span class="text-brand-800 text-xs block mb-0.5">Type</span>
+        <span class="font-medium capitalize">${order.orderType}</span>
+      </div>
+      <div class="bg-brand-900 border border-brand-800 rounded-xl p-4">
+        <span class="text-brand-800 text-xs block mb-0.5">Name</span>
+        <span class="font-medium">${order.customerName}</span>
+      </div>
+      ${order.deliveryAddress ? `<div class="col-span-2 bg-brand-900 border border-brand-800 rounded-xl p-4"><span class="text-brand-800 text-xs block mb-0.5">Delivery Address</span><span class="font-medium">${order.deliveryAddress}</span></div>` : ''}
+      ${order.notes ? `<div class="col-span-2 bg-brand-900 border border-brand-800 rounded-xl p-4"><span class="text-brand-800 text-xs block mb-0.5">Notes</span><span class="font-medium">${order.notes}</span></div>` : ''}
+    </div>
+    ${order.deliveryBoyName && ['out-for-delivery','delivered','completed'].includes(order.status) ? `
+    <div class="mt-4 bg-brand-900 border border-brand-800 rounded-xl p-4 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full bg-brand-400 text-brand-950 flex items-center justify-center font-display font-bold text-lg shrink-0">
+          <i class="fa-solid fa-motorcycle"></i>
+        </div>
+        <div>
+          <span class="text-brand-800 text-xs block mb-0.5">Your Delivery Rider</span>
+          <span class="font-medium text-sm">${order.deliveryBoyName}</span>
+        </div>
+      </div>
+      ${order.deliveryBoyPhone ? `<a href="tel:${order.deliveryBoyPhone}" class="bg-brand-400 text-brand-950 font-semibold text-xs px-4 py-2.5 rounded-xl hover:bg-brand-500 transition-colors flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-phone"></i> Call</a>` : ''}
+    </div>` : ''}
+  `;
+
+  // Poll for live status updates from the admin board while this view is open
+  if (state.trackingPoll) clearInterval(state.trackingPoll);
+  if (!['completed', 'cancelled'].includes(order.status)) {
+    state.trackingPoll = setInterval(async () => {
+      if (state.currentView !== 'tracking') { clearInterval(state.trackingPoll); return; }
+      try {
+        const fresh = await apiFetch('/api/orders/' + encodeURIComponent(order.orderNumber));
+        if (fresh.status !== order.status) {
+          if (fresh.status === 'ready') showToast(`Order ${order.orderNumber} is ready!`, 'info');
+          if (fresh.status === 'completed') showToast(`Order ${order.orderNumber} completed. Enjoy!`, 'success');
+          renderTracking(order.orderNumber);
+        }
+      } catch { /* ignore transient poll errors */ }
+    }, 8000);
+  }
+}
+
+// ============================================
+// TOASTS
+// ============================================
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const icons = {success:'fa-circle-check',info:'fa-circle-info',error:'fa-circle-exclamation'};
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<i class="fa-solid ${icons[type]} toast-icon"></i><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// ============================================
+// MOBILE NAV
+// ============================================
+function toggleMobileNav() {
+  document.getElementById('mobile-nav').classList.toggle('hidden');
+}
+function closeMobileNav() {
+  document.getElementById('mobile-nav').classList.add('hidden');
+}
+
+// ============================================
+// PARTICLES
+// ============================================
+function initParticles() {
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = Array.from({length: 40}, () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    size: Math.random() * 1.8 + 0.4,
+    vy: -(Math.random() * 0.25 + 0.05),
+    vx: (Math.random() - 0.5) * 0.15,
+    opacity: Math.random() * 0.25 + 0.05,
+    color: Math.random() > 0.6 ? '#C67D5A' : '#D4A853',
+  }));
+
+  // Check reduced motion
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) return;
+
+  function animate() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => {
+      p.y += p.vy;
+      p.x += p.vx;
+      if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.1, p.size), 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.opacity;
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ============================================
+// NAV SCROLL EFFECT
+// ============================================
+function initNavScroll() {
+  const nav = document.getElementById('main-nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  }, {passive: true});
+}
+
+// ============================================
+// DELIVERY FIELD TOGGLE (also on page render)
+// ============================================
+document.addEventListener('change', e => {
+  if (e.target.name === 'orderType') {
+    document.getElementById('address-field').classList.toggle('hidden', e.target.value !== 'delivery');
+  }
+});
+
+// ============================================
+// FOOTER
+// ============================================
+function handleNewsletterSignup(e) {
+  e.preventDefault();
+  const input = e.target.querySelector('input[type="email"]');
+  showToast(`Thanks! We'll send offers to ${input.value}`, 'success');
+  e.target.reset();
+}
+function setFooterYear() {
+  const el = document.getElementById('footer-year');
+  if (el) el.textContent = new Date().getFullYear();
+}
+
+// ============================================
+// INIT
+// ============================================
+function init() {
+  initParticles();
+  initNavScroll();
+  updateAccountNavLabel();
+  loadPublicMenu();
+  setFooterYear();
+}
+
+init();
+</script>
+</body>
+</html>

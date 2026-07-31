@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Display | Ember & Brew</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+<link rel="stylesheet" href="kitchen.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ============ NAV BAR ============ -->
+  <header class="topnav">
+
+    <div class="topnav-row">
+
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="brand-mark">
+          <img src="assets/logo.png" alt="" onerror="this.replaceWith(Object.assign(document.createElement('i'),{className:'fa-solid fa-mug-hot'}))">
+        </div>
+        <div>
+          <div class="brand-title">EMBER &amp; BREW</div>
+          <div class="brand-sub">Kitchen Display · Live Orders</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Live stats -->
+      <div class="flex items-center gap-2">
+        <div class="stat-pill"><span class="label">Pending</span><span class="value" id="stat-pending">0</span></div>
+        <div class="stat-pill"><span class="label">Preparing</span><span class="value" id="stat-preparing">0</span></div>
+        <div class="stat-pill"><span class="label">Ready</span><span class="value" id="stat-ready" style="color: var(--green)">0</span></div>
+        <div class="stat-pill"><span class="label">Avg</span><span class="value" id="stat-avg">0m</span></div>
+        <div class="stat-pill"><span class="label">Late</span><span class="value" id="stat-late" style="color: var(--red)">0</span></div>
+      </div>
+
+      <div class="flex-1"></div>
+
+      <!-- Clock -->
+      <div class="text-right">
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="clock-date" id="clock-date">— — —</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-2">
+        <button class="icon-btn active" id="btn-sound" title="Toggle sound">
+          <i class="fa-solid fa-volume-high"></i>
+        </button>
+        <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">
+          <i class="fa-solid fa-expand"></i>
+        </button>
+        <button class="icon-btn" id="logoutBtn" title="Logout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sub row: station filters (built from the live menu categories) -->
+    <div class="subnav">
+      <div class="flex items-center gap-2 flex-wrap" id="station-pills">
+        <button class="station-pill active" data-station="all">All <span class="count" id="cnt-all">0</span></button>
+      </div>
+      <div class="flex-1"></div>
+      <button class="btn-bump-all" id="btn-bump-all" disabled>
+        <i class="fa-solid fa-check-double"></i> Bump All Ready
+      </button>
+      <div class="sync-indicator" id="sync-indicator"><span class="dot"></span> Live</div>
+    </div>
+  </header>
+
+  <!-- ============ ORDER GRID ============ -->
+  <main class="main-scroll">
+    <div class="order-grid" id="order-grid"></div>
+    <div class="empty-state hidden" id="empty-state">
+      <div>
+        <div class="icon"><i class="fa-solid fa-check"></i></div>
+        <div class="big">ALL CLEAR</div>
+        <div class="sub">No active tickets in queue</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="kitchen.js"></script>
+
+<script>
+window.EB_CHATBOT_CONFIG = {
+  tokenKey: 'eb_admin_token',
+  title: 'Kitchen Assistant',
+  subtitle: 'Orders & prep queue',
+  greeting: "Hi Chef! Ask me \"what's the latest order?\", \"what do I need to prepare?\", or \"any special instructions on EB-XXXXXX?\"",
+  quickReplies: ['What is the latest order?', 'What do I have to prepare?', 'Any special instructions?', 'How busy are we?']
+};
+</script>
+<script src="/chatbot-widget.js"></script>
+
+</body>
+</html>

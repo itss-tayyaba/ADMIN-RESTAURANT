@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Delivery Portal — Ember & Brew</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="delivery.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="ember-dot"></span>
+      <span class="name">Ember <em>&amp;</em> Brew</span>
+    </div>
+    <p class="sidebar-tagline">Delivery Portal</p>
+
+    <div class="nav-section-label">Dashboard</div>
+    <button class="nav-item active" data-view="assigned"><span class="ic">🛵</span> Out for Delivery <span class="nav-badge" id="assignedBadge">0</span></button>
+    <button class="nav-item" data-view="delivered"><span class="ic">✅</span> Delivered Today <span class="nav-badge" id="deliveredBadge" hidden>0</span></button>
+
+    <div class="sidebar-foot">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="riderAvatar">R</div>
+        <div class="who">
+          <span class="n" id="riderNameLabel">Rider</span>
+          <span class="r" id="riderRegionLabel">Loading region…</span>
+        </div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <h1 class="serif">Welcome back, <span id="riderFirstName">Rider</span>!</h1>
+      <div class="topbar-right">
+        <span class="date-pill" id="todayDate"></span>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Stat cards -->
+      <div class="stat-grid">
+        <div class="stat-card gold">
+          <div class="label">Out for Delivery</div>
+          <div class="value" id="assignedCount">0</div>
+          <div class="sub">Awaiting drop-off</div>
+        </div>
+        <div class="stat-card sage">
+          <div class="label">Delivered Today</div>
+          <div class="value" id="deliveredCount">0</div>
+          <div class="sub">Completed since midnight</div>
+        </div>
+        <div class="stat-card ember">
+          <div class="label">Your Region</div>
+          <div class="value region-value" id="riderRegionValue">—</div>
+          <div class="sub" id="riderCapacityLabel">Loading capacity…</div>
+        </div>
+      </div>
+
+      <!-- Active Delivery + Live Map -->
+      <section class="panel active-delivery-panel" id="activeDeliveryPanel" style="margin-bottom:22px;">
+        <div class="panel-head">
+          <h3>Active Delivery</h3>
+          <span class="badge out-for-delivery" id="activeDeliveryBadge" hidden>In Transit</span>
+        </div>
+        <div class="panel-body active-delivery-body">
+          <div class="delivery-map-wrap">
+            <div id="deliveryMap"></div>
+            <div class="map-status-pill" id="mapStatusPill">No active order to trace</div>
+          </div>
+          <div class="active-order-panel" id="activeOrderPanel">
+            <div class="empty-orders">🛵 No orders out for delivery right now.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Out for delivery -->
+      <section class="panel" id="assigned" style="margin-bottom:22px;">
+        <div class="panel-head">
+          <h3>Out for Delivery</h3>
+        </div>
+        <div class="panel-body">
+          <div id="assignedOrders" class="order-grid"></div>
+        </div>
+      </section>
+
+      <!-- Delivered today -->
+      <section class="panel" id="delivered">
+        <div class="panel-head">
+          <h3>Delivered Today</h3>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Time</th></tr>
+            </thead>
+            <tbody id="deliveredBody">
+              <tr><td colspan="5" class="empty-state">Nothing delivered yet today.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="delivery.js"></script>
+
+<script>
+window.EB_CHATBOT_CONFIG = {
+  tokenKey: 'eb_admin_token',
+  title: 'Delivery Assistant',
+  subtitle: 'Your assigned drop-offs',
+  greeting: "Hi! Ask me \"what are my deliveries?\", \"what's my next delivery?\", or \"details for EB-XXXXXX\".",
+  quickReplies: ['What are my deliveries?', "What's my next delivery?", 'How many did I deliver today?', 'My region?']
+};
+</script>
+<script src="/chatbot-widget.js"></script>
+
+</body>
+</html>

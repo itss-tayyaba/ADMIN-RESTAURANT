@@ -1,0 +1,164 @@
+:root{
+  --ink:#1A1917;
+  --paper:#F5F0E8;
+  --paper-soft:#FCFAF5;
+  --surface:#FFFFFF;
+  --surface-soft:#F8F1E3;
+  --border:#E3D9C6;
+  --text:#242220;
+  --muted:#8A8478;
+  --accent:#C4923A;
+  --accent-deep:#A87832;
+  --accent-soft:rgba(196,146,58,0.12);
+  --danger:#B54B3A;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--text);margin:0}
+button, input, select, textarea{font:inherit}
+.text-muted{color:var(--muted)}
+#portal-main{min-height:72vh}
+.customer-app{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;max-width:1180px;margin:0 auto;padding:12px 0}
+@media(max-width:1100px){.customer-app{display:block;padding:0}}
+.customer-sidebar{background:#0f0e0b;color:var(--paper);border-radius:32px;padding:30px 24px;display:flex;flex-direction:column;gap:24px;min-height:auto;border:1px solid rgba(255,255,255,.08);box-shadow:0 28px 48px rgba(0,0,0,.18)}
+.sidebar-brand{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-brand .dot{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--accent),var(--accent-deep));box-shadow:0 0 16px rgba(196,146,58,.4)}
+.sidebar-brand .title{font-family:'Playfair Display',serif;font-size:1.45rem;font-weight:700;letter-spacing:.01em}
+.sidebar-brand .title em{color:var(--accent)}
+.sidebar-note{font-size:.95rem;color:rgba(245,240,232,.74);line-height:1.75}
+.sidebar-actions{display:grid;gap:12px;margin-top:16px}
+.sidebar-action{width:100%;text-align:left;padding:14px 18px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--paper);font-weight:700;font-size:.96rem;transition:all .2s;box-shadow:inset 0 0 0 rgba(255,255,255,0)}
+.sidebar-action:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18);box-shadow:inset 0 0 0 rgba(255,255,255,0)}
+.sidebar-menu{display:grid;gap:12px;margin-top:10px}
+.sidebar-item{width:100%;text-align:left;padding:16px 20px;border-radius:22px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--paper);font-weight:700;font-size:.96rem;transition:all .25s}
+.sidebar-item.active{background:rgba(196,146,58,.18);border-color:rgba(196,146,58,.28);color:#fff;box-shadow:inset 4px 0 0 rgba(196,146,58,.4)}
+.sidebar-item:hover{background:rgba(255,255,255,.1)}
+.sidebar-foot{margin-top:auto;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+.customer-main{display:flex;flex-direction:column;gap:24px;max-width:940px;width:100%;margin:0 auto}
+.customer-topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px;padding:22px 26px;background:var(--surface);border:1px solid var(--border);border-radius:30px;box-shadow:0 20px 45px rgba(36,34,32,.08)}
+.customer-topbar h1{font-family:'Playfair Display',serif;font-size:1.95rem;margin:0;line-height:1.05}
+.customer-topbar p{margin:0;color:var(--muted);max-width:620px}
+.customer-content{display:flex;flex-direction:column;gap:24px}
+.dashboard-summary{display:grid;grid-template-columns:repeat(3,minmax(230px,1fr));gap:18px}
+@media(max-width:900px){.dashboard-summary{grid-template-columns:1fr}}
+.summary-card{background:var(--surface-soft);border:1px solid var(--border);border-radius:24px;padding:22px;box-shadow:0 18px 40px rgba(36,34,32,.06);min-height:150px}
+.summary-card .label{font-size:.82rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:10px}
+.summary-card .value{font-family:'Playfair Display',serif;font-size:1.9rem;color:var(--ink);line-height:1}
+.summary-card .sub{margin-top:10px;color:var(--muted);font-size:.95rem;line-height:1.6}
+.portal-card{background:var(--surface-soft);border:1px solid var(--border);border-radius:28px;padding:30px;box-shadow:0 18px 40px rgba(36,34,32,.08)}
+.portal-card h2{margin:0 0 12px;color:var(--ink)}
+.portal-card p{color:var(--muted);line-height:1.75}
+.form-input{width:100%;background:var(--paper);border:1px solid var(--border);border-radius:16px;padding:16px 18px;color:var(--text);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--accent)}
+.form-button{border:none;border-radius:16px;padding:16px 18px;background:var(--accent);color:var(--paper);font-weight:700;cursor:pointer;transition:background .2s}
+.form-button.fullwidth{width:100%}
+.form-button:hover{background:var(--accent-deep)}
+.field-error{color:var(--danger);font-size:.85rem;line-height:1.3}
+.field-error:not(:empty){margin-top:6px}
+.order-list, .complaint-list{display:grid;gap:18px}
+.order-card, .complaint-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:22px}
+.order-card .order-header, .complaint-card .order-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.order-badge, .complaint-status{padding:8px 12px;border-radius:999px;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.order-badge{background:var(--accent-soft);color:var(--accent)}
+.complaint-status.new{background:rgba(154,86,56,.12);color:var(--accent-deep)}
+.complaint-status.in-progress{background:var(--accent-soft);color:var(--accent)}
+.complaint-status.resolved{background:rgba(163,180,150,.18);color:#657558}
+.link-button{display:inline-flex;align-items:center;gap:.5rem;padding:.95rem 1.25rem;border-radius:999px;border:1px solid rgba(196,146,58,.2);background:rgba(196,146,58,.08);color:var(--text);text-decoration:none;transition:all .25s}
+.link-button:hover{border-color:var(--accent);background:rgba(196,146,58,.14)}
+.order-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;transition:transform .25s,border-color .25s,box-shadow .25s}
+.order-card:hover{transform:translateY(-3px);border-color:rgba(196,146,58,.35);box-shadow:0 20px 45px rgba(36,34,32,.08)}
+.order-card .order-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.order-card .order-header p{margin:0}
+.order-card .order-badge{background:rgba(196,146,58,.14);color:var(--accent);}
+.order-card .order-meta{margin-top:18px;color:var(--muted);font-size:.95rem;line-height:1.7}
+.order-card .order-line{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:.95rem;color:var(--text)}
+.order-card .order-actions{margin-top:22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.customer-sidebar{background:linear-gradient(180deg, var(--ink) 0%, #13120f 100%);border-radius:32px;padding:32px 26px;box-shadow:0 30px 50px rgba(15,14,12,.18)}
+.sidebar-action{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);color:var(--paper);font-weight:700;}
+.sidebar-action:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.16)}
+.sidebar-item{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);color:var(--paper);}
+.sidebar-item.active{background:rgba(196,146,58,.18);border-color:rgba(196,146,58,.3);color:#fff;box-shadow:inset 3px 0 0 var(--accent);}
+.sidebar-item:hover{background:rgba(255,255,255,.1)}
+.order-journey{position:relative;padding:52px 0 108px}
+.journey-track{position:relative;height:4px;background:var(--border);border-radius:999px;margin:0 24px}
+.journey-progress{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-deep));border-radius:999px;transition:width 1.2s cubic-bezier(.65,0,.35,1);box-shadow:0 0 14px rgba(196,146,58,.35)}
+.journey-progress::after{content:'';position:absolute;top:0;right:0;bottom:0;width:24px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.65));filter:blur(2px);opacity:.75;animation:shimmer-sweep 1.6s ease-in-out infinite}
+.journey-mover{position:absolute;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:88px}
+.mover-box{width:36px;height:36px;border-radius:12px;background:linear-gradient(145deg,var(--accent),var(--accent-deep));display:flex;align-items:center;justify-content:center;color:var(--surface);font-size:14px;box-shadow:0 10px 24px rgba(196,146,58,.32);animation:mover-bounce 1s ease-in-out infinite;transform-origin:center}
+.journey-mover.arrived .mover-box{animation:mover-settle .6s ease both}
+.mover-shadow{width:22px;height:5px;background:rgba(0,0,0,.25);border-radius:50%;margin:5px auto 0;filter:blur(1.5px);animation:mover-shadow-pulse 1s ease-in-out infinite}
+.journey-stop{position:absolute;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;width:90px}
+.stop-icon{width:50px;height:50px;border-radius:50%;background:var(--surface);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);transition:all .4s;position:relative}
+.journey-stop.done .stop-icon{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.journey-stop.active .stop-icon{border-color:var(--accent);color:var(--accent);background:rgba(196,146,58,.1);animation:pulse-ring 1.8s infinite}
+.journey-stop.active .stop-icon i{animation:icon-pop .55s ease}
+.journey-stop.done .stop-icon i{animation:icon-pop .45s ease}
+.stop-label{font-size:.78rem;margin-top:42px;font-weight:700;text-align:center;color:var(--muted);transition:color .4s;line-height:1.3}
+.journey-stop.done .stop-label,.journey-stop.active .stop-label{color:var(--text)}
+.stop-time{font-size:.78rem;color:var(--muted);margin-top:4px}
+.steam{position:absolute;bottom:100%;width:4px;height:4px;border-radius:50%;background:rgba(196,146,58,.65);animation:steam-rise 1.8s ease-in infinite}
+.steam.s1{left:12px;animation-delay:0s}
+.steam.s2{left:24px;animation-delay:.45s}
+.steam.s3{left:36px;animation-delay:.9s}
+.celebrate{position:relative;text-align:center;margin-top:30px;padding:20px 16px;border-radius:20px;background:rgba(196,146,58,.08);border:1px solid rgba(196,146,58,.2);overflow:hidden}
+.celebrate-emoji{font-size:26px;display:block;margin-bottom:6px;animation:icon-pop .6s ease both}
+.celebrate-text{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--accent);animation:celebrate-pop .6s ease .1s both}
+.celebrate-sub{font-size:.92rem;color:var(--muted);margin-top:4px;animation:celebrate-pop .6s ease .2s both}
+@keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(196,146,58,.2)}50%{box-shadow:0 0 0 15px rgba(196,146,58,.05)}}
+@keyframes steam-rise{0%{opacity:0;transform:translateY(0) scale(0.6);}50%{opacity:.8;transform:translateY(-16px) scale(1);}100%{opacity:0;transform:translateY(-30px) scale(1.1)}}
+@keyframes icon-pop{0%{transform:scale(.8);opacity:0;}100%{transform:scale(1);opacity:1;}}
+@keyframes mover-bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes mover-settle{0%{opacity:0;transform:translateY(-12px) scale(.92);}100%{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes mover-shadow-pulse{0%{box-shadow:0 0 0 0 rgba(196,146,58,.3);}70%{box-shadow:0 0 0 7px rgba(196,146,58,0);}100%{box-shadow:0 0 0 0 rgba(196,146,58,0);}}
+#toast-container{pointer-events:none}
+.toast{padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.96);border:1px solid rgba(196,146,58,.2);color:var(--text);display:flex;align-items:center;gap:10px;min-width:260px;box-shadow:0 20px 50px rgba(36,34,32,.08)}
+.toast .toast-icon{font-size:1rem}
+.toast.success{border-color:rgba(103,187,97,.4)}
+.toast.error{border-color:rgba(216,112,101,.4)}
+.toast.info{border-color:rgba(196,146,58,.2)}
+@media(max-width:768px){.portal-card{padding:22px}.auth-tabs{flex-direction:column}.auth-tab{text-align:left}.customer-app{display:block}.customer-sidebar{min-height:auto}.customer-topbar{flex-direction:column;align-items:flex-start}}
+
+/* ==========================================================================
+   Theme alignment — the markup below still carries brand-* utility classes
+   written for the dark landing-page palette. The portal itself now uses the
+   same light paper/gold system as the Admin, Kitchen and Delivery portals,
+   so those utilities are re-pointed here to keep contrast correct and the
+   branding consistent across every portal.
+   ========================================================================== */
+#portal-main .text-brand-100{color:var(--ink)}
+#portal-main .text-brand-300{color:var(--muted)}
+#portal-main a.hover\:text-brand-300:hover,
+#portal-main button.hover\:text-brand-300:hover{color:var(--accent-deep)}
+#portal-main .text-brand-400{color:var(--accent)}
+#portal-main .border-brand-800{border-color:var(--border)}
+#portal-main .bg-brand-950,
+#portal-main .bg-brand-950\/80{background:var(--surface-soft)}
+
+/* Top nav (site-wide portal header, outside the sidebar shell) */
+.portal-nav{background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 1px 0 var(--border)}
+.portal-nav .nav-brand{display:flex;align-items:center;gap:10px}
+.portal-nav .nav-brand .dot{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--accent),var(--accent-deep));box-shadow:0 0 12px rgba(196,146,58,.5);flex-shrink:0}
+.portal-nav .nav-brand .name{font-family:'Playfair Display',serif;font-weight:700;font-size:1.15rem;color:var(--ink)}
+.portal-nav .nav-brand .name em{color:var(--accent);font-style:normal}
+.portal-nav .nav-brand .sub{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:1px}
+
+/* ---------------- Auth screen — matches the staff login-card design ---------------- */
+.auth-body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(196,146,58,0.18), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(154,86,56,0.20), transparent 45%),
+    var(--ink);
+}
+.auth-wrap{width:100%;max-width:380px}
+.auth-card{background:var(--surface);border-radius:20px;padding:40px 36px 32px;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:pop-in .45s cubic-bezier(.22,.61,.36,1) both}
+.auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.auth-brand .dot{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--accent),var(--accent-deep));box-shadow:0 0 12px rgba(196,146,58,.7);flex-shrink:0;animation:ember-glow 2.4s ease-in-out infinite}
+.auth-brand .name{font-family:'Playfair Display',serif;font-weight:700;font-size:24px;color:var(--ink)}
+.auth-brand .name em{color:var(--accent-deep);font-style:normal}
+.auth-sub{color:var(--muted);font-size:14px;margin:0 0 24px;line-height:1.6}
+.auth-tabs{display:flex;gap:1px;background:var(--surface-soft);border-radius:14px;overflow:hidden;margin-bottom:24px}
+.auth-tab{flex:1;padding:13px 14px;text-align:center;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);cursor:pointer;transition:all .2s;border:none;background:transparent;font-family:inherit}
+.auth-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff}
+.auth-foot{text-align:center;color:rgba(245,240,232,.55);font-size:12px;margin-top:20px;letter-spacing:.04em}
+@keyframes ember-glow{0%,100%{box-shadow:0 0 8px rgba(196,146,58,.55)}50%{box-shadow:0 0 16px rgba(196,146,58,.9)}}
+@keyframes pop-in{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
