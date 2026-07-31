@@ -16,6 +16,25 @@ const app = express();
 
 const AdminUser = require("./src/models/AdminUser");
 
+// Reuse the connection while a Vercel serverless instance is warm.
+let databaseConnection;
+function connectDatabase() {
+    if (mongoose.connection.readyState === 1) return Promise.resolve();
+    if (!databaseConnection) {
+        databaseConnection = mongoose.connect(process.env.MONGODB_URI)
+            .then(async () => {
+                await AdminUser.createDefaultAdmin();
+                await AdminUser.createDefaultChef();
+                await AdminUser.createDefaultDelivery();
+            })
+            .catch((err) => {
+                databaseConnection = null;
+                throw err;
+            });
+    }
+    return databaseConnection;
+}
+
 // ===================== ROUTES =====================
 
 const menuRoutes = require("./src/Routes/menu");
@@ -35,6 +54,10 @@ app.use(cors());
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+    connectDatabase().then(() => next()).catch(next);
+});
 
 // ===================== STATIC =====================
 
@@ -195,6 +218,9 @@ app.get("*", (req, res) => {
 
 // ===================== DATABASE =====================
 
+// The persistent HTTP and Socket.IO server is only for local development.
+// Vercel imports this module and serves the Express app as a function.
+if (require.main === module) {
 mongoose.connect(process.env.MONGODB_URI)
 
 .then(async () => {
@@ -232,3 +258,6 @@ mongoose.connect(process.env.MONGODB_URI)
     console.error(err);
 
 });
+}
+
+module.exports = app;
