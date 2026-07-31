@@ -157,3 +157,34 @@ ember-and-brew/public/       Frontend — one folder per portal
 - If you see `Socket connected: <id>` / `Socket disconnected: <id>` in the
   server logs, that's just Socket.IO logging each portal tab that opens or
   closes a live-update connection — normal, not an error.
+
+  # 🚀 Deployment
+
+The Restaurant Management System has been successfully deployed on **Vercel**.
+
+## Live Application
+
+Frontend + Backend (Full Application):
+
+https://admin-restaurant-six.vercel.app/
+
+## Backend API
+
+Menu API Endpoint:
+
+https://admin-restaurant-six.vercel.app/api/menu
+
+## Deployment Details
+
+* Frontend and backend are deployed together on the same Vercel project.
+* All existing `/api/*` routes work correctly without additional CORS configuration.
+* Deployment has been verified successfully.
+* Both frontend and backend endpoints return HTTP 200 status codes.
+
+The live application provides access to all major modules:
+
+* Customer Portal
+* Admin Dashboard
+* Kitchen Management Portal
+* Delivery Management Portal
+* Restaurant API Services
