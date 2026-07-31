@@ -174,7 +174,7 @@ function renderRegisterForm() {
         <div class="field-error" id="error-name"></div>
       </div>
       <div>
-        <input name="phone" class="form-input" placeholder="Phone number" autocomplete="off" value="" inputmode="numeric" maxlength="11" pattern="\d{11}">
+        <input name="phone" class="form-input" placeholder="Phone number" autocomplete="off" value="" inputmode="numeric" maxlength="11" pattern="[0-9]{11}">
         <div class="field-error" id="error-phone"></div>
       </div>
       <div>
