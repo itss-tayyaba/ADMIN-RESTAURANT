@@ -38,9 +38,15 @@
     </div>
   </aside>
 
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <!-- Main -->
   <div class="main">
     <header class="topbar">
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
       <h1 class="serif" id="pageTitle">Overview</h1>
       <div class="topbar-search">
         <input type="text" id="globalSearch" placeholder="Search orders or dishes…" />
@@ -89,7 +95,8 @@
               <button class="link" data-goto="orders">View all →</button>
             </div>
             <div class="panel-body">
-              <table>
+              <div class="table-scroll">
+<table>
                 <thead>
                   <tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr>
                 </thead>
@@ -97,6 +104,7 @@
                   <tr><td colspan="4" class="empty-state">Loading…</td></tr>
                 </tbody>
               </table>
+</div>
             </div>
           </div>
 
@@ -126,7 +134,8 @@
         </div>
         <div class="panel">
           <div class="panel-body">
-            <table>
+            <div class="table-scroll">
+<table>
               <thead>
                 <tr><th>Order</th><th>Customer</th><th>Type</th><th>Region</th><th>Items</th><th>Total</th><th>Status</th><th>Delivery</th><th>Update</th></tr>
               </thead>
@@ -134,6 +143,7 @@
                 <tr><td colspan="9" class="empty-state">Loading…</td></tr>
               </tbody>
             </table>
+</div>
           </div>
         </div>
       </div>
@@ -179,7 +189,8 @@
         </div>
         <div class="panel">
           <div class="panel-body">
-            <table>
+            <div class="table-scroll">
+<table>
               <thead>
                 <tr><th>Name</th><th>Username</th><th>Phone</th><th>Region</th><th>Active Orders</th><th>Status</th><th>Actions</th></tr>
               </thead>
@@ -187,6 +198,7 @@
                 <tr><td colspan="6" class="empty-state">Loading…</td></tr>
               </tbody>
             </table>
+</div>
           </div>
         </div>
       </div>

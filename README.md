@@ -172,7 +172,7 @@ https://admin-restaurant-six.vercel.app/
 
 Menu API Endpoint:
 
-https://admin-restaurant-six.vercel.app/api/menu
+https://admin-restaurant-six.vercel.app/api
 
 ## Deployment Details
 

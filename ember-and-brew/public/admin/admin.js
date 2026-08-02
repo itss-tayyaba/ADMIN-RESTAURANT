@@ -412,10 +412,27 @@
     if (name === 'complaints') loadComplaints();
     if (name === 'riders') refreshRidersView();
   }
-  els.navItems.forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+  els.navItems.forEach(btn => btn.addEventListener('click', () => { switchView(btn.dataset.view); closeSidebar(); }));
   document.querySelectorAll('[data-goto]').forEach(btn => {
-    btn.addEventListener('click', () => switchView(btn.dataset.goto));
+    btn.addEventListener('click', () => { switchView(btn.dataset.goto); closeSidebar(); });
   });
+
+  // ---------- Mobile sidebar toggle ----------
+  const sidebarEl = document.getElementById('sidebar');
+  const menuToggleBtn = document.getElementById('menuToggle');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  function openSidebar() {
+    sidebarEl && sidebarEl.classList.add('open');
+    sidebarOverlay && sidebarOverlay.classList.add('show');
+  }
+  function closeSidebar() {
+    sidebarEl && sidebarEl.classList.remove('open');
+    sidebarOverlay && sidebarOverlay.classList.remove('show');
+  }
+  menuToggleBtn && menuToggleBtn.addEventListener('click', () => {
+    sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  sidebarOverlay && sidebarOverlay.addEventListener('click', closeSidebar);
 
   // ---------- Toast ----------
   let toastTimer;
