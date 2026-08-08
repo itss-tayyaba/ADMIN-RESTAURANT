@@ -120,6 +120,7 @@
       overview: document.getElementById('view-overview'),
       orders: document.getElementById('view-orders'),
       menu: document.getElementById('view-menu'),
+      reservations: document.getElementById('view-reservations'),
       complaints: document.getElementById('view-complaints'),
       riders: document.getElementById('view-riders')
     },
@@ -144,6 +145,17 @@
     complaintsBadge: document.getElementById('complaintsBadge'),
     complaintFilterTabs: document.getElementById('complaintFilterTabs'),
     complaintsList: document.getElementById('complaintsList'),
+    reservationsBadge: document.getElementById('reservationsBadge'),
+    reservationFilterTabs: document.getElementById('reservationFilterTabs'),
+    reservationsBody: document.getElementById('reservationsBody'),
+    bookingTotal: document.getElementById('bookingTotal'),
+    bookingPending: document.getElementById('bookingPending'),
+    bookingConfirmed: document.getElementById('bookingConfirmed'),
+    bookingCompleted: document.getElementById('bookingCompleted'),
+    bookingUpcomingCount: document.getElementById('bookingUpcomingCount'),
+    bookingUpcomingList: document.getElementById('bookingUpcomingList'),
+    floorMap: document.getElementById('floorMap'), tableTotal: document.getElementById('tableTotal'), tableAvailable: document.getElementById('tableAvailable'), tableReserved: document.getElementById('tableReserved'),
+    floorFilters: document.getElementById('floorFilters'), toggleTableForm: document.getElementById('toggleTableForm'), addTableForm: document.getElementById('addTableForm'), newTableNumber: document.getElementById('newTableNumber'), newTableSeats: document.getElementById('newTableSeats'), newTableArea: document.getElementById('newTableArea'),
 
     orderFilterTabs: document.getElementById('orderFilterTabs'),
     ordersBody: document.getElementById('ordersBody'),
@@ -189,10 +201,15 @@
     toast: document.getElementById('toast')
   };
 
+  // Table edit option removed — edit modal elements omitted
+
   let allOrders = [];
   let prevOrdersMap = new Map(); // track previous statuses to notify of changes
   let allMenuItems = [];
   let allComplaints = [];
+  let currentReservationFilter = '';
+  let restaurantTables = [];
+  let currentTableArea = '';
   let currentOrderFilter = '';
   let currentMenuCategory = '';
   let currentComplaintFilter = '';
@@ -405,10 +422,12 @@
     currentView = name;
     Object.entries(els.views).forEach(([key, el]) => { el.hidden = key !== name; });
     els.navItems.forEach(btn => btn.classList.toggle('active', btn.dataset.view === name));
-    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', complaints: 'Complaints', riders: 'Delivery Riders' };
+    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', complaints: 'Complaints', riders: 'Delivery Riders' };
     els.pageTitle.textContent = titles[name] || 'Overview';
     if (name === 'orders') { loadRiders(); loadOrders(); }
+    if (name === 'overview') loadOverview();
     if (name === 'menu') loadMenu();
+    if (name === 'reservations') { loadReservations(); loadTables(); }
     if (name === 'complaints') loadComplaints();
     if (name === 'riders') refreshRidersView();
   }
@@ -514,6 +533,24 @@
       els.statMenuSub.textContent = unavailable ? unavailable + ' unavailable' : 'all available';
     } catch (err) {
       showToast(err.message || 'Could not load menu stats', true);
+    }
+  }
+
+  // Lightweight overview for faster initial load (only stats + popular dishes)
+  async function loadOverviewLite() {
+    try {
+      const statsRes = await fetch('/api/orders/stats/summary', { headers: authHeaders });
+      if (handleAuthFailure(statsRes)) return;
+      const stats = await safeJson(statsRes);
+      if (!statsRes.ok) throw new Error(stats.error || 'Failed to load stats');
+
+      els.statRevenue.textContent = money(stats.totalRevenue);
+      els.statRevenueSub.textContent = (stats.totalOrders || 0) + ' orders total';
+      els.statToday.textContent = stats.todayOrders || 0;
+      els.statPending.textContent = stats.pendingCount || 0;
+      renderPopularDishes(stats.popularDishes || []);
+    } catch (err) {
+      showToast(err.message || 'Could not load dashboard stats', true);
     }
   }
 
@@ -852,6 +889,174 @@
     }
   });
 
+  // ---------- Reservations view ----------
+  function reservationStatusLabel(status) {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+
+  function reservationDateTime(reservation) {
+    const date = new Date(`${reservation.date}T00:00:00`);
+    const readableDate = Number.isNaN(date.getTime()) ? reservation.date : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${readableDate}<span class="reservation-time">${escapeHtml(reservation.time)}</span>`;
+  }
+
+  async function loadReservations() {
+    els.reservationsBody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+    try {
+      const url = currentReservationFilter ? `/api/reservations?status=${currentReservationFilter}` : '/api/reservations';
+      const res = await fetch(url, { headers: authHeaders });
+      if (handleAuthFailure(res)) return;
+      const reservations = await safeJson(res);
+      if (!res.ok) throw new Error(reservations.error || 'Failed to load reservations');
+      renderReservations(reservations);
+      updateReservationBadge(reservations, currentReservationFilter);
+      if (!currentReservationFilter) renderBookingDashboard(reservations);
+      else loadBookingDashboard();
+    } catch (err) {
+      els.reservationsBody.innerHTML = `<tr><td colspan="6" class="empty-state">${escapeHtml(err.message || 'Failed to load reservations.')}</td></tr>`;
+    }
+  }
+
+  async function loadBookingDashboard() {
+    try {
+      const res = await fetch('/api/reservations', { headers: authHeaders });
+      if (handleAuthFailure(res)) return;
+      const reservations = await safeJson(res);
+      if (res.ok) renderBookingDashboard(reservations);
+    } catch { /* table remains available if dashboard summary cannot refresh */ }
+  }
+
+  function renderBookingDashboard(reservations) {
+    const counts = status => reservations.filter(r => r.status === status).length;
+    els.bookingTotal.textContent = reservations.length;
+    els.bookingPending.textContent = counts('pending');
+    els.bookingConfirmed.textContent = counts('confirmed');
+    els.bookingCompleted.textContent = counts('completed');
+
+    const upcoming = reservations.filter(r => !['completed', 'cancelled'].includes(r.status)).slice(0, 5);
+    els.bookingUpcomingCount.textContent = upcoming.length;
+    if (!upcoming.length) {
+      els.bookingUpcomingList.innerHTML = '<div class="empty-state">No upcoming reservations yet.</div>';
+      return;
+    }
+    els.bookingUpcomingList.innerHTML = upcoming.map(r => `
+      <div class="booking-upcoming-item">
+        <div class="booking-upcoming-time"><strong>${escapeHtml(r.time)}</strong><small>${escapeHtml(r.date)}</small></div>
+        <div class="booking-upcoming-guest"><strong>${escapeHtml(r.guestName)}</strong><small>${Number(r.guests)} guests · ${escapeHtml(r.tableNumber || 'Table to assign')}</small></div>
+        <span class="booking-status-pill ${escapeHtml(r.status)}">${escapeHtml(reservationStatusLabel(r.status))}</span>
+      </div>`).join('');
+  }
+
+  async function loadTables() {
+    try {
+      const res = await fetch('/api/tables', { headers: authHeaders });
+      if (handleAuthFailure(res)) return;
+      const tables = await safeJson(res);
+      if (!res.ok) throw new Error(tables.error || 'Failed to load tables');
+      restaurantTables = tables;
+      renderFloorMap();
+    } catch (err) { els.floorMap.innerHTML = `<div class="empty-state">${escapeHtml(err.message || 'Could not load tables.')}</div>`; }
+  }
+
+  function renderFloorMap() {
+    const visible = restaurantTables.filter(t => !currentTableArea || t.area === currentTableArea);
+    els.tableTotal.textContent = restaurantTables.length;
+    els.tableAvailable.textContent = restaurantTables.filter(t => t.status === 'available').length;
+    els.tableReserved.textContent = restaurantTables.filter(t => t.status === 'reserved').length;
+    if (!visible.length) { els.floorMap.innerHTML = '<div class="empty-state">No tables in this area yet.</div>'; return; }
+    els.floorMap.innerHTML = visible.map(t => `<div class="floor-table ${escapeHtml(t.status)}" data-table="${t._id}" title="Click to change table status"><strong>${escapeHtml(t.tableNumber)}</strong><small>♟ ${Number(t.seats)} seats</small><span>${escapeHtml(t.status)}</span></div>`).join('');
+    // status click listeners
+    els.floorMap.querySelectorAll('.floor-table').forEach(card => {
+      card.addEventListener('click', async (e) => {
+        const table = restaurantTables.find(t => t._id === card.dataset.table);
+        if (!table || table.status === 'reserved') return showToast('This table is reserved by an active booking.', true);
+        const next = table.manualStatus === 'available' ? 'occupied' : table.manualStatus === 'occupied' ? 'maintenance' : 'available';
+        try {
+          const res = await fetch(`/api/tables/${table._id}/status`, { method: 'PUT', headers: authHeaders, body: JSON.stringify({ manualStatus: next }) });
+          if (!res.ok) throw new Error();
+          loadTables();
+        } catch { showToast('Could not update table status.', true); }
+      });
+    });
+  }
+
+  els.toggleTableForm.addEventListener('click', () => { els.addTableForm.hidden = !els.addTableForm.hidden; });
+  els.addTableForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/tables', { method: 'POST', headers: authHeaders, body: JSON.stringify({ tableNumber: els.newTableNumber.value, seats: Number(els.newTableSeats.value), area: els.newTableArea.value }) });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || 'Could not add table');
+      els.addTableForm.reset(); els.addTableForm.hidden = true; showToast(`Table ${data.tableNumber} added.`); loadTables();
+    } catch (err) { showToast(err.message || 'Could not add table.', true); }
+  });
+  // Table editing has been disabled — edit modal and handlers removed
+  els.floorFilters.addEventListener('click', e => {
+    const btn = e.target.closest('.floor-filter'); if (!btn) return;
+    els.floorFilters.querySelectorAll('.floor-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); currentTableArea = btn.dataset.area; renderFloorMap();
+  });
+
+  async function updateReservationBadge(knownReservations, filtered) {
+    try {
+      let reservations = knownReservations && !filtered ? knownReservations : null;
+      if (!reservations) {
+        const res = await fetch('/api/reservations', { headers: authHeaders });
+        if (handleAuthFailure(res)) return;
+        reservations = await safeJson(res);
+        if (!res.ok || !Array.isArray(reservations)) return;
+      }
+      const pending = reservations.filter(r => r.status === 'pending').length;
+      els.reservationsBadge.textContent = pending;
+      els.reservationsBadge.hidden = pending === 0;
+    } catch { /* badge is non-critical */ }
+  }
+
+  function renderReservations(reservations) {
+    if (!reservations.length) {
+      els.reservationsBody.innerHTML = '<tr><td colspan="6" class="empty-state">No reservations found.</td></tr>';
+      return;
+    }
+    const statuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+    // Only offer tables with an exact seats match to the reservation guest count
+    const tableOptionsByReservation = (guests) => restaurantTables.filter(t => Number(t.seats) === Number(guests)).map(table => table.tableNumber);
+    els.reservationsBody.innerHTML = reservations.map(r => `
+      <tr>
+        <td><div class="reservation-guest"><span class="guest-initial">${escapeHtml((r.guestName || '?').trim().charAt(0).toUpperCase())}</span><span><strong>${escapeHtml(r.guestName)}</strong><small>${escapeHtml(r.email)}<br>${escapeHtml(r.phone)}</small></span></div></td>
+        <td>${reservationDateTime(r)}</td><td>${Number(r.guests)}</td>
+        <td><select class="reservation-table-select" data-reservation="${r._id}"><option value="">Assign table</option>${tableOptionsByReservation(r.guests).map(t => `<option value="${t}" ${r.tableNumber === t ? 'selected' : ''}>${t}</option>`).join('') || '<option value="" disabled>No matching tables</option>'}</select></td>
+        <td><select class="reservation-status-select status-${escapeHtml(r.status)}" data-reservation="${r._id}">${statuses.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${reservationStatusLabel(s)}</option>`).join('')}</select></td>
+        <td><button class="btn-primary reservation-save-btn" data-reservation="${r._id}">Save</button></td>
+      </tr>`).join('');
+
+    els.reservationsBody.querySelectorAll('.reservation-save-btn').forEach(btn => btn.addEventListener('click', async () => {
+      const id = btn.dataset.reservation;
+      const tableNumber = els.reservationsBody.querySelector(`.reservation-table-select[data-reservation="${id}"]`).value;
+      const status = els.reservationsBody.querySelector(`.reservation-status-select[data-reservation="${id}"]`).value;
+      btn.disabled = true; btn.textContent = 'Saving...';
+      try {
+        const res = await fetch(`/api/reservations/${id}`, { method: 'PUT', headers: authHeaders, body: JSON.stringify({ tableNumber, status }) });
+        if (handleAuthFailure(res)) return;
+        const data = await safeJson(res);
+        if (!res.ok) throw new Error(data.error || 'Could not update reservation');
+        showToast(`Reservation for ${data.guestName} updated.`);
+        loadReservations();
+      } catch (err) {
+        showToast(err.message || 'Could not update reservation.', true);
+        btn.disabled = false; btn.textContent = 'Save';
+      }
+    }));
+  }
+
+  els.reservationFilterTabs.addEventListener('click', (e) => {
+    const btn = e.target.closest('.booking-nav-link');
+    if (!btn) return;
+    els.reservationFilterTabs.querySelectorAll('.booking-nav-link').forEach(tab => tab.classList.remove('active'));
+    btn.classList.add('active');
+    currentReservationFilter = btn.dataset.status;
+    loadReservations();
+  });
+
   // ---------- Complaints view ----------
   async function loadComplaintBadge() {
     try {
@@ -978,13 +1183,17 @@
   }
 
   // ---------- Boot ----------
-  loadOverview();
-  loadComplaintBadge();
-  setInterval(loadComplaintBadge, 30000);
-  // Keep whatever the admin is looking at fresh — new orders (and status
-  // changes made from another tab/device) show up without a manual reload.
+  // Load a lightweight overview first to speed initial render (stats only).
+  loadOverviewLite();
+  // Defer heavier badge/table requests slightly so the UI paints first
+  setTimeout(() => { loadComplaintBadge(); updateReservationBadge(); }, 1200);
+  // Poll less frequently to reduce repeated load on backend
+  setInterval(loadComplaintBadge, 45000);
+  setInterval(updateReservationBadge, 45000);
+  // Keep views fresh, but with a longer interval and lighter overview refresh
   setInterval(() => {
     if (currentView === 'orders') loadOrders();
-    if (currentView === 'overview') loadOverview();
-  }, 12000);
+    if (currentView === 'overview') loadOverviewLite();
+    if (currentView === 'reservations') loadReservations();
+  }, 20000);
 })();

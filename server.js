@@ -15,6 +15,7 @@ const { Server } = require('socket.io');
 const app = express();
 
 const AdminUser = require("./src/models/AdminUser");
+const RestaurantTable = require("./src/models/RestaurantTable");
 
 // Reuse the connection while a Vercel serverless instance is warm.
 let databaseConnection;
@@ -43,6 +44,8 @@ const authRoutes = require("./src/Routes/auth");
 const customerAuthRoutes = require("./src/Routes/customerAuth");
 const recommendationRoutes = require("./src/Routes/recommendations");
 const complaintRoutes = require("./src/Routes/complaints");
+const reservationRoutes = require("./src/Routes/reservations");
+const tableRoutes = require("./src/Routes/tables");
 const kitchenRoutes = require("./src/Routes/kitchen");
 const deliveryRoutes = require("./src/Routes/delivery");
 const chatbotRoutes = require("./src/Routes/chatbot");
@@ -112,6 +115,9 @@ app.use("/api/customer-auth", customerAuthRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 
 app.use("/api/complaints", complaintRoutes);
+
+app.use("/api/reservations", reservationRoutes);
+app.use("/api/tables", tableRoutes);
 
 app.use("/api/kitchen", kitchenRoutes);
 
@@ -232,6 +238,24 @@ mongoose.connect(process.env.MONGODB_URI)
     await AdminUser.createDefaultChef();
 
     await AdminUser.createDefaultDelivery();
+
+    try {
+        const tableCount = await RestaurantTable.countDocuments();
+        if (!tableCount) {
+            const defaultTables = [
+                { tableNumber: 'T-01', seats: 2, area: 'indoor' },
+                { tableNumber: 'T-02', seats: 2, area: 'indoor' },
+                { tableNumber: 'T-03', seats: 4, area: 'indoor' },
+                { tableNumber: 'T-04', seats: 4, area: 'outdoor' },
+                { tableNumber: 'T-05', seats: 6, area: 'outdoor' },
+                { tableNumber: 'T-06', seats: 8, area: 'indoor' }
+            ];
+            await RestaurantTable.insertMany(defaultTables);
+            console.log('✅ Seeded default restaurant tables');
+        }
+    } catch (err) {
+        console.warn('Could not seed default tables:', err && err.message);
+    }
 
     console.log("✅ Default Users Ready");
 

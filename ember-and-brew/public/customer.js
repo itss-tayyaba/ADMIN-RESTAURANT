@@ -3,6 +3,8 @@ const customerState = {
   customer: JSON.parse(localStorage.getItem('eb_customer') || 'null'),
   orders: [],
   complaints: [],
+  reservations: [],
+  dataLoaded: false,
   dashboardView: 'orders',
   selectedOrderNumber: null,
   authMode: 'login'
@@ -44,6 +46,21 @@ function apiFetch(url, options = {}) {
   });
 }
 
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function formatCurrency(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+}
+
 function authHeaders() {
   return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + customerState.token };
 }
@@ -76,22 +93,31 @@ function clearSession() {
 }
 
 function initPortal() {
+  // If we were sent here from checkout and already have a session
+  // (e.g. token restored from localStorage), just bounce straight back
+  // instead of showing the dashboard.
+  if (customerState.customer && localStorage.getItem('eb_return_to_checkout') === '1') {
+    window.location.href = '/index.html';
+    return;
+  }
   renderPortal();
 }
 
-function renderPortal() {
+async function renderPortal() {
   const main = document.getElementById('portal-main');
   main.innerHTML = customerState.customer ? renderDashboardHtml() : renderAuthHtml();
   updateTopNav();
   if (customerState.customer) {
     bindDashboardEvents();
-    if (!customerState.orders.length || !customerState.complaints.length) {
-      loadCustomerData();
+    if (!customerState.dataLoaded) {
+      await loadCustomerData();
+    } else if (customerState.dashboardView === 'reservations') {
+      await loadCustomerReservations();
     } else {
       renderDashboardViewData();
-    }
-    if (customerState.dashboardView === 'tracking') {
-      renderTracking(customerState.selectedOrderNumber);
+      if (customerState.dashboardView === 'tracking' && customerState.selectedOrderNumber) {
+        renderTracking(customerState.selectedOrderNumber);
+      }
     }
   } else {
     bindAuthEvents();
@@ -125,6 +151,9 @@ function renderDashboardViewData() {
   if (document.getElementById('complaint-section')) {
     renderComplaints();
   }
+  if (document.getElementById('reservation-list')) {
+    renderReservations();
+  }
 }
 
 function renderAuthHtml() {
@@ -147,6 +176,20 @@ function renderAuthHtml() {
       </div>
     </div>
   `;
+}
+
+function toggleMobileNav() {
+  const mobileNav = document.getElementById('mobile-nav');
+  if (mobileNav) {
+    mobileNav.classList.toggle('hidden');
+  }
+}
+
+function closeMobileNav() {
+  const mobileNav = document.getElementById('mobile-nav');
+  if (mobileNav) {
+    mobileNav.classList.add('hidden');
+  }
 }
 
 function renderLoginForm() {
@@ -267,6 +310,13 @@ async function handleLogin(event) {
       body: JSON.stringify({ identifier, password })
     });
     saveSession(data.token, data.customer);
+    if (localStorage.getItem('eb_return_to_checkout') === '1') {
+      // Came here from checkout — go back so the customer can finish
+      // placing their order. The cart is untouched (localStorage) and
+      // index.html's init() will consume the flag and jump to checkout.
+      window.location.href = '/index.html';
+      return;
+    }
     renderPortal();
     showToast(`Welcome back, ${data.customer.name.split(' ')[0]}!`, 'success');
   } catch (err) {
@@ -301,6 +351,13 @@ async function handleRegister(event) {
       body: JSON.stringify({ name, phone, email, password })
     });
     saveSession(data.token, data.customer);
+    if (localStorage.getItem('eb_return_to_checkout') === '1') {
+      // Came here from checkout — go back so the customer can finish
+      // placing their order. The cart is untouched (localStorage) and
+      // index.html's init() will consume the flag and jump to checkout.
+      window.location.href = '/index.html';
+      return;
+    }
     renderPortal();
     showToast(`Welcome, ${data.customer.name.split(' ')[0]}!`, 'success');
   } catch (err) {
@@ -319,17 +376,24 @@ function renderDashboardHtml() {
           <span class="title">Ember <em>&amp;</em> Brew</span>
         </div>
         <div class="sidebar-menu">
-          <button class="sidebar-item ${customerState.dashboardView === 'orders' ? 'active' : ''}" data-view="orders">My Orders</button>
+          <button class="sidebar-item ${customerState.dashboardView === 'orders' ? 'active' : ''}" data-view="orders">My Dashboard</button>
           <button class="sidebar-item ${customerState.dashboardView === 'menu' ? 'active' : ''}" data-view="menu">View Menu</button>
           <button class="sidebar-item ${customerState.dashboardView === 'tracking' ? 'active' : ''}" data-view="tracking">Track Order</button>
-          <button class="sidebar-item ${customerState.dashboardView === 'complaints' ? 'active' : ''}" data-view="complaints">My Complaints</button>
-        </div>
-        <div class="sidebar-foot">
-          <p class="sidebar-note">Use the order list to open live tracking. Your complaint history and menu access are all here too.</p>
+          <button class="sidebar-item ${customerState.dashboardView === 'reservations' ? 'active' : ''}" data-view="reservations">Reservation</button>
+          <button class="sidebar-item ${customerState.dashboardView === 'complaints' ? 'active' : ''}" data-view="complaints">Complaints</button>
         </div>
       </aside>
       <div class="customer-main">
+        ${customerState.dashboardView === 'orders' ? `
+        <section class="customer-topbar">
+          <div>
+            <h1>Welcome back, ${customerState.customer.name ? customerState.customer.name.split(' ')[0] : 'Guest'}</h1>
+            <p>Track orders, file complaints, and reserve a table from your portal.</p>
+          </div>
+        </section>
+        ` : ''}
         <section class="customer-content">
+          ${customerState.dashboardView === 'orders' ? `
           <div class="dashboard-summary">
             <div class="summary-card">
               <div class="label">Signed in as</div>
@@ -347,6 +411,7 @@ function renderDashboardHtml() {
               <p class="sub">Check status or file a new complaint.</p>
             </div>
           </div>
+          ` : ''}
           <div id="dashboard-pane">${renderDashboardPaneHtml()}</div>
         </section>
       </div>
@@ -381,6 +446,10 @@ function renderDashboardPaneHtml() {
     `;
   }
 
+  if (customerState.dashboardView === 'reservations') {
+    return renderReservationsViewHtml();
+  }
+
   if (customerState.dashboardView === 'tracking') {
     return `
       <div class="portal-card mb-6">
@@ -388,7 +457,7 @@ function renderDashboardPaneHtml() {
           <div>
             <p class="text-xs uppercase tracking-[.4em] text-muted">Track Order</p>
             <h2 class="text-2xl font-semibold">Enter an order number</h2>
-            <p class="text-muted mt-2">Use your order number to view live status and delivery progress.</p>
+            <p class="text-muted mt-2">Use your order number to view live status and delivery progress. After your food arrives, tell the delivery OTP shown here to the rider.</p>
           </div>
         </div>
         <form id="tracking-form" class="mt-6 grid gap-4 sm:grid-cols-[1fr_auto] items-end">
@@ -415,6 +484,109 @@ function renderDashboardPaneHtml() {
   `;
 }
 
+function renderReservationsViewHtml() {
+  const latest = customerState.reservations[0];
+  const summaryTitle = latest ? 'Latest reservation status' : 'No reservation requests yet';
+  const summaryText = latest
+    ? `Your most recent request for ${escapeHtml(latest.date)} at ${escapeHtml(latest.time)} is currently <strong>${reservationStatusLabel(latest.status)}</strong>.${latest.tableNumber ? ` Table ${escapeHtml(latest.tableNumber)} has been assigned.` : ''}`
+    : 'Request a table below and the admin will approve it here. Once confirmed, the status will update automatically.';
+
+  return `
+    <div class="portal-card mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-[.4em] text-muted">Reservations</p>
+          <h2 class="text-2xl font-semibold">Book a table</h2>
+          <p class="text-muted mt-2">Submit a reservation request and see its status below.</p>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-[1fr_320px] items-start">
+        <div class="portal-card bg-[#F8F4EB] border border-[#E4D7C3] text-[#3D3322] p-5">
+          <p class="text-sm uppercase tracking-[.3em] text-[#8A7D6B] mb-3">${summaryTitle}</p>
+          <p class="leading-7">${summaryText}</p>
+        </div>
+        <div id="reservation-form-container">${renderReservationFormHtml()}</div>
+      </div>
+    </div>
+    <div id="reservation-list"></div>
+  `;
+}
+
+function renderReservationFormHtml() {
+  return `
+    <form id="reservation-form" class="space-y-5">
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="text-sm text-brand-300 mb-2 block">Name</label>
+          <input name="guestName" class="form-input" value="${escapeHtml(customerState.customer.name || '')}" required>
+        </div>
+        <div>
+          <label class="text-sm text-brand-300 mb-2 block">Phone</label>
+          <input name="phone" class="form-input" value="${escapeHtml(customerState.customer.phone || '')}" required inputmode="numeric" maxlength="11">
+        </div>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="text-sm text-brand-300 mb-2 block">Date</label>
+          <input name="date" type="date" class="form-input" required>
+        </div>
+        <div>
+          <label class="text-sm text-brand-300 mb-2 block">Time</label>
+          <input name="time" type="time" class="form-input" required>
+        </div>
+      </div>
+      <div>
+        <label class="text-sm text-brand-300 mb-2 block">Party size</label>
+        <select name="guests" class="form-input" required>
+          ${[2,3,4,5,6,7,8,9,10].map(size => `<option value="${size}">${size} People</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="text-sm text-brand-300 mb-2 block">Special requests</label>
+        <textarea name="notes" rows="4" class="form-input" placeholder="Window seat, birthday celebration, etc."></textarea>
+      </div>
+      <div class="field-error" id="error-reservation"></div>
+      <div class="flex flex-wrap gap-3 items-center">
+        <button type="submit" class="form-button">Request Reservation</button>
+      </div>
+    </form>
+  `;
+}
+
+async function handleReservationSubmit(event) {
+  event.preventDefault();
+  document.getElementById('error-reservation').textContent = '';
+  const form = event.target;
+  const guestName = form.guestName.value.trim();
+  const phone = form.phone.value.trim();
+  const date = form.date.value;
+  const time = form.time.value;
+  const guests = Number(form.guests.value);
+  const notes = form.notes.value.trim();
+  if (!guestName || !phone || !date || !time || !guests) {
+    document.getElementById('error-reservation').textContent = 'Please complete all required reservation details.';
+    return;
+  }
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  button.textContent = 'Requesting…';
+  try {
+    await apiFetch('/api/reservations', {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guestName, email: customerState.customer.email || '', phone, date, time, guests, notes })
+    });
+    showToast('Reservation request sent. Admin will confirm it soon.', 'success');
+    await loadCustomerData();
+    renderPortal();
+  } catch (err) {
+    document.getElementById('error-reservation').textContent = err.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Request Reservation';
+  }
+}
+
 function bindDashboardEvents() {
   const navLogout = document.getElementById('nav-logout-button');
   if (navLogout) {
@@ -432,13 +604,37 @@ function bindDashboardEvents() {
     });
   }
 
-  document.querySelectorAll('.customer-sidebar [data-view]').forEach(button => {
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', toggleMobileNav);
+  }
+
+  document.querySelectorAll('#mobile-nav [data-view]').forEach(button => {
     button.addEventListener('click', event => {
       customerState.dashboardView = event.currentTarget.dataset.view;
       if (customerState.dashboardView !== 'tracking') {
         customerState.selectedOrderNumber = null;
       }
       renderPortal();
+      closeMobileNav();
+    });
+  });
+
+  const navReservationBtn = document.getElementById('nav-reservation-button');
+  if (navReservationBtn) {
+    navReservationBtn.addEventListener('click', async () => {
+      customerState.dashboardView = 'reservations';
+      await renderPortal();
+    });
+  }
+
+  document.querySelectorAll('.customer-sidebar [data-view]').forEach(button => {
+    button.addEventListener('click', async event => {
+      customerState.dashboardView = event.currentTarget.dataset.view;
+      if (customerState.dashboardView !== 'tracking') {
+        customerState.selectedOrderNumber = null;
+      }
+      await renderPortal();
     });
   });
 
@@ -461,27 +657,54 @@ function bindDashboardEvents() {
       renderTracking(orderNumber);
     });
   }
+
+  const reservationForm = document.getElementById('reservation-form');
+  if (reservationForm) {
+    reservationForm.addEventListener('submit', handleReservationSubmit);
+  }
+}
+
+async function loadCustomerReservations() {
+  try {
+    const reservations = await apiFetch('/api/reservations/mine/list', { headers: authHeaders() });
+    customerState.reservations = Array.isArray(reservations) ? reservations : [];
+    renderReservations();
+    return customerState.reservations;
+  } catch (err) {
+    console.error('Unable to refresh reservations:', err);
+    return [];
+  }
 }
 
 async function loadCustomerData() {
   try {
-    const [orders, complaints] = await Promise.all([
+    const [orders, complaints, reservations] = await Promise.all([
       apiFetch('/api/orders/mine/list', { headers: authHeaders() }),
-      apiFetch('/api/complaints/mine/list', { headers: authHeaders() })
+      apiFetch('/api/complaints/mine/list', { headers: authHeaders() }),
+      apiFetch('/api/reservations/mine/list', { headers: authHeaders() })
     ]);
-    customerState.orders = orders;
-    customerState.complaints = complaints;
+    customerState.orders = Array.isArray(orders) ? orders : [];
+    customerState.complaints = Array.isArray(complaints) ? complaints : [];
+    customerState.reservations = Array.isArray(reservations) ? reservations : [];
+    customerState.dataLoaded = true;
     renderOrders();
     renderComplaints();
+    renderReservations();
   } catch (err) {
     if (err.message.toLowerCase().includes('token') || err.message.toLowerCase().includes('account')) {
       clearSession();
       renderPortal();
-      showToast('Session expired. Please sign in again.', 'error');
+      showToast('Session expired. Please log in again.', 'error');
       return;
     }
-    document.getElementById('order-section').innerHTML = `<p class="text-sm text-terra-300">${err.message}</p>`;
-    document.getElementById('complaint-section').innerHTML = `<p class="text-sm text-terra-300">${err.message}</p>`;
+    const orderContainer = document.getElementById('order-section');
+    const complaintContainer = document.getElementById('complaint-section');
+    if (orderContainer) {
+      orderContainer.innerHTML = `<p class="text-sm text-terra-300">${err.message}</p>`;
+    }
+    if (complaintContainer) {
+      complaintContainer.innerHTML = `<p class="text-sm text-terra-300">${err.message}</p>`;
+    }
   }
 }
 
@@ -517,6 +740,13 @@ function orderCardHtml(order) {
       ${order.deliveryBoyPhone ? `<p class="text-brand-300 mt-1">${order.deliveryBoyPhone}</p>` : ''}
     </div>
   ` : '';
+  const otpInfo = order.otp ? `
+    <div class="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+      <p class="text-[11px] uppercase tracking-[.25em] font-bold text-amber-800 mb-2">Delivery OTP</p>
+      <p class="font-mono text-2xl font-bold tracking-[.35em]">${escapeHtml(order.otp)}</p>
+      <p class="mt-2 text-xs leading-5">After you receive your order, tell this code to the rider for delivery verification.</p>
+    </div>
+  ` : '';
 
   return `
     <article class="order-card">
@@ -530,13 +760,64 @@ function orderCardHtml(order) {
       </div>
       <div class="mt-4 text-sm text-brand-300">
         <p>${order.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
-        <p class="mt-3"><strong>Total:</strong> $${order.total.toFixed(2)}</p>
+        <p class="mt-3"><strong>Total:</strong> $${formatCurrency(order.total)}</p>
       </div>
       ${deliveryInfo}
+      ${otpInfo}
       <div class="mt-5 flex flex-wrap gap-3 items-center">
         <button data-order="${order.orderNumber}" class="track-order-button link-button">View Tracking</button>
         <span class="text-xs text-brand-400 uppercase tracking-[.25em]">Tap for live status</span>
       </div>
+    </article>
+  `;
+}
+
+function renderReservations() {
+  const container = document.getElementById('reservation-list');
+  if (!container) return;
+  const reservations = Array.isArray(customerState.reservations) ? customerState.reservations : [];
+  if (reservations.length === 0) {
+    container.innerHTML = `
+      <div class="portal-card">
+        <p class="text-brand-300">No reservation requests yet.</p>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = `
+    <div class="reservation-list">
+      ${reservations.map(reservationCardHtml).join('')}
+    </div>
+  `;
+}
+
+function reservationStatusLabel(status) {
+  const labels = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled'
+  };
+  return labels[status] || status;
+}
+
+function reservationCardHtml(reservation) {
+  return `
+    <article class="order-card">
+      <div class="order-header">
+        <div>
+          <p class="font-semibold text-brand-100">${escapeHtml(reservation.guestName)}</p>
+          <p class="text-sm text-brand-300">${escapeHtml(reservation.date)} · ${escapeHtml(reservation.time)}</p>
+        </div>
+        <span class="order-badge">${reservationStatusLabel(reservation.status)}</span>
+      </div>
+      <div class="mt-4 text-sm text-brand-300">
+        <p><strong>Guests:</strong> ${reservation.guests}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(reservation.phone)}</p>
+        ${reservation.tableNumber ? `<p><strong>Table:</strong> ${escapeHtml(reservation.tableNumber)}</p>` : ''}
+        ${reservation.status === 'confirmed' ? `<p class="mt-3 text-brand-400">Your table is confirmed.</p>` : ''}
+      </div>
+      ${reservation.notes ? `<div class="mt-4 rounded-2xl border border-brand-800 bg-brand-950/80 p-4 text-sm text-brand-300"><p>${escapeHtml(reservation.notes)}</p></div>` : ''}
     </article>
   `;
 }
@@ -643,9 +924,17 @@ async function handleComplaintSubmit(event) {
 
 async function renderTracking(orderNumber) {
   const panel = document.getElementById('tracking-panel');
+  if (!panel) return;
+  if (!orderNumber) {
+    panel.innerHTML = `<div class="portal-card text-center"><p class="text-muted">Enter your order number above, or choose <strong>View Tracking</strong> from My Orders.</p></div>`;
+    return;
+  }
   panel.innerHTML = `<div class="portal-card"><p class="text-muted">Loading tracking details…</p></div>`;
   try {
-    const order = await apiFetch('/api/orders/' + encodeURIComponent(orderNumber));
+    const order = await apiFetch('/api/orders/mine/' + encodeURIComponent(orderNumber), { headers: authHeaders() });
+    if (!order || !order.orderNumber || !order.status) {
+      throw new Error('This order could not be loaded. Please choose it again from My Orders.');
+    }
     // Choose a tracking flow based on order type.
     // Delivery orders include the 'out-for-delivery' step; dine-in/takeaway do not.
     const ot = (order.orderType || '').toLowerCase();
@@ -694,7 +983,7 @@ async function renderTracking(orderNumber) {
             ${order.status === 'completed' ? `
               <div class="celebrate">
                 <span class="celebrate-emoji">🎉</span>
-                <p class="celebrate-text">Order complete!</p>
+                <p class="celebrate-text">Hooray! Your order has been delivered.</p>
                 <p class="celebrate-sub">Enjoy your meal, ${order.customerName ? order.customerName.split(' ')[0] : 'Customer'}!</p>
               </div>
             ` : ''}
@@ -707,7 +996,7 @@ async function renderTracking(orderNumber) {
           </div>
           <div class="summary-card">
             <div class="label">Total</div>
-            <div class="value">$${order.total.toFixed(2)}</div>
+            <div class="value">$${formatCurrency(order.total)}</div>
           </div>
         </div>
         ${order.deliveryBoyName ? `
@@ -717,6 +1006,13 @@ async function renderTracking(orderNumber) {
             ${order.deliveryBoyPhone ? `<a href="tel:${order.deliveryBoyPhone}" class="link-button">Call rider</a>` : ''}
           </div>
         ` : ''}
+        ${order.otp ? `
+          <div class="portal-card mt-6 border-amber-300 bg-amber-50">
+            <p class="text-xs uppercase tracking-[.3em] text-amber-800 mb-2">Delivery OTP</p>
+            <p class="font-mono text-3xl font-bold tracking-[.35em] text-amber-950">${escapeHtml(order.otp)}</p>
+            <p class="text-sm text-amber-900 mt-3">After you receive your order, tell this code to the rider so they can verify delivery.</p>
+          </div>
+        ` : ''}
       </div>
     `;
 
@@ -724,7 +1020,7 @@ async function renderTracking(orderNumber) {
     if (!['completed', 'cancelled'].includes(order.status)) {
       customerTrackingPoll = setInterval(async () => {
         try {
-          const fresh = await apiFetch('/api/orders/' + encodeURIComponent(order.orderNumber));
+          const fresh = await apiFetch('/api/orders/mine/' + encodeURIComponent(order.orderNumber), { headers: authHeaders() });
           if (fresh.status !== order.status) {
             if (fresh.status === 'ready') showToast(`Order ${order.orderNumber} is ready!`, 'info');
             if (fresh.status === 'completed') showToast(`Order ${order.orderNumber} completed. Enjoy!`, 'success');

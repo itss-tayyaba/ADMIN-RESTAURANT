@@ -42,11 +42,37 @@ function customerAuth(req, res, next) {
   }
 }
 
+// Middleware: attach req.customer if a valid token is present, but never
+// block the request when it's missing — used on routes (like placing an
+// order) that must also work for guest checkout. An expired/invalid token
+// is treated the same as no token, rather than hard-failing, so a stale
+// session left over in localStorage can't block a guest order.
+function optionalCustomerAuth(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith('Bearer ')) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+    if (decoded.role === 'customer') {
+      req.customer = decoded;
+    }
+  } catch (err) {
+    // Ignore — proceed as guest.
+  }
+
+  next();
+}
+
 function signCustomerToken(customer) {
   return jwt.sign(
     {
       id: customer._id,
       name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
       role: 'customer'
     },
     process.env.JWT_SECRET,
@@ -197,3 +223,4 @@ router.get('/me', customerAuth, async (req, res) => {
 
 module.exports = router;
 module.exports.customerAuth = customerAuth;
+module.exports.optionalCustomerAuth = optionalCustomerAuth;

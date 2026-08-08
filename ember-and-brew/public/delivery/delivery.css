@@ -259,6 +259,11 @@ tr:last-child td{ border-bottom:none; }
 .items li:last-child{ border-bottom:0; }
 
 .notes-summary{ margin-top:10px; font-size:12.5px; }
+
+.otp-verification{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.otp-verification label{ width:100%; color:var(--text-muted); font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+.otp-verification input{ width:126px; border:1px solid var(--border); border-radius:8px; padding:9px 10px; background:var(--paper-2); color:var(--ink); font:700 13px/1.2 'DM Sans',sans-serif; letter-spacing:.08em; }
+.otp-verification input:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(196,146,58,.14); }
 .notes-summary strong{ color:var(--text-muted); font-weight:700; display:block; margin-bottom:2px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
 .notes-summary .short-note{ color:var(--ink-3); }
 

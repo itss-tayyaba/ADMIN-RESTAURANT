@@ -64,6 +64,7 @@ logoutBtn.addEventListener("click", () => {
 
     if (!confirm("Are you sure you want to logout?")) return;
 
+    stopLiveLocationSharing();
     localStorage.removeItem("eb_admin_token");
     localStorage.removeItem("eb_admin_user");
 
@@ -102,6 +103,48 @@ let customerMarker = null;
 let routeLine = null;
 let currentActiveOrderId = null;
 const geocodeCache = new Map();
+let liveLocationWatchId = null;
+let lastLocationSentAt = 0;
+
+function updateLiveLocationButton() {
+    const button = document.getElementById('liveLocationButton');
+    if (!button) return;
+    const sharing = liveLocationWatchId !== null;
+    button.textContent = sharing ? 'Stop Live Location' : 'Start Live Location';
+    button.classList.toggle('sharing', sharing);
+}
+
+function startLiveLocationSharing() {
+    if (!navigator.geolocation) return alert('This device does not support location sharing.');
+    if (liveLocationWatchId !== null) return stopLiveLocationSharing();
+    liveLocationWatchId = navigator.geolocation.watchPosition(async position => {
+        const now = Date.now();
+        if (now - lastLocationSentAt < 10000) return;
+        lastLocationSentAt = now;
+        try {
+            const response = await fetch(`${API}/location`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message);
+        } catch (error) {
+            console.warn('Live location update failed:', error.message);
+        }
+    }, error => {
+        alert(error.code === error.PERMISSION_DENIED ? 'Location permission was denied.' : 'Could not read your location.');
+        stopLiveLocationSharing();
+    }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+    updateLiveLocationButton();
+}
+
+function stopLiveLocationSharing() {
+    if (liveLocationWatchId !== null) navigator.geolocation.clearWatch(liveLocationWatchId);
+    liveLocationWatchId = null;
+    lastLocationSentAt = 0;
+    updateLiveLocationButton();
+}
 
 function initDeliveryMap() {
     const mapEl = document.getElementById('deliveryMap');
@@ -194,21 +237,30 @@ async function updateActiveDeliveryMap(order) {
 
     pill.textContent = `Locating ${order.customerName}'s address…`;
 
-    const address = order.deliveryAddress || order.region || '';
-    const point = await geocodeAddress(address);
+    // Prefer the customer-confirmed GeoJSON pin over text geocoding. Text
+    // geocoding can place a rider on the wrong street or neighbourhood.
+    const coordinates = order.deliveryLocation?.coordinates;
+    const hasSavedPin = order.deliveryLocation?.type === 'Point'
+        && Array.isArray(coordinates)
+        && coordinates.length === 2
+        && coordinates.every(Number.isFinite);
+    const point = hasSavedPin
+        ? { lat: coordinates[1], lng: coordinates[0] }
+        : await geocodeAddress(order.deliveryAddress || order.region || '');
 
     if (customerMarker) { deliveryMap.removeLayer(customerMarker); customerMarker = null; }
     if (routeLine) { deliveryMap.removeLayer(routeLine); routeLine = null; }
 
     if (!point) {
-        pill.textContent = "Couldn't locate this address on the map";
+        pill.textContent = "This order has no usable delivery location";
         deliveryMap.setView([RESTAURANT_LOCATION.lat, RESTAURANT_LOCATION.lng], 13);
         return;
     }
 
     customerMarker = L.marker([point.lat, point.lng])
         .addTo(deliveryMap)
-        .bindPopup(`${escapeHtml(order.customerName)} (Drop-off)`);
+        .bindPopup(`${escapeHtml(order.customerName)} (Exact drop-off pin)`)
+        .openPopup();
 
     pill.textContent = `#${order.orderNumber} · Finding the road route…`;
 
@@ -240,6 +292,7 @@ function renderActiveDelivery(assigned) {
     const activeOrder = assigned[0] || null;
 
     if (!activeOrder) {
+        stopLiveLocationSharing();
         panel.innerHTML = `<div class="empty-orders">🛵 No orders out for delivery right now.</div>`;
         badge.hidden = true;
         updateActiveDeliveryMap(null);
@@ -262,7 +315,7 @@ function renderActiveDelivery(assigned) {
             </div>
             <div class="stop">
                 <span class="dot dropoff"></span>
-                <div><strong>${escapeHtml(activeOrder.customerName)}</strong><span>${escapeHtml(activeOrder.deliveryAddress || activeOrder.region || 'Address not set')}</span></div>
+                <div><strong>${escapeHtml(activeOrder.customerName)}</strong><span>${escapeHtml(activeOrder.deliveryAddress || activeOrder.region || 'Address not set')}${activeOrder.deliveryLocation?.type === 'Point' ? ' · Exact map pin' : ''}</span></div>
             </div>
         </div>
         <div class="distance-pill">
@@ -272,12 +325,18 @@ function renderActiveDelivery(assigned) {
         <div class="footer" style="border-top:none; padding-top:0; margin-top:2px;">
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 ${callBtn}
-                <button class="btn deliver-btn" onclick="markDelivered('${activeOrder._id}')">✅ Mark as Delivered</button>
+                <button id="liveLocationButton" class="btn" onclick="startLiveLocationSharing()">Start Live Location</button>
+                <div class="otp-verification">
+                    <label for="otp-active-${activeOrder._id}">Customer OTP</label>
+                    <input id="otp-active-${activeOrder._id}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit OTP">
+                    <button class="btn deliver-btn" onclick="verifyOtp('${activeOrder._id}', 'otp-active-${activeOrder._id}')">Verify</button>
+                </div>
             </div>
         </div>
     `;
 
     updateActiveDeliveryMap(activeOrder);
+    updateLiveLocationButton();
 }
 
 // =====================================
@@ -478,7 +537,11 @@ function createCard(order) {
         <div class="footer">
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 ${callBtn}
-                <button class="btn deliver-btn" onclick="markDelivered('${order._id}')">✅ Mark Delivered</button>
+                <div class="otp-verification">
+                    <label for="otp-card-${order._id}">Enter Customer OTP</label>
+                    <input id="otp-card-${order._id}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit OTP">
+                    <button class="btn deliver-btn" onclick="verifyOtp('${order._id}', 'otp-card-${order._id}')">Verify</button>
+                </div>
             </div>
             <h3>$${Number(order.total || 0).toFixed(2)}</h3>
         </div>
@@ -515,13 +578,27 @@ function createDeliveredRow(order) {
 // out-for-delivery -> delivered
 // =====================================
 
-async function markDelivered(id) {
+function verifyOtp(id, inputId) {
 
-    if (!confirm("Confirm this order has been handed to the customer?")) return;
+    const input = document.getElementById(inputId);
+    const otp = input ? input.value.trim() : '';
+    if (!/^\d{6}$/.test(otp)) {
+        alert('Enter the 6-digit OTP provided by the customer.');
+        if (input) input.focus();
+        return;
+    }
+    markDelivered(id, otp);
+}
+
+async function markDelivered(id, otp) {
 
     try {
 
-        const res = await fetch(`${API}/${id}/delivered`, { method: "PUT", headers: { Authorization: 'Bearer ' + token } });
+        const res = await fetch(`${API}/${id}/delivered`, {
+            method: "PUT",
+            headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ otp })
+        });
 
         const data = await res.json();
 
@@ -535,6 +612,7 @@ async function markDelivered(id) {
 
         loadOrders();
         loadMyProfile();
+        alert(data.message || 'OTP verified. Order marked as delivered.');
 
     }
 

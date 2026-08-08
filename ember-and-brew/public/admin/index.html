@@ -23,6 +23,7 @@
     <button class="nav-item active" data-view="overview"><span class="ic">◆</span> Overview</button>
     <button class="nav-item" data-view="orders"><span class="ic">▤</span> Orders</button>
     <button class="nav-item" data-view="menu"><span class="ic">☕</span> Menu Items</button>
+    <button class="nav-item" data-view="reservations"><span class="ic">◉</span> Reservations <span class="nav-badge" id="reservationsBadge" hidden>0</span></button>
     <button class="nav-item" data-view="complaints"><span class="ic">⚑</span> Complaints <span class="nav-badge" id="complaintsBadge" hidden>0</span></button>
     <button class="nav-item" data-view="riders"><span class="ic">🛵</span> Delivery Riders</button>
 
@@ -165,6 +166,44 @@
         </div>
       </div>
 
+      <!-- RESERVATIONS -->
+      <div class="view" id="view-reservations" hidden>
+        <nav class="booking-nav" aria-label="Booking navigation">
+          <div class="booking-nav-brand">
+            <span class="booking-nav-icon">▣</span>
+            <span><strong>Table Bookings</strong><small>Manage and confirm guest reservations</small></span>
+          </div>
+          <div class="booking-nav-links" id="reservationFilterTabs">
+            <button class="booking-nav-link active" data-status="">All bookings</button>
+            <button class="booking-nav-link" data-status="pending">Pending</button>
+            <button class="booking-nav-link" data-status="confirmed">Confirmed</button>
+            <button class="booking-nav-link" data-status="completed">Completed</button>
+            <button class="booking-nav-link" data-status="cancelled">Cancelled</button>
+          </div>
+        </nav>
+        <div class="booking-stat-grid" id="bookingStats">
+          <div class="booking-stat total"><span class="booking-stat-icon">◫</span><span><strong id="bookingTotal">0</strong><small>Total bookings</small></span></div>
+          <div class="booking-stat pending"><span class="booking-stat-icon">◷</span><span><strong id="bookingPending">0</strong><small>Awaiting confirmation</small></span></div>
+          <div class="booking-stat confirmed"><span class="booking-stat-icon">✓</span><span><strong id="bookingConfirmed">0</strong><small>Confirmed guests</small></span></div>
+          <div class="booking-stat completed"><span class="booking-stat-icon">★</span><span><strong id="bookingCompleted">0</strong><small>Completed visits</small></span></div>
+        </div>
+        <section class="floor-map-panel">
+          <div class="booking-panel-head"><div><h3>Floor Map</h3><p>Real-time table status</p></div><div class="floor-summary"><span><b id="tableTotal">0</b> tables</span><span><b id="tableAvailable">0</b> available</span><span><b id="tableReserved">0</b> reserved</span></div></div>
+          <div class="floor-tools"><div class="floor-filters" id="floorFilters"><button class="floor-filter active" data-area="">All</button><button class="floor-filter" data-area="indoor">Indoor</button><button class="floor-filter" data-area="outdoor">Outdoor</button></div><button class="btn-primary" id="toggleTableForm">+ Add table</button></div>
+            <form class="add-table-form" id="addTableForm" hidden><input id="newTableNumber" placeholder="T-01" required maxlength="12"><input id="newTableSeats" type="number" placeholder="Seats" min="1" max="30" required><select id="newTableArea"><option value="indoor">Indoor</option><option value="outdoor">Outdoor</option></select><button class="btn-primary" type="submit">Save table</button></form>
+          <div id="floorMap" class="floor-map"><div class="empty-state">Add your restaurant tables to start the floor map.</div></div>
+          <div class="floor-legend"><span><i class="available"></i>Available</span><span><i class="reserved"></i>Reserved</span><span><i class="occupied"></i>Occupied</span><span><i class="maintenance"></i>Unavailable</span></div>
+        </section>
+        <div class="booking-dashboard-grid">
+          <section class="booking-upcoming-panel">
+            <div class="booking-panel-head"><div><h3>Upcoming bookings</h3><p>Next confirmed and pending reservations</p></div><span id="bookingUpcomingCount" class="booking-count">0</span></div>
+            <div id="bookingUpcomingList" class="booking-upcoming-list"><div class="empty-state">Loading bookings...</div></div>
+          </section>
+          <section class="booking-note-panel"><span class="booking-note-icon">✦</span><div><h3>Quick guide</h3><p>Choose a table, then set the status to Confirmed and save. Every update is shown here automatically.</p></div></section>
+        </div>
+        <div class="panel reservation-panel"><div class="panel-body"><div class="table-scroll"><table class="reservations-table"><thead><tr><th>Guest</th><th>Date &amp; Time</th><th>Guests</th><th>Table</th><th>Status</th><th>Save</th></tr></thead><tbody id="reservationsBody"><tr><td colspan="6" class="empty-state">Loading...</td></tr></tbody></table></div></div></div>
+      </div>
+
       <!-- COMPLAINTS -->
       <div class="view" id="view-complaints" hidden>
         <div class="filter-tabs" id="complaintFilterTabs">
@@ -267,6 +306,9 @@
           <datalist id="categoryList"></datalist>
         </div>
       </div>
+
+        <!-- Edit Table Modal -->
+        
       <div class="field">
         <span style="font-size:13px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:6px;">Image URL</span>
         <input type="text" id="itemImage" placeholder="https://…" required />

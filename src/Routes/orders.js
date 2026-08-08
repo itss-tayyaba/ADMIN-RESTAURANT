@@ -6,7 +6,7 @@ const Customer = require('../models/Customer');
 const MenuItem = require('../models/MenuItem');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { customerAuth } = require('./customerAuth');
+const { customerAuth, optionalCustomerAuth } = require('./customerAuth');
 const REGIONS = require('../data/regions');
 
 // Generates an order number that is NOT guessable/sequential (e.g. EB-4K9QXP).
@@ -45,23 +45,102 @@ function adminAuth(req, res, next) {
   }
 }
 
+function customerOrderPayload(order) {
+  const payload = order.toObject ? order.toObject() : order;
+  const canSeeOtp = payload.orderType === 'delivery'
+    && payload.status !== 'received'
+    && !payload.otpVerified;
+  if (!canSeeOtp) delete payload.otp;
+  return payload;
+}
+
+// Supports delivery orders created before OTP confirmation was introduced.
+// New orders always receive a code at checkout; legacy accepted orders receive
+// one the first time their owner opens the private customer portal.
+async function ensureCustomerDeliveryOtp(order) {
+  // Orders verified before the completion step was added are safely advanced
+  // on their next customer-portal view, so they receive the final Hooray UI.
+  if (order.status === 'delivered' && order.otpVerified) {
+    const time = new Date();
+    await Order.updateOne(
+      { _id: order._id, status: 'delivered' },
+      { $set: { status: 'completed' }, $push: { statusLog: { status: 'completed', time } } }
+    );
+    order.status = 'completed';
+    order.statusLog.push({ status: 'completed', time });
+    return order;
+  }
+
+  if (order.orderType === 'delivery' && order.status !== 'received' && !order.otpVerified && !order.otp) {
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    // Avoid a document save here: Order's post-save hook records menu pair
+    // counts and should run only when an order is actually created.
+    await Order.updateOne({ _id: order._id }, { $set: { otp } });
+    order.otp = otp;
+  }
+  return order;
+}
+
 // GET /api/orders/meta/regions — public list of valid delivery regions
 router.get('/meta/regions', (req, res) => {
   res.json({ regions: REGIONS });
 });
 
-// POST /api/orders — create a new order (requires a logged-in customer account)
-router.post('/', customerAuth, async (req, res) => {
+// The browser key is intentionally public, but it must be restricted to the
+// website origins in Google Cloud Console.
+router.get('/map-config', (req, res) => {
+  res.json({ apiKey: process.env.GOOGLE_MAPS_API_KEY || '' });
+});
+
+// POST /api/orders — create a new order. Works for a logged-in customer
+// (order is linked to their account) or a guest (guestName/guestPhone are
+// required instead and no account is created or required).
+router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
-    const { items, orderType, deliveryAddress, notes, region } = req.body;
+    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone } = req.body;
     if (!items || items.length === 0) return res.status(400).json({ error: 'Cart is empty' });
 
     if (orderType === 'delivery' && !REGIONS.includes(region)) {
       return res.status(400).json({ error: 'Please choose a valid delivery region.' });
     }
 
-    const customer = await Customer.findById(req.customer.id);
-    if (!customer) return res.status(401).json({ error: 'Account not found. Please log in again.' });
+    let validatedLocation;
+    if (orderType === 'delivery') {
+      const coordinates = deliveryLocation && deliveryLocation.coordinates;
+      const isPoint = deliveryLocation && deliveryLocation.type === 'Point';
+      const hasCoordinates = Array.isArray(coordinates) && coordinates.length === 2
+        && coordinates.every(Number.isFinite);
+      if (!isPoint || !hasCoordinates) {
+        return res.status(400).json({ error: 'Please select and confirm your delivery location on the map.' });
+      }
+      const [lng, lat] = coordinates;
+      if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        return res.status(400).json({ error: 'The selected delivery coordinates are invalid.' });
+      }
+      validatedLocation = { type: 'Point', coordinates: [lng, lat] };
+    }
+
+    let customer = null;
+    let orderCustomerName;
+    let orderCustomerPhone;
+
+    if (req.customer) {
+      customer = await Customer.findById(req.customer.id);
+      if (!customer) return res.status(401).json({ error: 'Account not found. Please log in again.' });
+      orderCustomerName = customer.name;
+      orderCustomerPhone = customer.phone;
+    } else {
+      const name = (guestName || '').trim();
+      const phone = (guestPhone || '').trim();
+      if (name.length < 2) {
+        return res.status(400).json({ error: 'Please enter your name.' });
+      }
+      if (!/^\d{11}$/.test(phone)) {
+        return res.status(400).json({ error: 'Phone number must be exactly 11 digits.' });
+      }
+      orderCustomerName = name;
+      orderCustomerPhone = phone;
+    }
 
     // Never trust client-submitted prices — look up every item's real price
     // and availability from the menu in the database. A customer could
@@ -100,22 +179,27 @@ router.post('/', customerAuth, async (req, res) => {
 
     const order = new Order({
       orderNumber,
-      customer: customer._id,
+      customer: customer ? customer._id : null,
+      isGuestOrder: !customer,
       items: resolvedItems,
       subtotal,
       tax,
       total: subtotal + tax,
-      customerName: customer.name,
-      customerPhone: customer.phone,
+      customerName: orderCustomerName,
+      customerPhone: orderCustomerPhone,
       orderType: orderType || 'dine-in',
       deliveryAddress: deliveryAddress || '',
+      deliveryLocation: validatedLocation,
       region: orderType === 'delivery' ? region : '',
       notes: notes || '',
+      // Generated at checkout but not shown until the order is accepted.
+      otp: orderType === 'delivery' ? crypto.randomInt(100000, 1000000).toString() : undefined,
+      otpVerified: false,
       statusLog: [{ status: 'received', time: new Date() }]
     });
 
     await order.save();
-    res.status(201).json(order);
+    res.status(201).json(customerOrderPayload(order));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create order' });
@@ -125,10 +209,28 @@ router.post('/', customerAuth, async (req, res) => {
 // GET /api/orders/mine/list — the logged-in customer's own order history
 router.get('/mine/list', customerAuth, async (req, res) => {
   try {
-    const orders = await Order.find({ customer: req.customer.id }).sort({ createdAt: -1 });
-    res.json(orders);
+    const orders = await Order.find({ customer: req.customer.id })
+      .select('+otp')
+      .sort({ createdAt: -1 });
+    await Promise.all(orders.map(ensureCustomerDeliveryOtp));
+    res.json(orders.map(customerOrderPayload));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch your orders' });
+  }
+});
+
+// Private tracking details for the customer who owns the order.
+router.get('/mine/:orderNumber', customerAuth, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      orderNumber: req.params.orderNumber,
+      customer: req.customer.id
+    }).select('+otp');
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    await ensureCustomerDeliveryOtp(order);
+    res.json(customerOrderPayload(order));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch order' });
   }
 });
 
@@ -201,7 +303,10 @@ router.get('/:id', async (req, res) => {
   try {
     const order = await Order.findOne({ orderNumber: req.params.id });
     if (!order) return res.status(404).json({ error: 'Order not found' });
-    res.json(order);
+    // Live rider GPS is private to the customer who owns the order.
+    const publicOrder = order.toObject();
+    delete publicOrder.riderLocation;
+    res.json(publicOrder);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch order' });
   }
@@ -221,13 +326,19 @@ router.put('/:id/status', adminAuth, async (req, res) => {
     if (existing.orderType !== 'delivery' && deliveryOnlyStatuses.includes(status)) {
       return res.status(400).json({ error: `"${status}" only applies to delivery orders.` });
     }
+    if (existing.orderType === 'delivery' && status === 'delivered') {
+      return res.status(400).json({ error: 'Delivery orders must be completed with the customer OTP.' });
+    }
+
+    const update = {
+      $set: { status },
+      $push: { statusLog: { status, time: new Date() } }
+    };
+    if (['completed', 'cancelled'].includes(status)) update.$unset = { riderLocation: 1 };
 
     const order = await Order.findOneAndUpdate(
       { orderNumber: req.params.id },
-      {
-        $set: { status },
-        $push: { statusLog: { status, time: new Date() } }
-      },
+      update,
       { new: true }
     );
     if (!order) return res.status(404).json({ error: 'Order not found' });

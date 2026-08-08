@@ -528,11 +528,39 @@ router.get("/orders", deliveryAuth, async (req, res) => {
 // out-for-delivery --> delivered
 // =====================================
 
+// Updated only by the assigned rider while they have an active delivery.
+router.put("/location", deliveryAuth, async (req, res) => {
+    try {
+        const { latitude, longitude } = req.body || {};
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+            || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            return res.status(400).json({ success: false, message: "Invalid rider coordinates." });
+        }
+        const update = await Order.updateMany(
+            { deliveryBoy: req.user.id, status: "out-for-delivery" },
+            { $set: { riderLocation: { type: "Point", coordinates: [longitude, latitude], updatedAt: new Date() } } }
+        );
+        if (!update.matchedCount) return res.status(409).json({ success: false, message: "There is no active delivery to share." });
+        res.json({ success: true, updatedAt: new Date() });
+    } catch (_) {
+        res.status(500).json({ success: false, message: "Could not update live location." });
+    }
+});
+
 router.put("/:id/delivered", deliveryAuth, async (req, res) => {
 
     try {
 
-        const order = await Order.findById(req.params.id);
+        const otp = String(req.body?.otp || '').trim();
+        if (!/^\d{6}$/.test(otp)) {
+            return res.status(400).json({
+                success: false,
+                message: "Enter the 6-digit OTP provided by the customer."
+            });
+        }
+
+        // otp is select:false and is retrieved only for this comparison.
+        const order = await Order.findById(req.params.id).select("+otp");
 
         if (!order) {
             return res.status(404).json({
@@ -555,11 +583,26 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
             });
         }
 
-        order.status = "delivered";
+        if (!order.otp || order.otp !== otp) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid OTP. Please ask the customer to confirm the code."
+            });
+        }
+
+        // OTP verification is the proof of handoff. Record the delivery,
+        // then complete the customer journey immediately.
+        order.status = "completed";
         order.deliveredAt = new Date();
+        order.otpVerified = true;
+        order.riderLocation = undefined;
 
         order.statusLog.push({
             status: "delivered",
+            time: new Date()
+        });
+        order.statusLog.push({
+            status: "completed",
             time: new Date()
         });
 
@@ -574,15 +617,20 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
             { $set: { activeOrders: 0 } }
         );
 
+        // This query selected the secret solely for verification. Do not
+        // expose it through the response or the realtime event.
+        const safeOrder = order.toObject();
+        delete safeOrder.otp;
+
         try {
             const io = req.app && req.app.locals && req.app.locals.io;
-            if (io) io.emit('order:update', order);
+            if (io) io.emit('order:update', safeOrder);
         } catch (e) { /* ignore emit errors */ }
 
         res.json({
             success: true,
-            message: "Order marked as delivered. Great job!",
-            order
+            message: "OTP verified. Delivery completed successfully.",
+            order: safeOrder
         });
 
     } catch (error) {

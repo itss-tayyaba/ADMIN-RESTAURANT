@@ -14,7 +14,9 @@ const statusLogSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
-  customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
+  customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: false, default: null, index: true },
+  // True when this order was placed without a customer account (guest checkout).
+  isGuestOrder: { type: Boolean, default: false },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
   tax: { type: Number, required: true },
@@ -29,6 +31,28 @@ const orderSchema = new mongoose.Schema({
   customerPhone: { type: String, required: true },
   orderType: { type: String, enum: ['dine-in', 'takeaway', 'delivery'] },
   deliveryAddress: String,
+  // GeoJSON Point uses [longitude, latitude] (not [latitude, longitude]).
+  deliveryLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: false
+    },
+    coordinates: {
+      type: [Number],
+      required: false
+    }
+  },
+  // Updated only by the assigned rider while an order is out for delivery.
+  riderLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: false
+    },
+    coordinates: { type: [Number], required: false },
+    updatedAt: { type: Date, required: false }
+  },
   // Fixed region the order falls under (only used for orderType 'delivery').
   // This is what the auto-assignment system matches against a rider's region.
   region: { type: String, default: '' },
@@ -38,8 +62,13 @@ const orderSchema = new mongoose.Schema({
   deliveryBoyPhone: { type: String, default: '' },
   assignedAt: Date,
   deliveredAt: Date,
+  // Hidden from standard query results; selected only while the server verifies it.
+  otp: { type: String, select: false },
+  otpVerified: { type: Boolean, default: false },
   statusLog: [statusLogSchema]
 }, { timestamps: true });
+
+orderSchema.index({ deliveryLocation: '2dsphere' });
 
 // After saving an order, update pair counts for AI recommendations
 orderSchema.post('save', async function() {
