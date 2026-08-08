@@ -166,7 +166,7 @@ The Restaurant Management System has been successfully deployed on **Vercel**.
 
 Frontend + Backend (Full Application):
 
-https://admin-restaurant-six.vercel.app/
+https://admin-restaurant-six.vercel.app
 
 ## Backend API
 
