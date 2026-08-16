@@ -111,11 +111,16 @@ adminUserSchema.statics.createDefaultAdmin = async function(){
 
     if(!admin){
 
+        const password = process.env.DEFAULT_ADMIN_PASSWORD || "ember2024";
+        if (!process.env.DEFAULT_ADMIN_PASSWORD) {
+            console.warn("⚠️  DEFAULT_ADMIN_PASSWORD not set — using demo password 'ember2024'. Set it in .env and change it from the admin panel before going live.");
+        }
+
         await this.create({
 
             username: "admin",
 
-            password: "ember2024",
+            password,
 
             name: "Restaurant Administrator",
 
@@ -139,11 +144,16 @@ adminUserSchema.statics.createDefaultChef = async function(){
 
     if(!chef){
 
+        const password = process.env.DEFAULT_CHEF_PASSWORD || "chef123";
+        if (!process.env.DEFAULT_CHEF_PASSWORD) {
+            console.warn("⚠️  DEFAULT_CHEF_PASSWORD not set — using demo password 'chef123'. Set it in .env before going live.");
+        }
+
         await this.create({
 
             username: "chef",
 
-            password: "chef123",
+            password,
 
             name: "Head Chef",
 
@@ -167,11 +177,16 @@ adminUserSchema.statics.createDefaultDelivery = async function(){
 
     if(!rider){
 
+        const password = process.env.DEFAULT_DELIVERY_PASSWORD || "delivery123";
+        if (!process.env.DEFAULT_DELIVERY_PASSWORD) {
+            console.warn("⚠️  DEFAULT_DELIVERY_PASSWORD not set — using demo password 'delivery123'. Set it in .env before going live.");
+        }
+
         await this.create({
 
             username: "delivery",
 
-            password: "delivery123",
+            password,
 
             name: "Delivery Rider",
 

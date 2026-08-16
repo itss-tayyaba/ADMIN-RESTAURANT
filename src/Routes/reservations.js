@@ -6,6 +6,37 @@ const { customerAuth } = require('./customerAuth');
 
 const router = express.Router();
 
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+// Must match the window used in src/Routes/tables.js, which is what
+// actually decides whether a table LOOKS occupied on the floor plan right
+// now. This constant is only used here to stop two reservations from being
+// confirmed onto the same table for overlapping times in the first place.
+const RESERVATION_WINDOW_MINUTES = 120; // a booking is assumed to hold the table for ~2 hours
+
+function minutesFromTimeStr(timeStr) {
+  const [h, m] = String(timeStr || '00:00').split(':').map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+// Blocks confirming a reservation onto a table that's already holding
+// another CONFIRMED reservation with an overlapping time on the same date.
+// (Deliberately ignores merely "pending" reservations on the same
+// table/time — an admin should be free to choose which of several pending
+// requests to confirm, rather than being blocked by the others.)
+async function hasConfirmedConflict(tableNumber, date, time, excludeReservationId) {
+  if (!tableNumber) return false;
+  const sameDay = await Reservation.find({
+    _id: { $ne: excludeReservationId },
+    tableNumber,
+    date,
+    status: 'confirmed'
+  }).select('time');
+
+  const start = minutesFromTimeStr(time);
+  return sameDay.some(r => Math.abs(minutesFromTimeStr(r.time) - start) < RESERVATION_WINDOW_MINUTES);
+}
+
 function adminAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ error: 'No token provided' });
@@ -86,9 +117,7 @@ router.get('/mine/list', customerAuth, async (req, res) => {
     if (customerPhone) {
       query.$or.push({ phone: customerPhone });
     }
-    console.log('Reservation lookup query:', JSON.stringify(query));
     const reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
-    console.log('Reservations returned for customer:', reservations.length);
     res.json(reservations);
   } catch (err) {
     console.error('Failed to fetch reservations for customer:', req.customer.id, err);
@@ -115,8 +144,24 @@ router.put('/:id', adminAuth, async (req, res) => {
     if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid reservation status.' });
     const table = typeof tableNumber === 'string' ? tableNumber.trim() : '';
     if (status === 'confirmed' && !table) return res.status(400).json({ error: 'Assign a table before confirming this reservation.' });
+
+    const previous = await Reservation.findById(req.params.id);
+    if (!previous) return res.status(404).json({ error: 'Reservation not found.' });
+
+    if (status === 'confirmed') {
+      const date = previous.date;
+      const time = previous.time;
+      const conflict = await hasConfirmedConflict(table, date, time, previous._id);
+      if (conflict) {
+        return res.status(409).json({
+          error: `Table ${table} already has another confirmed booking around ${time} on ${date}. Choose a different table or time.`
+        });
+      }
+    }
+
     const reservation = await Reservation.findByIdAndUpdate(req.params.id, { status, tableNumber: table }, { new: true, runValidators: true });
     if (!reservation) return res.status(404).json({ error: 'Reservation not found.' });
+
     res.json(reservation);
   } catch {
     res.status(500).json({ error: 'Failed to update reservation.' });

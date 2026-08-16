@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node server.js",
-    "seed": "node src/seeds.js"
+    "seed": "node src/seeds.js",
+    "seed:orders": "node src/seedOrders.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -12,8 +13,6 @@
     "express": "^4.21.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.6.0",
-    "puppeteer": "^25.5.0",
-    "socket.io": "^4.8.3",
-    "three": "^0.185.1"
+    "socket.io": "^4.8.3"
   }
 }

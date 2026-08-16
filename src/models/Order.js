@@ -30,6 +30,10 @@ const orderSchema = new mongoose.Schema({
   customerName: { type: String, required: true },
   customerPhone: { type: String, required: true },
   orderType: { type: String, enum: ['dine-in', 'takeaway', 'delivery'] },
+  // Set only for dine-in orders placed via a scanned table QR (?table=T-01).
+  // Empty for orders placed without scanning a table (customer typed order
+  // type manually, or arrived via takeaway/delivery).
+  tableNumber: { type: String, default: '', trim: true },
   deliveryAddress: String,
   // GeoJSON Point uses [longitude, latitude] (not [latitude, longitude]).
   deliveryLocation: {

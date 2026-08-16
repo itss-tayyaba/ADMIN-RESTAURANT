@@ -100,11 +100,21 @@ const OSRM_BASE = "https://router.project-osrm.org/route/v1/driving";
 
 let deliveryMap = null;
 let customerMarker = null;
+let riderMarker = null;
 let routeLine = null;
 let currentActiveOrderId = null;
 const geocodeCache = new Map();
 let liveLocationWatchId = null;
 let lastLocationSentAt = 0;
+// The rider's most recent GPS fix (once "Start Live Location" is on) and the
+// resolved drop-off point for whichever order is currently being traced.
+// Kept here so the route/ETA can be recomputed as the rider moves, instead
+// of being calculated once from the restaurant's fixed address and never
+// updated — which is why the rider's own distance used to freeze while the
+// customer's live-updating distance kept shrinking.
+let lastRiderPosition = null;
+let activeDropoffPoint = null;
+let activeDropoffOrder = null;
 
 function updateLiveLocationButton() {
     const button = document.getElementById('liveLocationButton');
@@ -118,6 +128,12 @@ function startLiveLocationSharing() {
     if (!navigator.geolocation) return alert('This device does not support location sharing.');
     if (liveLocationWatchId !== null) return stopLiveLocationSharing();
     liveLocationWatchId = navigator.geolocation.watchPosition(async position => {
+        // Update the local rider marker + route/ETA on every fix — this is
+        // cheap (no network call) and keeps the on-screen distance genuinely
+        // live instead of frozen at whatever it was when the order loaded.
+        lastRiderPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
+        refreshLiveRoute();
+
         const now = Date.now();
         if (now - lastLocationSentAt < 10000) return;
         lastLocationSentAt = now;
@@ -143,6 +159,11 @@ function stopLiveLocationSharing() {
     if (liveLocationWatchId !== null) navigator.geolocation.clearWatch(liveLocationWatchId);
     liveLocationWatchId = null;
     lastLocationSentAt = 0;
+    lastRiderPosition = null;
+    if (riderMarker) { deliveryMap?.removeLayer(riderMarker); riderMarker = null; }
+    // Falls back to the restaurant's fixed address for distance/ETA again
+    // now that we no longer have a live fix.
+    if (activeDropoffOrder) refreshLiveRoute();
     updateLiveLocationButton();
 }
 
@@ -224,7 +245,10 @@ async function updateActiveDeliveryMap(order) {
 
     if (!order) {
         currentActiveOrderId = null;
+        activeDropoffOrder = null;
+        activeDropoffPoint = null;
         if (customerMarker) { deliveryMap.removeLayer(customerMarker); customerMarker = null; }
+        if (riderMarker) { deliveryMap.removeLayer(riderMarker); riderMarker = null; }
         if (routeLine) { deliveryMap.removeLayer(routeLine); routeLine = null; }
         pill.textContent = "No active order to trace";
         deliveryMap.setView([RESTAURANT_LOCATION.lat, RESTAURANT_LOCATION.lng], 13);
@@ -252,6 +276,8 @@ async function updateActiveDeliveryMap(order) {
     if (routeLine) { deliveryMap.removeLayer(routeLine); routeLine = null; }
 
     if (!point) {
+        activeDropoffOrder = null;
+        activeDropoffPoint = null;
         pill.textContent = "This order has no usable delivery location";
         deliveryMap.setView([RESTAURANT_LOCATION.lat, RESTAURANT_LOCATION.lng], 13);
         return;
@@ -262,25 +288,72 @@ async function updateActiveDeliveryMap(order) {
         .bindPopup(`${escapeHtml(order.customerName)} (Exact drop-off pin)`)
         .openPopup();
 
+    // Remember these so refreshLiveRoute() can redraw the route as the
+    // rider's GPS moves, without re-geocoding or re-placing this marker.
+    activeDropoffOrder = order;
+    activeDropoffPoint = point;
+
+    await renderLiveRoute(order, point, true);
+}
+
+// Redraws the road route, distance/ETA pill, and rider marker using the
+// rider's current live position (falling back to the restaurant's fixed
+// address if live sharing isn't on yet). Called both on initial load and
+// every time a fresh GPS fix comes in from startLiveLocationSharing(), so
+// the rider sees the same continuously-updating distance the customer does
+// — instead of a number frozen at whatever it was when the order loaded.
+// `fit` only re-centers/zooms the map on the initial render; live refreshes
+// leave the rider's current view alone so the map doesn't jump every ~10s.
+async function renderLiveRoute(order, point, fit = false) {
+    const pill = document.getElementById('mapStatusPill');
+    if (!deliveryMap || !pill || !point) return;
+
+    const origin = lastRiderPosition || RESTAURANT_LOCATION;
+
+    if (lastRiderPosition) {
+        if (!riderMarker) {
+            riderMarker = L.marker([origin.lat, origin.lng], {
+                icon: L.divIcon({ className: 'rider-live-marker', html: '🛵', iconSize: [28, 28] })
+            }).addTo(deliveryMap).bindPopup('Your live location');
+        } else {
+            riderMarker.setLatLng([origin.lat, origin.lng]);
+        }
+    } else if (riderMarker) {
+        deliveryMap.removeLayer(riderMarker);
+        riderMarker = null;
+    }
+
+    if (routeLine) { deliveryMap.removeLayer(routeLine); routeLine = null; }
     pill.textContent = `#${order.orderNumber} · Finding the road route…`;
 
-    const road = await fetchRoadRoute(RESTAURANT_LOCATION, point);
+    const road = await fetchRoadRoute(origin, point);
 
     if (road) {
         // Real road path, following actual streets.
         routeLine = L.polyline(road.coords, { color: '#C4923A', weight: 5 }).addTo(deliveryMap);
-        deliveryMap.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+        if (fit) deliveryMap.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
         pill.textContent = `#${order.orderNumber} · ${road.distanceKm.toFixed(1)} km · ~${Math.round(road.durationMin)} min to drop-off`;
     } else {
         // Routing service unreachable — fall back to a straight-line estimate
         // so the rider still sees direction/distance.
         routeLine = L.polyline(
-            [[RESTAURANT_LOCATION.lat, RESTAURANT_LOCATION.lng], [point.lat, point.lng]],
+            [[origin.lat, origin.lng], [point.lat, point.lng]],
             { color: '#C4923A', weight: 4, dashArray: '6, 10' }
         ).addTo(deliveryMap);
-        deliveryMap.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
-        const km = haversineKm(RESTAURANT_LOCATION, point);
+        if (fit) deliveryMap.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+        const km = haversineKm(origin, point);
         pill.textContent = `#${order.orderNumber} · ~${km.toFixed(1)} km to drop-off (straight-line estimate)`;
+    }
+}
+
+let liveRouteRefreshInFlight = false;
+async function refreshLiveRoute() {
+    if (!activeDropoffOrder || !activeDropoffPoint || liveRouteRefreshInFlight) return;
+    liveRouteRefreshInFlight = true;
+    try {
+        await renderLiveRoute(activeDropoffOrder, activeDropoffPoint);
+    } finally {
+        liveRouteRefreshInFlight = false;
     }
 }
 

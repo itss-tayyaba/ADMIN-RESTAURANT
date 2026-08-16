@@ -2,12 +2,11 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Customer = require('../models/Customer');
+const Order = require('../models/Order');
 
 // Middleware: verify a customer JWT (exported for use in orders/complaints routes)
 function customerAuth(req, res, next) {
   const header = req.headers.authorization;
-
-  console.log("Authorization Header:", header);
 
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({
@@ -20,8 +19,6 @@ function customerAuth(req, res, next) {
       header.split(' ')[1],
       process.env.JWT_SECRET
     );
-
-    console.log("Decoded JWT:", decoded);
 
     if (decoded.role !== 'customer') {
       return res.status(403).json({
@@ -82,6 +79,24 @@ function signCustomerToken(customer) {
   );
 }
 
+// Link any orders placed as a guest (customer: null) with this phone number
+// to the now-authenticated account, so past guest orders show up in "My
+// Orders" instead of being stranded forever. Runs on both register and
+// login so it also catches guest orders placed *after* the account already
+// existed, e.g. on another device without signing in.
+async function claimGuestOrders(customer) {
+  if (!customer?.phone) return;
+  try {
+    await Order.updateMany(
+      { customer: null, customerPhone: customer.phone },
+      { $set: { customer: customer._id } }
+    );
+  } catch (err) {
+    // Never let a claim failure block login/register.
+    console.error('Failed to link guest orders to account:', err);
+  }
+}
+
 // POST /api/customer-auth/register
 router.post('/register', async (req, res) => {
   try {
@@ -125,6 +140,7 @@ router.post('/register', async (req, res) => {
     });
 
     await customer.save();
+    await claimGuestOrders(customer);
 
     const token = signCustomerToken(customer);
 
@@ -177,6 +193,8 @@ router.post('/login', async (req, res) => {
         error: 'Invalid credentials.'
       });
     }
+
+    await claimGuestOrders(customer);
 
     const token = signCustomerToken(customer);
 

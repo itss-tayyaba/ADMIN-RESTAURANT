@@ -24,11 +24,57 @@ const STATUS_ICONS = {
   preparing: 'fa-utensils',
   ready: 'fa-box-open',
   'out-for-delivery': 'fa-motorcycle',
-  delivered: 'fa-check-circle',
+  // Was 'fa-check-circle' — a checkmark icon used here made the "Delivered"
+  // step look already completed even while it was still pending, since the
+  // journey UI shows this icon for any stop that hasn't been reached yet.
+  delivered: 'fa-truck-ramp-box',
   completed: 'fa-gift',
   cancelled: 'fa-ban'
 };
 const TRACKING_FLOW = ['received', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'completed'];
+
+// Same branch coordinates and route-estimate logic as the public tracking
+// page, so the customer portal's "live status" shows an actual rider
+// distance/ETA instead of just a status label once a delivery is out.
+const PICKUP_LOCATION = { lat: 31.4187, lng: 73.0791 };
+
+function straightLineKm(from, to) {
+  const radians = value => value * Math.PI / 180;
+  const dLat = radians(to.lat - from.lat);
+  const dLng = radians(to.lng - from.lng);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(radians(from.lat)) * Math.cos(radians(to.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function renderDeliveryRouteEstimate(order) {
+  const output = document.getElementById('delivery-route-estimate');
+  const coordinates = order.deliveryLocation?.coordinates;
+  if (!output || !Array.isArray(coordinates) || coordinates.length !== 2 || !coordinates.every(Number.isFinite)) return;
+  const destination = { lng: coordinates[0], lat: coordinates[1] };
+  const riderCoordinates = order.riderLocation?.coordinates;
+  const hasLiveRiderLocation = order.riderLocation?.type === 'Point'
+    && Array.isArray(riderCoordinates)
+    && riderCoordinates.length === 2
+    && riderCoordinates.every(Number.isFinite);
+  const origin = hasLiveRiderLocation
+    ? { lng: riderCoordinates[0], lat: riderCoordinates[1] }
+    : PICKUP_LOCATION;
+  const source = document.getElementById('delivery-route-source');
+  if (source) source.textContent = hasLiveRiderLocation
+    ? 'Live rider GPS is active. Distance and ETA update automatically.'
+    : 'Waiting for the rider to enable live GPS; branch-to-customer estimate is shown meanwhile.';
+  try {
+    const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=false`);
+    const data = await response.json();
+    const route = data.routes?.[0];
+    if (!response.ok || !route) throw new Error('No route');
+    output.textContent = `${hasLiveRiderLocation ? 'Live rider distance: ' : ''}~${(route.distance / 1000).toFixed(1)} km · ~${Math.max(1, Math.round(route.duration / 60))} min`;
+  } catch (_) {
+    const km = straightLineKm(origin, destination);
+    output.textContent = `~${km.toFixed(1)} km · route estimate unavailable`;
+  }
+}
 
 let customerTrackingPoll = null;
 
@@ -989,6 +1035,24 @@ async function renderTracking(orderNumber) {
             ` : ''}
           </div>
         `}
+        ${order.orderType === 'delivery' && order.status === 'out-for-delivery' && order.deliveryLocation?.type === 'Point' ? `
+          <div class="portal-card mt-6">
+            <div class="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p class="text-xs uppercase tracking-[.3em] text-muted mb-1">Live delivery</p>
+                <p class="text-sm text-brand-300">Rider is on the way to your confirmed location.</p>
+              </div>
+              <i class="fa-solid fa-motorcycle text-2xl text-brand-400"></i>
+            </div>
+            <div class="flex items-center justify-between text-center gap-2">
+              <div class="flex-1"><i class="fa-solid fa-motorcycle text-brand-400"></i><p class="text-xs text-muted mt-1">Rider</p></div>
+              <div class="flex-1 border-t border-dashed border-brand-800"></div>
+              <div class="flex-1"><i class="fa-solid fa-location-dot text-[#B54B3A]"></i><p class="text-xs text-muted mt-1">Your location</p></div>
+            </div>
+            <p id="delivery-route-estimate" class="text-center text-sm font-semibold mt-4">Calculating route to your location…</p>
+            <p id="delivery-route-source" class="text-center text-xs text-muted mt-1">Waiting for the rider to enable live GPS; branch-to-customer estimate is shown meanwhile.</p>
+          </div>
+        ` : ''}
         <div class="grid gap-4 md:grid-cols-2">
           <div class="summary-card">
             <div class="label">Order type</div>
@@ -1016,6 +1080,8 @@ async function renderTracking(orderNumber) {
       </div>
     `;
 
+    renderDeliveryRouteEstimate(order);
+
     if (customerTrackingPoll) clearInterval(customerTrackingPoll);
     if (!['completed', 'cancelled'].includes(order.status)) {
       customerTrackingPoll = setInterval(async () => {
@@ -1025,6 +1091,11 @@ async function renderTracking(orderNumber) {
             if (fresh.status === 'ready') showToast(`Order ${order.orderNumber} is ready!`, 'info');
             if (fresh.status === 'completed') showToast(`Order ${order.orderNumber} completed. Enjoy!`, 'success');
             renderTracking(order.orderNumber);
+          } else if (fresh.status === 'out-for-delivery') {
+            // Status hasn't changed, but the rider's GPS may have — refresh
+            // just the distance/ETA readout instead of re-rendering the
+            // whole panel, so the live tracking widget actually updates.
+            renderDeliveryRouteEstimate(fresh);
           }
         } catch (err) {
           // ignore polling errors silently

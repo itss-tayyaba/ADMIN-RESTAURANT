@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { customerAuth, optionalCustomerAuth } = require('./customerAuth');
 const REGIONS = require('../data/regions');
+const REGION_CENTERS = require('../data/regionCenters');
+const { haversineKm } = require('../utils/geo');
 
 // Generates an order number that is NOT guessable/sequential (e.g. EB-4K9QXP).
 // Anyone who has this number can look the order up on the public tracking
@@ -97,7 +99,7 @@ router.get('/map-config', (req, res) => {
 // required instead and no account is created or required).
 router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
-    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone } = req.body;
+    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, tableNumber } = req.body;
     if (!items || items.length === 0) return res.status(400).json({ error: 'Cart is empty' });
 
     if (orderType === 'delivery' && !REGIONS.includes(region)) {
@@ -117,6 +119,22 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
         return res.status(400).json({ error: 'The selected delivery coordinates are invalid.' });
       }
+
+      // Geofence sanity check — the region dropdown and the map pin are
+      // otherwise unrelated (the dropdown is just a fixed list; it never
+      // reads the pin's coordinates). This catches an obviously mismatched
+      // pair, e.g. a pin left over from a search result in another city
+      // while "Gulberg" is still selected in the dropdown.
+      const center = REGION_CENTERS[region];
+      if (center) {
+        const distanceKm = haversineKm(lat, lng, center.lat, center.lng);
+        if (distanceKm > center.radiusKm) {
+          return res.status(400).json({
+            error: `That pinned location is about ${distanceKm.toFixed(1)} km from "${region}" — too far for that region. Please recheck the pin on the map or choose the delivery region that actually matches it.`
+          });
+        }
+      }
+
       validatedLocation = { type: 'Point', coordinates: [lng, lat] };
     }
 
@@ -188,6 +206,11 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       customerName: orderCustomerName,
       customerPhone: orderCustomerPhone,
       orderType: orderType || 'dine-in',
+      // Only meaningful for dine-in — ignore it entirely for takeaway/delivery
+      // even if a stray value is sent, so it can never mislabel those orders.
+      tableNumber: (orderType || 'dine-in') === 'dine-in' && typeof tableNumber === 'string'
+        ? tableNumber.trim().slice(0, 20)
+        : '',
       deliveryAddress: deliveryAddress || '',
       deliveryLocation: validatedLocation,
       region: orderType === 'delivery' ? region : '',
@@ -299,12 +322,18 @@ router.get('/', adminAuth, async (req, res) => {
 });
 
 // GET /api/orders/:id — get single order (for tracking)
+// Guests never create an account, so this public, order-number-gated route
+// is the only place they can ever see their delivery OTP. The order number
+// itself is the unguessable access token (see generateOrderNumber above),
+// so anyone who has it is treated as the order owner here — same trust
+// model already used for guest checkout itself.
 router.get('/:id', async (req, res) => {
   try {
-    const order = await Order.findOne({ orderNumber: req.params.id });
+    const order = await Order.findOne({ orderNumber: req.params.id }).select('+otp');
     if (!order) return res.status(404).json({ error: 'Order not found' });
+    await ensureCustomerDeliveryOtp(order);
     // Live rider GPS is private to the customer who owns the order.
-    const publicOrder = order.toObject();
+    const publicOrder = customerOrderPayload(order);
     delete publicOrder.riderLocation;
     res.json(publicOrder);
   } catch (err) {

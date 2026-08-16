@@ -1,14 +1,25 @@
+// A quick standalone script to verify your MONGODB_URI works before
+// running the full server. Never hardcode real credentials here — this
+// file is tracked by git (unlike .env), so anything hardcoded in it
+// ends up permanently in your repo history.
+//
+// Usage: node testConnection.js
+
+require("dotenv").config();
 const mongoose = require("mongoose");
 
-mongoose.connect(
-    "mongodb+srv://hamzatabi654_db_user:Hamza123456@cluster0.zk6n6bz.mongodb.net/ember-brew?retryWrites=true&w=majority&appName=Cluster0"
-)
+if (!process.env.MONGODB_URI) {
+    console.error("❌ MONGODB_URI is not set. Add it to your .env file first.");
+    process.exit(1);
+}
+
+mongoose.connect(process.env.MONGODB_URI)
 .then(() => {
     console.log("✅ MongoDB Connected Successfully!");
-    process.exit();
+    process.exit(0);
 })
 .catch((err) => {
     console.log("❌ Connection Failed");
     console.error(err);
-    process.exit();
+    process.exit(1);
 });

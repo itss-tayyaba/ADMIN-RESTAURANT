@@ -33,7 +33,15 @@
         </label>
         <label class="field">
           <span>Password</span>
-          <input type="password" id="password" autocomplete="current-password" required />
+          <div class="password-field">
+            <input type="password" id="password" autocomplete="current-password" required />
+            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password" aria-pressed="false">
+              <svg id="eyeToggleIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
         </label>
         <p id="loginError" class="login-error" hidden></p>
         <button type="submit" class="btn-primary btn-block" id="loginBtn">Sign in</button>
@@ -42,6 +50,21 @@
     <p class="login-foot">Ember &amp; Brew Admin</p>
   </div>
 <script>
+
+const passwordInput = document.getElementById("password");
+const toggleBtn = document.getElementById("togglePassword");
+const eyeToggleIcon = document.getElementById("eyeToggleIcon");
+
+const EYE_OPEN = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"></path><circle cx="12" cy="12" r="3"></circle>';
+const EYE_OFF = '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.9 20.9 0 0 1 5.06-6.06M9.9 4.24A10.6 10.6 0 0 1 12 4c7 0 11 8 11 8a20.9 20.9 0 0 1-3.22 4.53M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+
+toggleBtn.addEventListener("click", () => {
+  const willShow = passwordInput.type === "password";
+  passwordInput.type = willShow ? "text" : "password";
+  eyeToggleIcon.innerHTML = willShow ? EYE_OFF : EYE_OPEN;
+  toggleBtn.setAttribute("aria-label", willShow ? "Hide password" : "Show password");
+  toggleBtn.setAttribute("aria-pressed", String(willShow));
+});
 
 const form = document.getElementById("loginForm");
 const errorEl = document.getElementById("loginError");

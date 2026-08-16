@@ -115,6 +115,52 @@ function wantsHowTo(msg) {
 }
 
 // =====================================================================
+// UPSELL SIGNAL — mirrors the same hybrid logic as /api/recommendations
+// (personal order-pairing history first, global pairCounts as fallback)
+// so the chatbot can suggest a real, relevant add-on grounded in actual
+// order data, instead of just answering a question and stopping there.
+// =====================================================================
+async function personalPairIdsForChat(customerId, itemId) {
+  const orders = await Order.find({ customer: customerId, "items.menuItem": itemId })
+    .select("items").sort({ createdAt: -1 }).limit(20);
+  const counts = new Map();
+  orders.forEach(o => o.items.forEach(line => {
+    if (!line.menuItem) return;
+    const id = line.menuItem.toString();
+    if (id === itemId) return;
+    counts.set(id, (counts.get(id) || 0) + line.qty);
+  }));
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+}
+
+// Finds up to `limit` items that pair well with `item`, personal history
+// ranked above the global co-occurrence data. `customerId` is optional —
+// pass null/undefined for anonymous callers and it just uses global data.
+async function getPairSuggestions(customerId, item, limit) {
+  const itemId = item._id.toString();
+  const personalIds = customerId ? await personalPairIdsForChat(customerId, itemId) : [];
+
+  const globalPairs = item.pairCounts || new Map();
+  const globalSorted = Object.entries(globalPairs.toObject ? globalPairs.toObject() : globalPairs)
+    .sort((a, b) => b[1] - a[1]).map(([id]) => id);
+
+  const mergedIds = [];
+  for (const id of personalIds) {
+    if (mergedIds.length >= limit) break;
+    if (!mergedIds.includes(id)) mergedIds.push(id);
+  }
+  for (const id of globalSorted) {
+    if (mergedIds.length >= limit) break;
+    if (id !== itemId && !mergedIds.includes(id)) mergedIds.push(id);
+  }
+  if (!mergedIds.length) return [];
+
+  const docs = await MenuItem.find({ _id: { $in: mergedIds }, available: true });
+  const byId = new Map(docs.map(d => [d._id.toString(), d]));
+  return mergedIds.map(id => byId.get(id)).filter(Boolean).map(d => ({ name: d.name, price: d.price }));
+}
+
+// =====================================================================
 // STEP-BY-STEP "HOW DO I..." GUIDES
 // These mirror the actual sidebar labels / button text in each portal's
 // HTML/JS so the bot never invents UI that doesn't exist. First matching
@@ -271,7 +317,14 @@ async function handleCustomer(req, msg) {
     if (wantsPrice(msg) && !wantsAvailability(msg)) {
       return available.map(i => `${i.name} is ${money(i.price)}.`).join("\n");
     }
-    return available.map(i => `Yes! ${i.name} — ${money(i.price)} (${i.category}). ${i.description}`).join("\n\n");
+    let reply = available.map(i => `Yes! ${i.name} — ${money(i.price)} (${i.category}). ${i.description}`).join("\n\n");
+    // Light upsell nudge — only when there's a single, clear match, so it
+    // doesn't get noisy when the message matched several items at once.
+    if (available.length === 1) {
+      const [suggestion] = await getPairSuggestions(req.who?.id, available[0], 1);
+      if (suggestion) reply += `\n\nPairs really well with our ${suggestion.name} (${money(suggestion.price)}) — want to add it?`;
+    }
+    return reply;
   }
 
   return "I can help with menu items, prices, availability, and your order status. Try asking \"is the Tiramisu on the menu?\", \"what's my latest order?\", or \"who's my rider?\"";
@@ -516,6 +569,26 @@ async function buildCustomerContext(req, message) {
     requestedOrder = await Order.findOne({ orderNumber: orderNo, customer: req.who.id });
   }
 
+  // "Your usual" — derived from the 5 recent orders already fetched above,
+  // no extra query needed. Lets Claude answer "what should I get?" with a
+  // real, personal suggestion instead of a generic menu dump.
+  const usualCounts = new Map();
+  recentOrders.forEach(o => o.items.forEach(line => {
+    usualCounts.set(line.name, (usualCounts.get(line.name) || 0) + line.qty);
+  }));
+  const yourUsualOrder = [...usualCounts.entries()]
+    .sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name]) => name);
+
+  // If they mentioned a specific dish, surface what pairs well with it —
+  // personal order history first, global "customers who ordered X also
+  // got Y" data as fallback. Same logic as /api/recommendations.
+  let recommendedAddOns;
+  const mentionedItem = (await searchMenu(message)).find(m => m.available);
+  if (mentionedItem) {
+    const addOns = await getPairSuggestions(req.who.id, mentionedItem, 2);
+    if (addOns.length) recommendedAddOns = { pairsWellWith: mentionedItem.name, suggestions: addOns };
+  }
+
   return {
     yourName: req.who.name || undefined,
     deliveryRegionsWeServe: REGIONS,
@@ -525,6 +598,8 @@ async function buildCustomerContext(req, message) {
       total: o.total, orderType: o.orderType, createdAt: o.createdAt,
       riderName: o.deliveryBoyName || null, riderPhone: o.deliveryBoyPhone || null
     })),
+    yourUsualOrder: yourUsualOrder.length ? yourUsualOrder : undefined,
+    recommendedAddOns,
     specificOrderRequested: requestedOrder ? {
       orderNumber: requestedOrder.orderNumber, status: requestedOrder.status,
       items: requestedOrder.items.map(i => `${i.qty}x ${i.name}`), total: requestedOrder.total,
@@ -636,7 +711,7 @@ const CONTEXT_BUILDERS = {
 };
 
 const ROLE_BRIEF = {
-  customer: "You are talking to a CUSTOMER on the Ember & Brew café's customer portal. Help with the menu, prices, availability, delivery areas, and their own order status/history. You may only discuss their own orders, never anyone else's.",
+  customer: "You are talking to a CUSTOMER on the Ember & Brew café's customer portal. Help with the menu, prices, availability, delivery areas, and their own order status/history. You may only discuss their own orders, never anyone else's. You are also a light-touch SALES ASSISTANT: when it fits naturally (they ask about a dish, or ask what to get), you may suggest ONE relevant add-on from DATA.recommendedAddOns or DATA.yourUsualOrder. Keep it low-key and easy to decline — never more than one suggestion per reply, never pushy, and never suggest anything not present in DATA.",
   chef: "You are talking to the CHEF/kitchen staff on the kitchen display portal. Help them know what to cook next, what's in an order, and any special instructions the customer left (allergies, no sauce, extra spicy, etc). You do not have access to revenue or business stats — if asked, say that's an admin-only view.",
   delivery: "You are talking to a DELIVERY RIDER on the delivery portal. Help them with their assigned deliveries: addresses, customer contact info, order contents, and how many they've completed today. Only ever discuss orders assigned to THEM, never another rider's, and you have no access to revenue or business-wide stats.",
   admin: "You are talking to the RESTAURANT ADMIN on the admin dashboard. You have full visibility: revenue, order stats, popular dishes, delivery riders, complaints, and the full menu. Be concise and business-like."
@@ -692,6 +767,7 @@ router.post("/message", identify, async (req, res) => {
           `- If something isn't in DATA, say you don't have that information rather than guessing.`,
           `- Keep replies short and conversational — a few sentences or a short bullet list, no markdown headers, no code blocks.`,
           `- If the person asks HOW to do something in the app (e.g. "how do I track my order?", "how do I mark an order delivered?"), give exact numbered steps using ONLY the real sidebar/button names in UI below — never invent buttons or menus that aren't listed. Then show the relevant data underneath if you have it.`,
+          `- Upselling: only ever suggest items that appear in DATA.recommendedAddOns or DATA.yourUsualOrder (when present). At most one suggestion per reply, phrased as an easy-to-decline offer, never repeated if the person already said no or changed topic.`,
           `- UI (this portal's actual sidebar/buttons): ${UI_MAP[role] || "no UI map available for this role"}`,
           `- Money is in USD, format like $4.50.`,
           ``,

@@ -585,13 +585,34 @@ body {
 
 /* Responsive */
 @media (max-width: 1100px) {
-  .topnav-row { flex-wrap: wrap; }
+  .topnav-row { flex-wrap: wrap; padding: 10px 16px; }
   .clock { font-size: 28px; }
+  .divider { display: none; }
 }
 @media (max-width: 760px) {
   .stat-pill .label { display: none; }
+  .stat-pill { padding: 5px 9px; }
   .clock { font-size: 22px; }
+  .clock-date { display: none; }
+  .brand-sub { display: none; }
   .order-grid { grid-template-columns: 1fr; padding: 14px; }
+  .subnav { padding: 9px 16px; }
+  .btn-bump-all span, .btn-bump-all { font-size: 10px; padding: 8px 12px; }
+  .toast-container { top: auto; bottom: 16px; right: 12px; left: 12px; }
+  .toast { min-width: 0; }
+}
+@media (max-width: 480px) {
+  .topnav-row { padding: 8px 12px; gap: 10px; }
+  .brand-title { font-size: 17px; }
+  .clock { font-size: 18px; }
+  .icon-btn { width: 32px; height: 32px; font-size: 12px; }
+  .subnav { padding: 8px 12px; gap: 8px; }
+  .station-pill { padding: 6px 10px; font-size: 10px; }
+  .btn-bump-all { width: 100%; justify-content: center; }
+  .order-grid { padding: 10px; gap: 12px; }
+  .order-num { font-size: 28px; }
+  .order-foot { flex-wrap: wrap; }
+  .btn-action { flex: 1 1 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

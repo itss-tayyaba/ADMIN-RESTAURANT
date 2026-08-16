@@ -12,11 +12,19 @@
 <script>
 tailwind.config={theme:{extend:{colors:{brand:{50:'#FDF8EF',100:'#F5F0E8',200:'#E8DFD0',300:'#D4C4A8',400:'#D4A853',500:'#C4923A',600:'#A87832',700:'#8A5F2A',800:'#3D3830',900:'#1A1917',950:'#0F0E0C'},terra:{300:'#D9A58A',400:'#C67D5A',500:'#B56A45',600:'#9A5638'},sage:{300:'#A3B496',400:'#7A8B6F',500:'#657558'}},fontFamily:{display:['"Playfair Display"','serif'],body:['"DM Sans"','sans-serif']}}}}
 </script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--accent:#D4A853;--accent2:#C67D5A;--bg:#0F0E0C;--surface:#1A1917;--surface-light:#242220;--text:#F5F0E8;--muted:#8A8478;--border:#2E2C28}
-html{scroll-behavior:smooth}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradient(var(--text) 0.00005%,transparent 0.0005%) 50% 50%/2500px 2500px,linear-gradient(rgba(212,168,83,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(212,168,83,0.04) 1px,transparent 1px);background-size:2500px 2500px,60px 60px,60px 60px;opacity:.018;pointer-events:none;z-index:9999}
 #particles-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
 .view{display:none;opacity:0;transition:opacity .4s ease}
@@ -26,10 +34,20 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 #main-nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .3s,backdrop-filter .3s,box-shadow .3s}
 #main-nav.scrolled{background:rgba(15,14,12,.85);backdrop-filter:blur(16px);box-shadow:0 1px 0 var(--border)}
 
+/* Checkout — fixed shell so the item list scrolls but the header and the
+   totals/Place Order button never move as items are added. */
+.checkout-shell{display:flex;flex-direction:column;height:calc(100dvh - 64px);max-width:42rem;margin:0 auto;width:100%}
+.checkout-top{flex-shrink:0;padding:1.75rem 1rem .75rem}
+.checkout-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 1rem 1rem}
+.checkout-bottom{flex-shrink:0;padding:1rem;border-top:1px solid var(--border);background:rgba(15,14,12,.92);backdrop-filter:blur(12px)}
+@media(min-width:640px){.checkout-top{padding-left:1.5rem;padding-right:1.5rem}.checkout-scroll{padding-left:1.5rem;padding-right:1.5rem}.checkout-bottom{padding-left:1.5rem;padding-right:1.5rem}}
+
 /* Cart panel */
 #cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
 #cart-overlay.open{opacity:1;pointer-events:all}
-#cart-panel{position:fixed;top:0;right:0;bottom:0;width:min(420px,90vw);background:var(--surface);z-index:201;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;border-left:1px solid var(--border)}
+#cart-panel{position:fixed;top:0;right:0;bottom:0;height:100%;width:min(420px,90vw);background:var(--surface);z-index:201;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;border-left:1px solid var(--border);overflow:hidden}
+#cart-panel>*{flex-shrink:0}
+#cart-items{flex:1 1 auto;min-height:0;overflow-y:auto}
 #cart-panel.open{transform:translateX(0)}
 
 /* Menu card */
@@ -37,12 +55,77 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 .menu-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(212,168,83,.08);border-color:rgba(212,168,83,.2)}
 .menu-card img{transition:transform .5s}
 .menu-card:hover img{transform:scale(1.05)}
-.menu-photo{transform-style:preserve-3d;will-change:transform}
-.menu-card.is-spinning{border-color:rgba(212,168,83,.7);box-shadow:0 18px 46px rgba(212,168,83,.2)}
-.menu-card.is-spinning .menu-photo{animation:menu-photo-spin 950ms cubic-bezier(.22,.8,.22,1) both}
-@keyframes menu-photo-spin{0%{transform:rotateY(0) scale(1)}35%{transform:rotateY(135deg) scale(1.08)}70%{transform:rotateY(280deg) scale(1.08)}100%{transform:rotateY(360deg) scale(1)}}
 .menu-card .add-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;transition:all .25s;font-family:inherit;font-size:14px}
 .menu-card .add-btn:hover{background:var(--accent);color:var(--bg)}
+
+/* Dish flip card — click the real menu photo to flip it over and
+   reveal the description, using an actual CSS 3D rotation. */
+.dish-flip{position:relative;overflow:hidden;cursor:pointer;perspective:1400px}
+.dish-flip-inner{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.4,.1,.2,1);transform-style:preserve-3d}
+.dish-flip.flipped .dish-flip-inner{transform:rotateY(180deg)}
+.dish-flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.dish-flip-front img{transition:transform .5s}
+.dish-flip:hover .dish-flip-front img{transform:scale(1.05)}
+.dish-flip-back{transform:rotateY(180deg);background:linear-gradient(160deg,var(--surface-light,#20180f),var(--surface));display:flex;align-items:center;justify-content:center;padding:18px;text-align:center;border:1px solid rgba(212,168,83,.25)}
+.dish-flip-back-inner{display:flex;flex-direction:column;align-items:center;gap:6px}
+.dish-flip-back-cat{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.dish-flip-back-inner h4{font-family:'Playfair Display',serif;font-weight:700;font-size:17px;margin:2px 0}
+.dish-flip-back-inner p{font-size:12.5px;line-height:1.5;color:var(--muted)}
+.dish-flip-back-hint{margin-top:6px;font-size:10px;color:var(--accent);letter-spacing:.04em;display:flex;align-items:center;gap:5px}
+.dish-flip-badge{position:absolute;bottom:8px;right:8px;background:rgba(15,14,12,.72);backdrop-filter:blur(4px);border:1px solid rgba(212,168,83,.35);color:var(--accent);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:100px;display:flex;align-items:center;gap:5px;opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s;pointer-events:none}
+.dish-flip:hover .dish-flip-badge{opacity:1;transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){.dish-flip-inner{transition:none}}
+
+/* Dish detail popup — click a menu photo to open an item customization
+   sheet (add-ons, quantity, live total) instead of the old 3D preview. */
+#dish3d-modal{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .22s ease}
+#dish3d-modal.open{opacity:1;pointer-events:auto}
+.dish3d-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.76);backdrop-filter:blur(7px)}
+.dish3d-dialog{position:relative;width:min(480px,100%);max-height:calc(100vh - 32px);overflow:auto;background:linear-gradient(145deg,#24201a,#151310);border:1px solid rgba(212,168,83,.4);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.55);transform:translateY(12px) scale(.98);transition:transform .22s ease}
+#dish3d-modal.open .dish3d-dialog{transform:translateY(0) scale(1)}
+.dish3d-close{position:absolute;top:14px;right:14px;z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid rgba(212,168,83,.35);background:rgba(15,14,12,.78);color:var(--text);cursor:pointer;font-size:19px;line-height:1}
+.dish3d-close:hover{background:var(--accent);color:var(--bg)}
+.dish3d-dialog .add-btn{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+
+.dishdetail-body{padding:24px 24px 20px}
+.dishdetail-header{padding-right:34px;margin-bottom:10px}
+.dishdetail-header h2{font-size:22px}
+.dishdetail-desc{color:var(--muted);font-size:13.5px;margin-top:5px;line-height:1.5}
+.dishdetail-veg-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:100px;padding:4px 12px;font-size:12px;font-weight:600;margin-top:12px}
+.dishdetail-veg-badge i{font-size:9px}
+.dishdetail-veg-badge.veg{color:#7BC47F;border-color:rgba(123,196,127,.4)}
+.dishdetail-veg-badge.nonveg{color:#E0654F;border-color:rgba(224,101,79,.4)}
+.dishdetail-baseprice{font-size:13.5px;color:var(--muted);margin-top:14px}
+.dishdetail-baseprice strong{color:var(--text);font-weight:700}
+.dishdetail-divider{height:1px;background:var(--border);margin:18px 0}
+.dishdetail-addons-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.dishdetail-addons-head span:first-child{font-weight:700;font-size:14.5px}
+.dishdetail-addons-head span:last-child{font-size:11.5px;color:var(--muted)}
+.dishdetail-addons-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.dishdetail-addons-grid{grid-template-columns:1fr}}
+.dishdetail-addon{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:100px;padding:11px 16px;cursor:pointer;transition:border-color .2s,background .2s;font-size:13.5px}
+.dishdetail-addon:hover{border-color:rgba(212,168,83,.45)}
+.dishdetail-addon.checked{border-color:var(--accent);background:rgba(212,168,83,.08)}
+.dishdetail-addon.disabled{opacity:.4;cursor:not-allowed}
+.dishdetail-addon-box{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dishdetail-addon.checked .dishdetail-addon-box{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.dishdetail-addon-box i{font-size:9px;opacity:0}
+.dishdetail-addon.checked .dishdetail-addon-box i{opacity:1}
+.dishdetail-addon-name{flex:1}
+.dishdetail-addon-price{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.dishdetail-footer{display:flex;align-items:center;justify-content:space-between;margin-top:20px;margin-bottom:16px}
+.dishdetail-qty{display:flex;align-items:center;gap:14px;border:1px solid var(--border);border-radius:100px;padding:6px 8px}
+.dishdetail-qty button{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;line-height:1}
+.dishdetail-qty button:hover{border-color:var(--accent);color:var(--accent)}
+.dishdetail-qty span{min-width:16px;text-align:center;font-weight:600}
+.dishdetail-total{text-align:right}
+.dishdetail-total span{display:block;font-size:11.5px;color:var(--muted)}
+.dishdetail-total strong{font-size:22px}
+
+/* Cart / "New Order" panel */
+.cart-clear-btn{color:var(--muted);transition:color .2s}
+.cart-clear-btn:hover{color:var(--accent2)}
+.cart-line-addon{font-size:11px;color:var(--muted);line-height:1.4}
 
 /* Category pill */
 .cat-pill{padding:8px 20px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .25s;font-family:inherit;font-size:14px;font-weight:500;white-space:nowrap}
@@ -111,6 +194,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 #complaint-modal .modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
 #complaint-modal .modal-content{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:480px;width:90%;max-height:88vh;overflow-y:auto;transform:translateY(20px) scale(.96);transition:transform .3s cubic-bezier(.4,0,.2,1)}
 #complaint-modal.open .modal-content{transform:translateY(0) scale(1)}
+
+
 .complaint-fab{position:fixed;left:20px;bottom:20px;z-index:150;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:100px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:border-color .2s,transform .2s}
 .complaint-fab:hover{border-color:var(--accent2);transform:translateY(-2px)}
 .complaint-fab i{color:var(--accent2)}
@@ -204,7 +289,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
       <a href="#" onclick="navigate('menu');return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Menu</a>
       <a href="#" onclick="scrollToReservation();return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Reservations</a>
       <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Customer Portal</a>
-      <a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Staff Login</a>
+      <!--<a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Staff Login</a>-->
     </div>
     <div class="flex items-center gap-3">
       <button id="cart-btn" onclick="toggleCart()" class="relative p-2 text-brand-300 hover:text-brand-400 transition-colors" aria-label="Open cart">
@@ -234,6 +319,14 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 
   <!-- MENU VIEW -->
   <section id="view-menu" class="view active" aria-label="Menu">
+    <!-- QR table banner: shown when the customer arrived via a table's QR code -->
+    <div class="qr-table-banner hidden bg-brand-400 text-brand-950">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-center gap-3 text-sm font-semibold">
+        <i class="fa-solid fa-qrcode"></i>
+        <span class="qr-table-banner-label"></span>
+        <a href="#" onclick="clearQrTable();return false" class="underline underline-offset-2 font-medium opacity-80 hover:opacity-100">Not you?</a>
+      </div>
+    </div>
     <!-- Hero -->
     <div id="hero-section" class="relative overflow-hidden border-b border-brand-800" style="background:radial-gradient(ellipse at 30% 20%,rgba(212,168,83,.1) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(198,125,90,.06) 0%,transparent 50%)">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16 relative z-10">
@@ -357,12 +450,34 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
       </div>
       <!-- Category pills -->
       <div id="category-pills" class="flex gap-2 mb-10 overflow-x-auto pb-2 justify-center flex-wrap" role="tablist" aria-label="Menu categories"></div>
-      <!-- Menu grid -->
-      <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
-      <p id="menu-empty" class="hidden text-center text-brand-800 py-16 text-sm">No items match your search.</p>
+
+      <div class="xl:grid xl:grid-cols-[1fr_340px] xl:gap-8 xl:items-start">
+        <div>
+          <!-- Menu grid -->
+          <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+          <p id="menu-empty" class="hidden text-center text-brand-800 py-16 text-sm">No items match your search.</p>
+        </div>
+
+        <!-- Inline order panel: desktop-only, always visible next to the menu so
+             added items show up here immediately without opening the cart drawer. -->
+        <aside id="inline-cart-panel" class="hidden xl:flex xl:flex-col xl:sticky xl:top-24 bg-brand-950/40 border border-brand-800 rounded-2xl overflow-hidden">
+          <div class="flex items-center justify-between p-5 border-b border-brand-800">
+            <h3 class="font-display text-lg font-bold">Your Order</h3>
+            <span id="inline-cart-count" class="text-xs text-brand-400 font-semibold"></span>
+          </div>
+          <div id="inline-cart-items" class="max-h-[420px] overflow-y-auto p-5"></div>
+          <div id="inline-cart-footer" class="border-t border-brand-800 p-5">
+            <div class="flex justify-between mb-1 text-sm"><span class="text-brand-300">Subtotal</span><span id="inline-cart-subtotal" class="font-medium">$0.00</span></div>
+            <div class="flex justify-between mb-4 text-sm"><span class="text-brand-300">Tax (8%)</span><span id="inline-cart-tax" class="font-medium">$0.00</span></div>
+            <div class="flex justify-between mb-5 font-bold"><span>Total</span><span id="inline-cart-total" class="text-brand-400">$0.00</span></div>
+            <button onclick="goToCheckout()" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm">Checkout</button>
+          </div>
+        </aside>
+      </div>
     </div>
 
     <!-- Reservation section -->
+
     <div id="reservation-section" class="max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 border-t border-brand-800">
       <div class="text-center mb-12">
         <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-800 mb-4" style="background:rgba(212,168,83,.05)">
@@ -389,7 +504,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
             </div>
             <div>
               <label class="block text-[11px] uppercase tracking-wider text-brand-800 mb-2"><i class="fa-solid fa-phone mr-1"></i> Phone</label>
-              <input type="tel" id="resv-phone" placeholder="03001234567" class="form-input" required inputmode="numeric" minlength="11" maxlength="11" pattern="[0-9]{11}" title="Enter an 11-digit phone number">
+              <input type="tel" id="resv-phone" placeholder="03001234567 or +923001234567" class="form-input" required inputmode="tel" minlength="11" maxlength="13" pattern="^(0\d{10}|\+?92\d{10})$" title="Enter a valid Pakistani phone number, e.g. 03001234567 or +923001234567">
             </div>
             <div>
               <label class="block text-[11px] uppercase tracking-wider text-brand-800 mb-2"><i class="fa-solid fa-calendar mr-1"></i> Date</label>
@@ -449,11 +564,38 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 
   <!-- CHECKOUT VIEW -->
   <section id="view-checkout" class="view" aria-label="Checkout">
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
-      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
-      <h2 class="font-display text-3xl sm:text-4xl font-bold mb-2">Checkout</h2>
-      <p class="text-brand-800 text-sm mb-10">Complete your order below.</p>
-      <form id="checkout-form" onsubmit="handleCheckout(event)" novalidate>
+    <form id="checkout-form" onsubmit="handleCheckout(event)" novalidate class="checkout-shell">
+
+      <!-- Fixed header: stays put while the fields/items below scroll -->
+      <div class="checkout-top">
+        <button type="button" onclick="navigate('menu')" class="text-brand-400 text-sm mb-4 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold mb-4">Checkout</h2>
+        <div>
+          <label class="text-xs font-medium text-brand-300 mb-2 block">Order Type</label>
+          <div class="flex gap-3 flex-wrap">
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+              <input type="radio" name="orderType" value="dine-in" class="accent-[#D4A853]" checked> <span class="text-sm">Dine In</span>
+            </label>
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+              <input type="radio" name="orderType" value="takeaway" class="accent-[#D4A853]"> <span class="text-sm">Takeaway</span>
+            </label>
+            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+              <input type="radio" name="orderType" value="delivery" class="accent-[#D4A853]"> <span class="text-sm">Delivery</span>
+            </label>
+          </div>
+          <div class="form-error" data-error="orderType"></div>
+          <div id="checkout-table-note" class="hidden mt-2 flex items-center justify-between gap-3 bg-brand-400/10 border border-brand-400/30 rounded-lg px-3 py-2">
+            <span class="text-xs text-brand-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-qrcode text-brand-400"></i>
+              Scanned <strong id="checkout-table-note-label" class="text-brand-100 font-semibold"></strong> — ordering Dine In
+            </span>
+            <a href="#" onclick="clearQrTable();return false" class="text-xs text-brand-400 hover:text-brand-300 whitespace-nowrap">Not at this table?</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrollable middle: account/address/notes + the item list -->
+      <div class="checkout-scroll">
         <div id="checkout-account-card" class="mb-6 bg-brand-900 border border-brand-800 rounded-xl p-4 flex items-center justify-between gap-4">
           <div>
             <span class="text-brand-800 text-xs block mb-0.5">Ordering as</span>
@@ -468,24 +610,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           </div>
           <div class="grid sm:grid-cols-2 gap-3">
             <input name="guestName" class="form-input" placeholder="Your name" autocomplete="name">
-            <input name="guestPhone" class="form-input" placeholder="03XXXXXXXXX" inputmode="numeric" autocomplete="tel">
+            <input name="guestPhone" class="form-input" placeholder="03XXXXXXXXX or +923XXXXXXXXX" inputmode="tel" autocomplete="tel">
           </div>
           <p class="text-xs text-brand-800 mt-2">Use your order number to track this guest order, or sign in above to save it to your account.</p>
-        </div>
-        <div class="mb-6">
-          <label class="text-xs font-medium text-brand-300 mb-2 block">Order Type</label>
-          <div class="flex gap-3 flex-wrap">
-            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
-              <input type="radio" name="orderType" value="dine-in" class="accent-[#D4A853]" checked> <span class="text-sm">Dine In</span>
-            </label>
-            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
-              <input type="radio" name="orderType" value="takeaway" class="accent-[#D4A853]"> <span class="text-sm">Takeaway</span>
-            </label>
-            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
-              <input type="radio" name="orderType" value="delivery" class="accent-[#D4A853]"> <span class="text-sm">Delivery</span>
-            </label>
-          </div>
-          <div class="form-error" data-error="orderType"></div>
         </div>
         <div id="address-field" class="mb-6 hidden">
           <label class="text-xs font-medium text-brand-300 mb-1.5 block">Delivery Address</label>
@@ -506,66 +633,32 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <p id="selected-delivery-region" class="mt-1 text-xs text-brand-300 hidden"></p>
           <div class="form-error" data-error="deliveryLocation"></div>
         </div>
-        <div class="mb-8">
+        <div class="mb-6">
           <label class="text-xs font-medium text-brand-300 mb-1.5 block">Special Instructions</label>
           <textarea name="notes" class="form-input" rows="3" placeholder="Allergies, extra napkins, ring the bell..."></textarea>
         </div>
-        <!-- Order summary -->
-        <div class="bg-brand-900 border border-brand-800 rounded-xl p-5 mb-6">
+        <!-- Order summary — just the item rows here; totals live in the fixed footer below -->
+        <div class="bg-brand-900 border border-brand-800 rounded-xl p-5">
           <h3 class="font-semibold text-sm mb-3 text-brand-300">Order Summary</h3>
           <div id="checkout-items"></div>
-          <div class="border-t border-brand-800 mt-3 pt-3 flex justify-between text-sm">
-            <span class="text-brand-300">Subtotal</span><span id="checkout-subtotal" class="font-medium">$0.00</span>
-          </div>
-          <div class="flex justify-between text-sm mt-1">
-            <span class="text-brand-300">Tax (8%)</span><span id="checkout-tax" class="font-medium">$0.00</span>
-          </div>
-          <div class="flex justify-between text-base mt-3 pt-3 border-t border-brand-800 font-bold">
-            <span>Total</span><span id="checkout-total" class="text-brand-400">$0.00</span>
-          </div>
+        </div>
+      </div>
+
+      <!-- Fixed footer: totals + Place Order never move, no matter how long the item list gets -->
+      <div class="checkout-bottom">
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-brand-300">Subtotal</span><span id="checkout-subtotal" class="font-medium">$0.00</span>
+        </div>
+        <div class="flex justify-between text-sm mb-2">
+          <span class="text-brand-300">Tax (8%)</span><span id="checkout-tax" class="font-medium">$0.00</span>
+        </div>
+        <div class="flex justify-between text-base mb-3 font-bold">
+          <span>Total</span><span id="checkout-total" class="text-brand-400">$0.00</span>
         </div>
         <button type="submit" class="w-full bg-brand-400 text-brand-950 font-semibold py-3.5 rounded-xl hover:bg-brand-500 transition-colors text-sm">Place Order</button>
-      </form>
-    </div>
+      </div>
+    </form>
   </section>
-
-  <!-- DELIVERY LOCATION PICKER -->
-  <div id="delivery-location-modal" class="fixed inset-0 z-[100] hidden items-start sm:items-center justify-center overflow-y-auto p-4 bg-black/60" role="dialog" aria-modal="true" aria-labelledby="delivery-location-title">
-    <div class="w-full max-w-3xl my-4 sm:my-auto rounded-2xl bg-brand-950 border border-brand-800 shadow-2xl overflow-hidden">
-      <div class="p-5 border-b border-brand-800 flex items-start justify-between gap-4">
-        <div>
-          <p class="text-xs uppercase tracking-[.3em] text-brand-400 mb-1">Delivery location</p>
-          <h2 id="delivery-location-title" class="font-display text-2xl font-bold">Confirm your exact location</h2>
-        </div>
-        <button type="button" onclick="closeDeliveryLocationPicker()" class="text-brand-300 hover:text-white text-xl" aria-label="Close map">&times;</button>
-      </div>
-      <div class="p-5">
-        <div class="flex flex-col sm:flex-row gap-3 mb-3">
-          <input id="delivery-map-search" class="form-input flex-1" placeholder="Search area, landmark, or address">
-          <button type="button" onclick="searchDeliveryLocation()" class="border border-brand-800 text-brand-300 rounded-xl px-4 py-3 text-sm hover:bg-brand-900"><i class="fa-solid fa-magnifying-glass mr-2"></i>Search</button>
-          <button type="button" onclick="useCurrentDeliveryLocation()" class="border border-brand-800 text-brand-300 rounded-xl px-4 py-3 text-sm hover:bg-brand-900"><i class="fa-solid fa-location-crosshairs mr-2"></i>Use current location</button>
-        </div>
-        <p id="delivery-map-message" class="text-xs text-brand-400 mb-3">Search, use GPS, or drag the pin to your exact delivery point.</p>
-        <div id="delivery-location-map" class="h-80 rounded-xl overflow-hidden bg-brand-900 border border-brand-800"></div>
-        <div class="mt-4 rounded-xl bg-brand-900 border border-brand-800 p-4">
-          <p class="text-xs text-brand-800 uppercase tracking-[.18em] mb-1">Selected address</p>
-          <p id="delivery-map-address" class="text-sm text-brand-200">Choose a point on the map.</p>
-        </div>
-        <div class="mt-3 rounded-xl bg-brand-900 border border-brand-800 p-4">
-          <p class="text-xs text-brand-800 uppercase tracking-[.18em] mb-2">Delivery check</p>
-          <select id="delivery-map-region" class="form-input text-sm" onchange="setMapDeliveryRegion(this.value)">
-            <option value="">Checking delivery region…</option>
-          </select>
-          <p id="delivery-map-region-status" class="mt-2 text-xs text-brand-400">Choose a location to check delivery availability.</p>
-          <p id="delivery-map-branch" class="mt-1 text-sm text-brand-200 hidden"><i class="fa-solid fa-store mr-1.5 text-brand-400"></i>Ember &amp; Brew · Faisalabad Branch</p>
-        </div>
-      </div>
-      <div class="p-5 border-t border-brand-800 flex justify-end gap-3">
-        <button type="button" onclick="closeDeliveryLocationPicker()" class="border border-brand-800 text-brand-300 px-5 py-2.5 rounded-xl text-sm">Cancel</button>
-        <button id="confirm-delivery-location" type="button" onclick="confirmDeliveryLocation()" disabled class="bg-brand-400 text-brand-950 font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed">Confirm Location</button>
-      </div>
-    </div>
-  </div>
 
   <!-- TRACKING VIEW -->
   <section id="view-tracking" class="view" aria-label="Order Tracking">
@@ -609,7 +702,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <div class="form-error" data-error="cr-name"></div>
         </div>
         <div class="mb-4">
-          <input type="tel" name="phone" id="cr-phone-input" class="form-input" placeholder="Phone number" autocomplete="tel" inputmode="numeric" maxlength="11" pattern="[0-9]{11}">
+          <input type="tel" name="phone" id="cr-phone-input" class="form-input" placeholder="03XXXXXXXXX or +923XXXXXXXXX" autocomplete="tel" inputmode="tel" maxlength="13" pattern="^(0\d{10}|\+?92\d{10})$">
           <div class="form-error" data-error="cr-phone"></div>
           <script>
             (function () {
@@ -619,8 +712,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
                 var v = el.value;
                 // auto-correct common lookalike characters (O/o -> 0, l/I -> 1)
                 v = v.replace(/[oO]/g, '0').replace(/[lI]/g, '1');
-                // strip anything that still isn't a digit
-                v = v.replace(/\D/g, '').slice(0, 11);
+                // allow local (0XXXXXXXXXX) or international (+92XXXXXXXXXX) format
+                v = formatPKPhoneInput(v);
                 el.value = v;
                 var pos = Math.max(0, v.length - cursorFromEnd);
                 el.setSelectionRange(pos, pos);
@@ -648,6 +741,52 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
   </section>
 
 </main>
+
+<!-- DELIVERY LOCATION PICKER (kept outside <main> so its z-index isn't
+     capped by main's own stacking context — otherwise it renders behind
+     the fixed nav bar) -->
+<div id="delivery-location-modal" class="fixed inset-0 z-[100] hidden items-start sm:items-center justify-center overflow-y-auto p-4 bg-black/60" role="dialog" aria-modal="true" aria-labelledby="delivery-location-title">
+  <div class="w-full max-w-3xl my-4 sm:my-auto rounded-2xl bg-brand-950 border border-brand-800 shadow-2xl overflow-hidden">
+    <div class="p-5 border-b border-brand-800 flex items-start justify-between gap-4">
+      <div>
+        <p class="text-xs uppercase tracking-[.3em] text-brand-400 mb-1">Delivery location</p>
+        <h2 id="delivery-location-title" class="font-display text-2xl font-bold">Confirm your exact location</h2>
+      </div>
+      <button type="button" onclick="closeDeliveryLocationPicker()" class="text-brand-300 hover:text-white text-xl" aria-label="Close map">&times;</button>
+    </div>
+    <div class="p-5">
+      <div class="flex flex-col sm:flex-row gap-3 mb-1 relative">
+        <input id="delivery-map-search" class="form-input flex-1" placeholder="Search area, landmark, or address" autocomplete="off">
+        <button type="button" onclick="searchDeliveryLocation()" class="border border-brand-800 text-brand-300 rounded-xl px-4 py-3 text-sm hover:bg-brand-900"><i class="fa-solid fa-magnifying-glass mr-2"></i>Search</button>
+        <button type="button" onclick="useCurrentDeliveryLocation()" class="border border-brand-800 text-brand-300 rounded-xl px-4 py-3 text-sm hover:bg-brand-900"><i class="fa-solid fa-location-crosshairs mr-2"></i>Use current location</button>
+      </div>
+      <div id="delivery-search-results" class="hidden mb-3 rounded-xl border border-brand-800 bg-brand-900 divide-y divide-brand-800 max-h-56 overflow-y-auto"></div>
+      <p id="delivery-map-message" class="text-xs text-brand-400 mb-3">Search, use GPS, or drag the pin to your exact delivery point.</p>
+      <div id="delivery-location-map" class="h-80 rounded-xl overflow-hidden bg-brand-900 border border-brand-800"></div>
+      <div class="mt-4 rounded-xl bg-brand-900 border border-brand-800 p-4">
+        <div class="flex items-center justify-between mb-1">
+          <p class="text-xs text-brand-800 uppercase tracking-[.18em]">Selected address</p>
+          <button type="button" id="edit-delivery-address-btn" onclick="toggleDeliveryAddressEdit()" class="text-xs text-brand-400 hover:text-brand-200 underline">Edit</button>
+        </div>
+        <p id="delivery-map-address" class="text-sm text-brand-200">Choose a point on the map.</p>
+        <input id="delivery-map-address-input" type="text" class="form-input text-sm hidden mt-1" placeholder="Type the correct area / landmark / street name" oninput="onDeliveryAddressManualEdit(this.value)">
+        <p class="text-[11px] text-brand-500 mt-1">Wrong area name? Tap "Edit" and type the correct one — your pinned GPS point is always saved exactly, so the rider still finds you.</p>
+      </div>
+      <div class="mt-3 rounded-xl bg-brand-900 border border-brand-800 p-4">
+        <p class="text-xs text-brand-800 uppercase tracking-[.18em] mb-2">Delivery check</p>
+        <select id="delivery-map-region" class="form-input text-sm" onchange="setMapDeliveryRegion(this.value)">
+          <option value="">Checking delivery region…</option>
+        </select>
+        <p id="delivery-map-region-status" class="mt-2 text-xs text-brand-400">Choose a location to check delivery availability.</p>
+        <p id="delivery-map-branch" class="mt-1 text-sm text-brand-200 hidden"><i class="fa-solid fa-store mr-1.5 text-brand-400"></i>Ember &amp; Brew · Faisalabad Branch</p>
+      </div>
+    </div>
+    <div class="p-5 border-t border-brand-800 flex justify-end gap-3">
+      <button type="button" onclick="closeDeliveryLocationPicker()" class="border border-brand-800 text-brand-300 px-5 py-2.5 rounded-xl text-sm">Cancel</button>
+      <button id="confirm-delivery-location" type="button" onclick="confirmDeliveryLocation()" disabled class="bg-brand-400 text-brand-950 font-semibold px-5 py-2.5 rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed">Confirm Location</button>
+    </div>
+  </div>
+</div>
 
 <!-- FOOTER -->
 <footer class="relative z-10 border-t border-brand-800 mt-10" style="background:var(--surface)">
@@ -720,8 +859,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 <!-- Cart panel -->
 <aside id="cart-panel" role="dialog" aria-label="Shopping cart">
   <div class="flex items-center justify-between p-5 border-b border-brand-800">
-    <h2 class="font-display text-lg font-bold">Your Cart</h2>
-    <button onclick="toggleCart()" class="text-brand-800 hover:text-brand-100 transition-colors p-1" aria-label="Close cart"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <h2 class="font-display text-lg font-bold">Your Order</h2>
+    <div class="flex items-center gap-4">
+      <span id="cart-count-text" class="text-xs text-brand-400 font-semibold"></span>
+      <button onclick="clearCart()" class="cart-clear-btn p-1" aria-label="Clear order"><i class="fa-solid fa-trash-can"></i></button>
+      <button onclick="toggleCart()" class="text-brand-800 hover:text-brand-100 transition-colors p-1" aria-label="Close cart"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
   </div>
   <div id="cart-items" class="flex-1 overflow-y-auto p-5"></div>
   <div id="cart-footer" class="border-t border-brand-800 p-5">
@@ -739,6 +882,42 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
     <button onclick="closeUpsell()" class="absolute top-4 right-4 text-brand-800 hover:text-brand-100 transition-colors" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
     <div id="upsell-body"></div>
   </div>
+</div>
+
+<!-- Dish detail / customization popup -->
+<div id="dish3d-modal" role="dialog" aria-modal="true" aria-labelledby="dish3d-title" aria-hidden="true">
+  <div class="dish3d-backdrop" onclick="closeDishItem()"></div>
+  <section class="dish3d-dialog">
+    <button type="button" class="dish3d-close" onclick="closeDishItem()" aria-label="Close">&times;</button>
+    <div class="dishdetail-body">
+      <div class="dishdetail-header">
+        <h2 id="dish3d-title" class="font-display font-bold"></h2>
+        <p id="dish3d-desc" class="dishdetail-desc"></p>
+        <span id="dish3d-veg-badge" class="dishdetail-veg-badge"><i class="fa-solid fa-square"></i><span id="dish3d-veg-label"></span></span>
+      </div>
+      <p class="dishdetail-baseprice">Base price: <strong id="dish3d-baseprice"></strong></p>
+      <div class="dishdetail-divider"></div>
+      <div id="dish3d-addons-section">
+        <div class="dishdetail-addons-head">
+          <span id="dish3d-addons-title">Add-ons</span>
+          <span>Optional &middot; up to 3</span>
+        </div>
+        <div id="dish3d-addons-grid" class="dishdetail-addons-grid"></div>
+      </div>
+      <div class="dishdetail-footer">
+        <div class="dishdetail-qty">
+          <button type="button" onclick="dishDetailChangeQty(-1)" aria-label="Decrease quantity"><i class="fa-solid fa-minus" style="font-size:10px"></i></button>
+          <span id="dish3d-qty">1</span>
+          <button type="button" onclick="dishDetailChangeQty(1)" aria-label="Increase quantity"><i class="fa-solid fa-plus" style="font-size:10px"></i></button>
+        </div>
+        <div class="dishdetail-total">
+          <span>Total</span>
+          <strong id="dish3d-total"></strong>
+        </div>
+      </div>
+      <button id="dish3d-add" type="button" class="add-btn w-full">Add to Cart</button>
+    </div>
+  </section>
 </div>
 
 <!-- Floating complaint button -->
@@ -806,14 +985,6 @@ async function loadPublicMenu() {
   if (state.currentView === 'menu') renderMenu();
 }
 
-// AI "Frequently Paired" data — in production this comes from MongoDB order history analysis
-const PAIRINGS = {
-  1:[7,8],2:[9,10],3:[7,11],4:[19,12],5:[18,10],6:[8,16],
-  7:[1,2],8:[3,6],9:[2,21],10:[5,24],11:[3,21],12:[4,23],
-  13:[22,17],14:[23,15],15:[14,23],16:[6,21],17:[14,22],
-  18:[1,5],19:[4,2],20:[24,1],21:[16,11],22:[17,13],23:[14,15],24:[10,20]
-};
-
 const STATUS_FLOWS = {
   delivery: ['received','preparing','ready','out-for-delivery','delivered'],
   default: ['received','preparing','ready','completed']
@@ -844,13 +1015,16 @@ function makeConfetti(count = 32) {
 // ============================================
 const state = {
   currentView: 'menu',
-  cart: JSON.parse(localStorage.getItem('eb_cart') || '[]'), // {item, qty}
+  cart: JSON.parse(localStorage.getItem('eb_cart') || '[]'), // {item, qty, addons, addonSignature}
   activeCategory: 'All',
   searchQuery: '',
   // Real customer session — restored from localStorage on load
   customerToken: localStorage.getItem('eb_customer_token') || null,
   customer: JSON.parse(localStorage.getItem('eb_customer') || 'null'), // {id, name, email, phone}
   trackingPoll: null, // interval id for polling an order's live status
+  // Table detected from a scanned QR code (?table=T-01). Persisted so it
+  // survives a page reload while the customer is still seated there.
+  qrTable: localStorage.getItem('eb_qr_table') || null,
 };
 
 // ============================================
@@ -976,7 +1150,8 @@ async function handleCustomerRegister(e) {
   clearErrors();
   const form = e.target;
   const name = form.name.value.trim();
-  const phone = form.phone.value.trim();
+  const phoneRaw = form.phone.value.trim();
+  const phone = normalizePKPhone(phoneRaw);
   const email = form.email.value.trim();
   const password = form.password.value;
   const errBox = document.getElementById('customer-register-error');
@@ -984,7 +1159,7 @@ async function handleCustomerRegister(e) {
 
   let valid = true;
   if (name.length < 2) { showFieldError('cr-name', 'Please enter your name.'); valid = false; }
-  if (!/^\d{11}$/.test(phone)) { showFieldError('cr-phone', 'Phone number must be exactly 11 digits.'); valid = false; }
+  if (!isValidPKPhone(phoneRaw)) { showFieldError('cr-phone', 'Enter a valid phone number, e.g. 03001234567 or +923001234567.'); valid = false; }
   if (password.length < 6) { showFieldError('cr-password', 'At least 6 characters.'); valid = false; }
   if (!valid) return;
 
@@ -1259,9 +1434,22 @@ function filterMenu() {
   empty.classList.add('hidden');
   grid.innerHTML = items.map((item, idx) => `
     <article class="menu-card animate-fade-up" style="animation-delay:${Math.min(idx*60,400)}ms">
-      <div class="relative overflow-hidden aspect-[4/3]">
-        <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover" loading="lazy">
-        <span class="absolute top-3 left-3 bg-brand-950/70 backdrop-blur-sm text-brand-300 text-[11px] font-medium px-2.5 py-1 rounded-full">${item.cat}</span>
+      <div class="dish-flip aspect-[4/3]" onclick="openDishItem('${item.id}')" role="button" tabindex="0" aria-label="View ${item.name} details" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDishItem('${item.id}')}">
+        <div class="dish-flip-inner">
+          <div class="dish-flip-face dish-flip-front">
+            <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover" loading="lazy">
+            <span class="absolute top-3 left-3 bg-brand-950/70 backdrop-blur-sm text-brand-300 text-[11px] font-medium px-2.5 py-1 rounded-full">${item.cat}</span>
+            <span class="dish-flip-badge"><i class="fa-solid fa-circle-info"></i> View Details</span>
+          </div>
+          <div class="dish-flip-face dish-flip-back">
+            <div class="dish-flip-back-inner">
+              <span class="dish-flip-back-cat">${item.cat}</span>
+              <h4>${item.name}</h4>
+              <p>${item.desc}</p>
+              <span class="dish-flip-back-hint"><i class="fa-solid fa-rotate-left"></i> Tap to flip back</span>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="p-4">
         <div class="flex items-start justify-between gap-3 mb-1.5">
@@ -1283,27 +1471,211 @@ function renderMenu() {
 }
 
 // ============================================
+// DISH FLIP CARD — click the actual menu photo
+// and it rotates (CSS 3D flip) to reveal the
+// dish description on the back. Click again
+// (or press Enter) to flip it back.
+// ============================================
+// Clicking a menu image opens an item detail popup: add-ons, quantity,
+// and a live total — the old 3D preview is skipped for now.
+
+// Default add-on presets, keyed by (lowercased) category. "default" is used
+// for any category without a specific list. Prices are illustrative and can
+// be swapped for real per-dish data from the backend later.
+const ADDON_PRESETS = {
+  burgers: [
+    { name: 'Extra Cheese Slice', price: 0.48 },
+    { name: 'Double Patty', price: 0.95 },
+    { name: 'Bacon Strips', price: 0.71 },
+    { name: 'Avocado', price: 0.60 },
+    { name: 'Caramelized Onions', price: 0.36 }
+  ],
+  pizza: [
+    { name: 'Extra Cheese', price: 0.55 },
+    { name: 'Stuffed Crust', price: 0.90 },
+    { name: 'Mushrooms', price: 0.45 },
+    { name: 'Jalapeños', price: 0.35 },
+    { name: 'Extra Toppings', price: 0.75 }
+  ],
+  coffee: [
+    { name: 'Extra Espresso Shot', price: 0.55 },
+    { name: 'Oat Milk', price: 0.40 },
+    { name: 'Vanilla Syrup', price: 0.35 },
+    { name: 'Whipped Cream', price: 0.30 }
+  ],
+  drinks: [
+    { name: 'Extra Ice', price: 0 },
+    { name: 'Large Size', price: 0.50 },
+    { name: 'Extra Syrup', price: 0.35 }
+  ],
+  desserts: [
+    { name: 'Extra Scoop', price: 0.65 },
+    { name: 'Chocolate Drizzle', price: 0.30 },
+    { name: 'Whipped Cream', price: 0.30 }
+  ],
+  default: [
+    { name: 'Extra Cheese', price: 0.45 },
+    { name: 'Extra Sauce', price: 0.30 },
+    { name: 'Side of Fries', price: 1.20 },
+    { name: 'Spicy Kick', price: 0.20 }
+  ]
+};
+function getAddonsForItem(item) {
+  const key = Object.keys(ADDON_PRESETS).find(k => k !== 'default' && item.cat && item.cat.toLowerCase().includes(k));
+  return ADDON_PRESETS[key || 'default'];
+}
+// Simple, front-end-only veg/non-veg inference from the dish name/description
+// until the menu data has a real `isVeg` field from the backend.
+const NONVEG_KEYWORDS = ['beef','chicken','bacon','pork','mutton','fish','shrimp','prawn','meat','pepperoni','ham','sausage','turkey','lamb','salmon','tuna','anchov'];
+function isItemVeg(item) {
+  if (typeof item.isVeg === 'boolean') return item.isVeg;
+  const text = `${item.name} ${item.desc} ${item.cat}`.toLowerCase();
+  return !NONVEG_KEYWORDS.some(k => text.includes(k));
+}
+
+let dish3dLastFocus = null;
+const dishDetail = { item: null, qty: 1, addons: [], selected: new Set() };
+
+function openDishItem(itemId) {
+  const item = MENU.find(entry => entry.id === itemId);
+  const modal = document.getElementById('dish3d-modal');
+  if (!item || !modal) {
+    showToast('The menu is still loading. Please try again.', 'error');
+    return;
+  }
+  dish3dLastFocus = document.activeElement;
+  dishDetail.item = item;
+  dishDetail.qty = 1;
+  dishDetail.addons = getAddonsForItem(item);
+  dishDetail.selected = new Set();
+
+  document.getElementById('dish3d-title').textContent = item.name;
+  document.getElementById('dish3d-desc').textContent = item.desc || '';
+  document.getElementById('dish3d-baseprice').textContent = `$${item.price.toFixed(2)}`;
+  const veg = isItemVeg(item);
+  const badge = document.getElementById('dish3d-veg-badge');
+  badge.classList.toggle('veg', veg);
+  badge.classList.toggle('nonveg', !veg);
+  document.getElementById('dish3d-veg-label').textContent = veg ? 'Veg' : 'Non-Veg';
+  document.getElementById('dish3d-addons-title').textContent = `${item.cat || 'Dish'} Add-ons`;
+  document.getElementById('dish3d-qty').textContent = '1';
+
+  const grid = document.getElementById('dish3d-addons-grid');
+  grid.innerHTML = dishDetail.addons.map((a, i) => `
+    <label class="dishdetail-addon" data-addon-idx="${i}">
+      <span class="dishdetail-addon-box"><i class="fa-solid fa-check"></i></span>
+      <span class="dishdetail-addon-name">${a.name}</span>
+      <span class="dishdetail-addon-price">${a.price > 0 ? '+$' + a.price.toFixed(2) : 'Free'}</span>
+    </label>
+  `).join('');
+  grid.querySelectorAll('.dishdetail-addon').forEach(el => {
+    el.onclick = () => dishDetailToggleAddon(Number(el.dataset.addonIdx));
+  });
+
+  document.getElementById('dish3d-add').onclick = () => confirmDishItemAddToCart();
+  updateDishDetailTotal();
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  modal.querySelector('.dish3d-close').focus();
+}
+
+function dishDetailToggleAddon(idx) {
+  const grid = document.getElementById('dish3d-addons-grid');
+  const el = grid.querySelector(`[data-addon-idx="${idx}"]`);
+  if (dishDetail.selected.has(idx)) {
+    dishDetail.selected.delete(idx);
+  } else {
+    if (dishDetail.selected.size >= 3) {
+      showToast('You can pick up to 3 add-ons.', 'error');
+      return;
+    }
+    dishDetail.selected.add(idx);
+  }
+  grid.querySelectorAll('.dishdetail-addon').forEach((node, i) => {
+    node.classList.toggle('checked', dishDetail.selected.has(i));
+    node.classList.toggle('disabled', !dishDetail.selected.has(i) && dishDetail.selected.size >= 3);
+  });
+  updateDishDetailTotal();
+}
+
+function dishDetailChangeQty(delta) {
+  dishDetail.qty = Math.max(1, dishDetail.qty + delta);
+  document.getElementById('dish3d-qty').textContent = dishDetail.qty;
+  updateDishDetailTotal();
+}
+
+function updateDishDetailTotal() {
+  if (!dishDetail.item) return;
+  const addonsSum = [...dishDetail.selected].reduce((s, i) => s + dishDetail.addons[i].price, 0);
+  const total = (dishDetail.item.price + addonsSum) * dishDetail.qty;
+  document.getElementById('dish3d-total').textContent = `$${total.toFixed(2)}`;
+}
+
+function confirmDishItemAddToCart() {
+  if (!dishDetail.item) return;
+  const chosenAddons = [...dishDetail.selected].map(i => dishDetail.addons[i]);
+  addItemToCart(dishDetail.item, chosenAddons, dishDetail.qty);
+  closeDishItem();
+}
+
+function closeDishItem() {
+  const modal = document.getElementById('dish3d-modal');
+  if (!modal || !modal.classList.contains('open')) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  dish3dLastFocus?.focus?.();
+}
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeDishItem(); });
+
+// ============================================
 // CART
 // ============================================
+// Adds an item to the cart. `addons` is an optional array of {name, price}
+// selected from the dish-detail popup. Lines with a different set of addons
+// are kept as separate cart rows so pricing stays accurate.
+function addItemToCart(item, addons = [], qty = 1) {
+  const signature = addons.map(a => a.name).sort().join('|');
+  const existing = state.cart.find(c => c.item.id === item.id && (c.addonSignature || '') === signature);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    state.cart.push({ item, qty, addons, addonSignature: signature });
+  }
+  updateCartBadge();
+  renderCartItems();
+  showToast(`${item.name} added to cart`, 'success');
+  // AI upsell — powered by the real /api/recommendations endpoint.
+  // Personalized (ranks the customer's own past pairings first) when
+  // logged in; falls back to global frequently-bought-together for guests.
+  fetchUpsellRecommendations(item.id).then(recs => {
+    if (recs && recs.length > 0) {
+      setTimeout(() => showUpsell(item, recs), 400);
+    }
+  });
+}
+
+async function fetchUpsellRecommendations(itemId) {
+  try {
+    const headers = state.customerToken ? authHeaders(state.customerToken) : {};
+    const res = await fetch(`/api/recommendations/${itemId}`, { headers });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    return null; // never let a failed recommendation call block adding to cart
+  }
+}
+
+// Kept for the plain "Add to Cart" button on menu cards (no add-ons).
 function addToCart(itemId) {
   const item = MENU.find(i => i.id === itemId);
   if (!item) {
     showToast('Menu did not load properly. Please refresh the page.', 'error');
     return;
   }
-  const existing = state.cart.find(c => c.item.id === itemId);
-  if (existing) {
-    existing.qty++;
-  } else {
-    state.cart.push({item, qty:1});
-  }
-  updateCartBadge();
-  showToast(`${item.name} added to cart`, 'success');
-  // Show AI upsell
-  const paired = PAIRINGS[itemId];
-  if (paired && paired.length > 0) {
-    setTimeout(() => showUpsell(item, paired), 400);
-  }
+  addItemToCart(item, [], 1);
 }
 
 function removeFromCart(index) {
@@ -1319,8 +1691,21 @@ function updateQty(index, delta) {
   updateCartBadge();
 }
 
+function clearCart() {
+  if (state.cart.length === 0) return;
+  if (!confirm('Remove all items from your order?')) return;
+  state.cart = [];
+  renderCartItems();
+  updateCartBadge();
+}
+
+function cartLineUnitPrice(c) {
+  const addonsSum = (c.addons || []).reduce((s, a) => s + a.price, 0);
+  return c.item.price + addonsSum;
+}
+
 function getCartSubtotal() {
-  return state.cart.reduce((s, c) => s + c.item.price * c.qty, 0);
+  return state.cart.reduce((s, c) => s + cartLineUnitPrice(c) * c.qty, 0);
 }
 
 function updateCartBadge() {
@@ -1335,23 +1720,38 @@ function updateCartBadge() {
   } else {
     badge.classList.add('hidden');
   }
+  const countLabel = count > 0 ? `${count} item${count === 1 ? '' : 's'}` : '';
+  const inlineCount = document.getElementById('inline-cart-count');
+  if (inlineCount) inlineCount.textContent = countLabel;
+  const cartCountText = document.getElementById('cart-count-text');
+  if (cartCountText) cartCountText.textContent = countLabel;
 }
 
-function renderCartItems() {
-  const container = document.getElementById('cart-items');
-  const footer = document.getElementById('cart-footer');
+// Renders one cart's worth of item rows into a given container + footer pair.
+// Used for both the slide-in drawer (#cart-items/#cart-footer) and the
+// always-visible inline panel (#inline-cart-items/#inline-cart-footer) so
+// they never fall out of sync with each other.
+function renderCartInto(containerId, footerId, subtotalId, taxId, totalId) {
+  const container = document.getElementById(containerId);
+  const footer = document.getElementById(footerId);
+  if (!container || !footer) return;
   if (state.cart.length === 0) {
-    container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center"><i class="fa-solid fa-bag-shopping text-3xl text-brand-800 mb-3"></i><p class="text-brand-800 text-sm">Your cart is empty</p><p class="text-brand-800 text-xs mt-1">Browse the menu to add items</p></div>`;
+    container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center py-6"><i class="fa-solid fa-bag-shopping text-3xl text-brand-800 mb-3"></i><p class="text-brand-800 text-sm">Your cart is empty</p><p class="text-brand-800 text-xs mt-1">Browse the menu to add items</p></div>`;
     footer.style.display = 'none';
     return;
   }
   footer.style.display = 'block';
-  container.innerHTML = state.cart.map((c, i) => `
+  container.innerHTML = state.cart.map((c, i) => {
+    const unit = cartLineUnitPrice(c);
+    const addonsLine = (c.addons && c.addons.length)
+      ? `<p class="cart-line-addon">+ ${c.addons.map(a => a.name).join(', ')}</p>` : '';
+    return `
     <div class="flex gap-3 mb-4 pb-4 border-b border-brand-800 last:border-0 last:mb-0 last:pb-0">
       <img src="${c.item.img}" alt="${c.item.name}" class="w-14 h-14 rounded-lg object-cover flex-shrink-0">
       <div class="flex-1 min-w-0">
         <h4 class="text-sm font-semibold truncate">${c.item.name}</h4>
-        <p class="text-brand-400 text-sm font-medium">$${(c.item.price * c.qty).toFixed(2)}</p>
+        ${addonsLine}
+        <p class="text-brand-400 text-sm font-medium mt-0.5">$${(unit * c.qty).toFixed(2)}</p>
         <div class="flex items-center gap-2 mt-1.5">
           <button onclick="updateQty(${i},-1)" class="w-6 h-6 rounded bg-brand-800 text-brand-300 text-xs flex items-center justify-center hover:bg-brand-700 transition-colors" aria-label="Decrease quantity"><i class="fa-solid fa-minus text-[9px]"></i></button>
           <span class="text-sm font-medium w-5 text-center">${c.qty}</span>
@@ -1360,12 +1760,18 @@ function renderCartItems() {
         </div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
   const sub = getCartSubtotal();
   const tax = sub * 0.08;
-  document.getElementById('cart-subtotal').textContent = '$' + sub.toFixed(2);
-  document.getElementById('cart-tax').textContent = '$' + tax.toFixed(2);
-  document.getElementById('cart-total').textContent = '$' + (sub + tax).toFixed(2);
+  document.getElementById(subtotalId).textContent = '$' + sub.toFixed(2);
+  document.getElementById(taxId).textContent = '$' + tax.toFixed(2);
+  document.getElementById(totalId).textContent = '$' + (sub + tax).toFixed(2);
+}
+
+function renderCartItems() {
+  renderCartInto('cart-items', 'cart-footer', 'cart-subtotal', 'cart-tax', 'cart-total');
+  renderCartInto('inline-cart-items', 'inline-cart-footer', 'inline-cart-subtotal', 'inline-cart-tax', 'inline-cart-total');
 }
 
 function toggleCart() {
@@ -1409,25 +1815,27 @@ function goToAccountLogin() {
 // ============================================
 // AI UPSELL
 // ============================================
-function showUpsell(addedItem, pairedIds) {
-  const paired = pairedIds.map(id => MENU.find(m => m.id === id)).filter(Boolean).slice(0, 3);
-  if (paired.length === 0) return;
+function showUpsell(addedItem, recs) {
+  if (!recs || recs.length === 0) return;
+  const anyPersonalized = recs.some(r => r.personalized);
   const body = document.getElementById('upsell-body');
   body.innerHTML = `
     <div class="flex items-center gap-2 mb-1">
       <i class="fa-solid fa-wand-magic-sparkles text-brand-400 text-sm"></i>
-      <span class="text-xs text-brand-400 font-medium uppercase tracking-wider">Frequently Paired</span>
+      <span class="text-xs text-brand-400 font-medium uppercase tracking-wider">${anyPersonalized ? 'Picked For You' : 'Frequently Paired'}</span>
     </div>
-    <p class="text-sm text-brand-300 mb-5">Customers who ordered <strong class="text-brand-100">${addedItem.name}</strong> also love:</p>
+    <p class="text-sm text-brand-300 mb-5">${anyPersonalized
+      ? `Based on what you usually order with <strong class="text-brand-100">${escapeHtml(addedItem.name)}</strong>:`
+      : `Customers who ordered <strong class="text-brand-100">${escapeHtml(addedItem.name)}</strong> also love:`}</p>
     <div class="flex flex-col gap-3">
-      ${paired.map(p => `
+      ${recs.map(p => `
         <div class="flex items-center gap-3 p-2.5 rounded-lg bg-brand-950/50 border border-brand-800 hover:border-brand-400/30 transition-colors">
-          <img src="${p.img}" alt="${p.name}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+          <img src="${p.image}" alt="${escapeHtml(p.name)}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
           <div class="flex-1 min-w-0">
-            <h4 class="text-sm font-semibold truncate">${p.name}</h4>
+            <h4 class="text-sm font-semibold truncate">${escapeHtml(p.name)}${p.personalized ? ' <span class="text-brand-400 font-normal text-[10px]">· your usual</span>' : ''}</h4>
             <p class="text-brand-400 text-sm">$${p.price.toFixed(2)}</p>
           </div>
-          <button onclick="addToCart('${p.id}');closeUpsell()" class="px-3 py-1.5 rounded-lg bg-brand-400/10 border border-brand-400/30 text-brand-400 text-xs font-semibold hover:bg-brand-400 hover:text-brand-950 transition-all flex-shrink-0">
+          <button onclick="addToCart('${p._id}');closeUpsell()" class="px-3 py-1.5 rounded-lg bg-brand-400/10 border border-brand-400/30 text-brand-400 text-xs font-semibold hover:bg-brand-400 hover:text-brand-950 transition-all flex-shrink-0">
             Add
           </button>
         </div>
@@ -1786,46 +2194,261 @@ function setOpenStreetMapDeliveryPoint(position, knownAddress = '', pan = true) 
   }
 }
 
+// Faisalabad's approximate bounding box, used to bias (not force) search
+// results toward the city so nearby small localities rank correctly.
+// -----------------------------------------------------------------
+// Curated local gazetteer. Coordinates below were verified against
+// Wikipedia/OpenStreetMap-sourced references, not guessed. This list is
+// checked FIRST on every search — it's instant (no network call) and
+// reliable for common areas, since OpenStreetMap's free data is patchy
+// for small/newer localities (see Sitara Techno Park, Muhammad Nagar,
+// etc.). Nominatim is only used as a fallback when nothing here matches.
+// Add more entries here any time a customer reports a place that isn't
+// found — that's more reliable than hoping OSM adds it.
+const KNOWN_PLACES = [
+  // ---- Faisalabad: official delivery regions ----
+  // `precise: true` marks entries whose coordinates were verified against
+  // Wikipedia/OSM references specifically so they can be trusted as the
+  // "ground truth" name for a nearby dropped pin (see findNearestKnownPlace
+  // below) — Nominatim's own neighbourhood tagging for these areas is
+  // often wrong or outdated, which is the whole reason this list exists.
+  { name: 'D Ground, Faisalabad', lat: 31.4065, lng: 73.1104, aliases: ['d ground', 'dground'], precise: true },
+  { name: 'Susan Road, Madina Town, Faisalabad', lat: 31.4208, lng: 73.1222, aliases: ['susan road', 'susan rd'], precise: true },
+  { name: 'Jinnah Colony, Faisalabad', lat: 31.4204, lng: 73.0665, aliases: ['jinnah colony'], precise: true },
+  { name: 'Madina Town, Faisalabad', lat: 31.4208, lng: 73.1222, aliases: ['madina town'], precise: true },
+  { name: "Peoples Colony No. 1, Faisalabad", lat: 31.4085, lng: 73.1074, aliases: ['peoples colony', "people's colony", 'peoples colony no 1', 'peoples colony no.1'], precise: true },
+  { name: "Peoples Colony No. 2, Faisalabad", lat: 31.3983, lng: 73.0972, aliases: ['peoples colony no 2', 'peoples colony no.2'], precise: true },
+  { name: 'Samanabad, Faisalabad', lat: 31.3958, lng: 73.0688, aliases: ['samanabad'], precise: true },
+  { name: 'Gulberg, Faisalabad', lat: 31.4210, lng: 73.0671, aliases: ['gulberg'], precise: true },
+  // ---- Faisalabad: other well-known landmarks/areas ----
+  { name: 'Clock Tower (Ghanta Ghar), Faisalabad', lat: 31.4187, lng: 73.0791, aliases: ['clock tower', 'ghanta ghar'] },
+  { name: 'Batala Colony, Faisalabad', lat: 31.4020, lng: 73.1030, aliases: ['batala colony'], precise: true },
+  { name: 'Ghulam Muhammad Abad, Faisalabad', lat: 31.4460, lng: 73.0580, aliases: ['ghulam muhammad abad', 'gm abad', 'g.m. abad'], precise: true },
+  { name: 'Millat Town, Faisalabad', lat: 31.4573, lng: 73.0947, aliases: ['millat town'], precise: true },
+  { name: 'Nishatabad, Faisalabad', lat: 31.4030, lng: 73.0270, aliases: ['nishatabad'], precise: true },
+  { name: 'Muhammad Nagar, Faisalabad', lat: 31.397134, lng: 73.117943, aliases: ['muhammad nagar', 'muhammad nager', 'mohammad nagar'], precise: true },
+  { name: 'Shadman Colony, Faisalabad', lat: 31.3985, lng: 73.1155, aliases: ['shadman colony'], precise: true },
+  { name: 'Faisalabad (city centre)', lat: 31.4187, lng: 73.0791, aliases: ['faisalabad', 'fsd'] },
+  { name: 'DIGITALSOFTS, Peoples Colony No. 1, Faisalabad', lat: 31.4137175, lng: 73.0987421, aliases: ['digitalsofts', 'digital softs', 'digitsofts', 'digital soft'], precise: true },
+  // ---- Major Pakistani cities (verified) ----
+  { name: 'Karachi', lat: 24.8608, lng: 67.0104, aliases: ['karachi'] },
+  { name: 'Lahore', lat: 31.5580, lng: 74.3507, aliases: ['lahore'] },
+  { name: 'Islamabad', lat: 33.7215, lng: 73.0433, aliases: ['islamabad'] },
+  { name: 'Rawalpindi', lat: 33.5973, lng: 73.0479, aliases: ['rawalpindi', 'pindi'] },
+  { name: 'Multan', lat: 30.1968, lng: 71.4782, aliases: ['multan'] },
+  { name: 'Peshawar', lat: 34.0080, lng: 71.5785, aliases: ['peshawar'] },
+  { name: 'Quetta', lat: 30.1841, lng: 67.0014, aliases: ['quetta'] },
+  { name: 'Gujranwala', lat: 32.1557, lng: 74.1871, aliases: ['gujranwala'] },
+  { name: 'Sialkot', lat: 32.4927, lng: 74.5313, aliases: ['sialkot'] },
+  { name: 'Sargodha', lat: 32.0859, lng: 72.6742, aliases: ['sargodha'] },
+  { name: 'Bahawalpur', lat: 29.3978, lng: 71.6752, aliases: ['bahawalpur'] },
+  { name: 'Sukkur', lat: 27.7032, lng: 68.8589, aliases: ['sukkur'] },
+  { name: 'Hyderabad', lat: 25.3969, lng: 68.3772, aliases: ['hyderabad'] },
+  { name: 'Gujrat', lat: 32.5742, lng: 74.0754, aliases: ['gujrat'] },
+  { name: 'Sahiwal', lat: 30.6660, lng: 73.1019, aliases: ['sahiwal'] },
+  { name: 'Okara', lat: 30.8103, lng: 73.4516, aliases: ['okara'] },
+  { name: 'Dera Ghazi Khan', lat: 30.0561, lng: 70.6403, aliases: ['dera ghazi khan', 'dg khan'] },
+  { name: 'Dera Ismail Khan', lat: 31.8313, lng: 70.9017, aliases: ['dera ismail khan', 'd.i. khan', 'di khan'] },
+  { name: 'Abbottabad', lat: 34.1463, lng: 73.2117, aliases: ['abbottabad'] },
+  { name: 'Mardan', lat: 34.1986, lng: 72.0404, aliases: ['mardan'] },
+  { name: 'Murree', lat: 33.9070, lng: 73.3943, aliases: ['murree'] },
+  { name: 'Gilgit', lat: 35.9221, lng: 74.3087, aliases: ['gilgit'] },
+  { name: 'Skardu', lat: 35.2971, lng: 75.6333, aliases: ['skardu'] },
+];
+
+function searchKnownPlaces(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return KNOWN_PLACES.filter(place =>
+    place.name.toLowerCase().includes(q) ||
+    place.aliases.some(alias => alias.includes(q) || q.includes(alias))
+  );
+}
+
+// Straight-line distance in km — duplicated locally (straightLineKm below
+// does the same thing for order tracking) so this stays usable regardless
+// of script load order.
+function haversineKm(from, to) {
+  const radians = value => value * Math.PI / 180;
+  const dLat = radians(to.lat - from.lat);
+  const dLng = radians(to.lng - from.lng);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(radians(from.lat)) * Math.cos(radians(to.lat)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Reverse-geocode override: if a dropped pin lands close to one of our
+// verified colonies, trust that curated name instead of whatever loose
+// neighbourhood tag Nominatim guesses — that's the whole reason customers
+// were seeing wrong area names (e.g. a Peoples Colony pin coming back as
+// "Allama Iqbal Colony") even though the app already knew better.
+function findNearestKnownPlace(point, maxKm = 0.6) {
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const place of KNOWN_PLACES) {
+    if (!place.precise) continue;
+    const d = haversineKm(point, { lat: place.lat, lng: place.lng });
+    if (d < nearestDist) { nearestDist = d; nearest = place; }
+  }
+  return nearest && nearestDist <= maxKm ? nearest : null;
+}
+
+const FAISALABAD_VIEWBOX = '72.85,31.55,73.35,31.28';
+
+async function runNominatimSearch(query, { boundedToFaisalabad = true } = {}) {
+  // countrycodes=pk is a hard filter — results can never come back from
+  // outside Pakistan, no matter how "famous" a matched name is elsewhere
+  // (this is what previously let a "Four Seasons" search return Tokyo/Libya
+  // results: an unbounded worldwide search ranks by global importance when
+  // there's no strong local match).
+  const params = new URLSearchParams({
+    format: 'jsonv2', addressdetails: '1', limit: '6', 'accept-language': 'en',
+    countrycodes: 'pk', q: query
+  });
+  if (boundedToFaisalabad) {
+    // bounded=1 makes the viewbox a hard filter for the first attempt, so a
+    // generic/global business name doesn't out-rank real nearby matches.
+    params.set('viewbox', FAISALABAD_VIEWBOX);
+    params.set('bounded', '1');
+  }
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
+  if (!response.ok) throw new Error('Location search is unavailable right now.');
+  return response.json();
+}
+
 async function searchDeliveryLocation() {
   const input = document.getElementById('delivery-map-search');
   const query = input.value.trim();
+  const resultsBox = document.getElementById('delivery-search-results');
   if (!query) {
     setDeliveryMapMessage('Enter an address, area, or landmark to search.', true);
     return;
   }
+  if (resultsBox) { resultsBox.classList.add('hidden'); resultsBox.innerHTML = ''; }
+
+  // Check our curated, verified list of Faisalabad areas and major
+  // Pakistani cities first — it's instant and doesn't depend on
+  // OpenStreetMap having indexed the place.
+  const knownMatches = searchKnownPlaces(query);
+  if (knownMatches.length) {
+    const asNominatimShape = knownMatches.map(place => ({
+      lat: place.lat, lon: place.lng, display_name: place.name,
+      address: {}, _knownPlace: true, _label: place.name
+    }));
+    renderDeliverySearchResults(asNominatimShape);
+    setDeliveryMapMessage(knownMatches.length > 1
+      ? `Found ${knownMatches.length} matches in our verified list — pick one below.`
+      : 'Location found. Drag the pin if you need to fine-tune it.');
+    if (knownMatches.length === 1) {
+      const place = knownMatches[0];
+      setOpenStreetMapDeliveryPoint({ lat: place.lat, lng: place.lng }, place.name);
+    }
+    return;
+  }
+
   setDeliveryMapMessage('Searching location…');
   try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(query + ', Faisalabad, Pakistan')}`);
-    const results = await response.json();
-    if (!response.ok || !results?.length) throw new Error('No matching location was found. Try a more specific address or landmark.');
-    const result = results[0];
-    setOpenStreetMapDeliveryPoint({ lat: result.lat, lng: result.lon }, formatDeliveryAddress(result));
-    setDeliveryMapMessage('Location found. Drag the pin if you need to fine-tune it.');
+    // Pass 1: strictly inside Faisalabad (bounded=1). Best for local areas
+    // and landmarks.
+    let results = await runNominatimSearch(query, { boundedToFaisalabad: true });
+    // Pass 2: same query, but Pakistan-wide instead of Faisalabad-only —
+    // useful if the customer is searching a different city (still never
+    // leaves Pakistan, since countrycodes=pk is always applied).
+    if (!results?.length) {
+      results = await runNominatimSearch(query, { boundedToFaisalabad: false });
+    }
+    // Pass 3: retry with "Faisalabad, Pakistan" appended, in case the
+    // landmark needs the city name to disambiguate.
+    if (!results?.length && !/faisalabad|pakistan/i.test(query)) {
+      results = await runNominatimSearch(`${query}, Faisalabad, Pakistan`, { boundedToFaisalabad: false });
+    }
+    if (!results?.length) throw new Error('No matching location was found in Pakistan. Try a more specific address or landmark, or drop the pin manually.');
+    renderDeliverySearchResults(results);
+    setDeliveryMapMessage(results.length > 1
+      ? `Found ${results.length} matches — pick the closest one below.`
+      : 'Location found. Drag the pin if you need to fine-tune it.');
+    if (results.length === 1) {
+      const result = results[0];
+      setOpenStreetMapDeliveryPoint({ lat: result.lat, lng: result.lon }, formatDeliveryAddress(result));
+    }
   } catch (err) {
     setDeliveryMapMessage(err.message || 'Location search is unavailable. Place the pin manually instead.', true);
   }
 }
 
+function renderDeliverySearchResults(results) {
+  const resultsBox = document.getElementById('delivery-search-results');
+  if (!resultsBox) return;
+  if (results.length < 2) { resultsBox.classList.add('hidden'); resultsBox.innerHTML = ''; return; }
+  resultsBox.innerHTML = results.map((result, i) => `
+    <button type="button" class="w-full text-left px-3 py-2 text-sm text-brand-200 hover:bg-brand-800" data-result-index="${i}">
+      <i class="fa-solid fa-location-dot text-[#B54B3A] mr-2"></i>${escapeHtml(result._label || result.display_name)}
+      ${result._knownPlace ? '<span class="ml-2 text-[10px] uppercase tracking-wide text-brand-500">Verified</span>' : ''}
+    </button>
+  `).join('');
+  resultsBox.classList.remove('hidden');
+  resultsBox.querySelectorAll('[data-result-index]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const result = results[Number(btn.dataset.resultIndex)];
+      const label = result._knownPlace ? result._label : formatDeliveryAddress(result);
+      setOpenStreetMapDeliveryPoint({ lat: result.lat, lng: result.lon }, label);
+      resultsBox.classList.add('hidden');
+      resultsBox.innerHTML = '';
+      setDeliveryMapMessage('Location selected. Drag the pin if you need to fine-tune it.');
+    });
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
 async function reverseGeocodeOpenStreetMapDeliveryPoint(point) {
   const requestId = ++deliveryGeocodeRequestId;
   document.getElementById('delivery-map-address').textContent = 'Finding address…';
+  // Check our verified colony list first — Nominatim's neighbourhood
+  // tagging for Faisalabad is often wrong (see KNOWN_PLACES comment), so a
+  // pin dropped near a colony we already know about should use that name
+  // rather than risk a mislabeled OSM tag.
+  const nearestKnown = findNearestKnownPlace(point);
+  if (nearestKnown) {
+    if (requestId !== deliveryGeocodeRequestId || confirmedDeliveryLocation?.lat !== point.lat || confirmedDeliveryLocation?.lng !== point.lng) return;
+    setOpenStreetMapDeliveryAddress(nearestKnown.name);
+    setDeliveryMapMessage(`Matched to a known area: ${nearestKnown.name}. Tap "Edit" if this isn't right.`);
+    return;
+  }
   try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${encodeURIComponent(point.lat)}&lon=${encodeURIComponent(point.lng)}`);
+    // zoom=18 asks Nominatim for the most specific (building/street) match
+    // instead of letting it fall back to a broader area boundary, and
+    // accept-language keeps locality names consistent between searches.
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=en&lat=${encodeURIComponent(point.lat)}&lon=${encodeURIComponent(point.lng)}`);
     const result = await response.json();
     if (!response.ok || !result?.display_name) throw new Error('Address lookup was unavailable.');
     if (requestId !== deliveryGeocodeRequestId || confirmedDeliveryLocation?.lat !== point.lat || confirmedDeliveryLocation?.lng !== point.lng) return;
     setOpenStreetMapDeliveryAddress(formatDeliveryAddress(result));
+    // OpenStreetMap's local-area data isn't always accurate or up to date
+    // for every neighbourhood, so let the customer confirm/correct the
+    // detected name instead of silently trusting it.
+    setDeliveryMapMessage('Check the area name below — tap "Edit" to correct it if it\'s not quite right.');
   } catch (err) {
     if (requestId !== deliveryGeocodeRequestId) return;
     document.getElementById('delivery-map-address').textContent = `Coordinates: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
-    setDeliveryMapMessage('Address lookup was unavailable. Your exact coordinates will still be saved.', true);
+    setDeliveryMapMessage('Address lookup was unavailable. Type the area name yourself using "Edit" below — your exact coordinates will still be saved.', true);
   }
 }
 
 function formatDeliveryAddress(result) {
   const address = result.address || {};
   const street = [address.house_number, address.road].filter(Boolean).join(' ');
-  const locality = address.neighbourhood || address.suburb || address.quarter || address.residential || address.village;
+  // Ordered from most to least specific. OSM tags small Pakistani
+  // localities inconsistently (neighbourhood, suburb, hamlet, residential,
+  // village all show up depending on how the area was mapped), so we check
+  // every likely tag rather than just the first couple.
+  const locality = address.neighbourhood || address.suburb || address.quarter
+    || address.residential || address.hamlet || address.village
+    || address.city_district || address.borough;
   const city = address.city || address.town || address.municipality || address.county;
   const concise = [...new Set([street, locality, city].filter(Boolean))].join(', ');
   return concise || (result.display_name || '').split(',').slice(0, 3).join(',').trim();
@@ -1835,6 +2458,11 @@ function setOpenStreetMapDeliveryAddress(address) {
   if (!confirmedDeliveryLocation) return;
   confirmedDeliveryLocation.address = address;
   document.getElementById('delivery-map-address').textContent = address;
+  const addressInput = document.getElementById('delivery-map-address-input');
+  if (addressInput) addressInput.value = address;
+  // A new point was just geocoded automatically, so drop back to display
+  // mode in case the customer had a manual edit open for a previous pin.
+  setDeliveryAddressEditMode(false);
   const normalisedAddress = address.toLowerCase();
   const matchingOption = (cachedRegions || []).find(region => normalisedAddress.includes(region.toLowerCase()));
   if (matchingOption) {
@@ -1842,6 +2470,32 @@ function setOpenStreetMapDeliveryAddress(address) {
   } else {
     setMapDeliveryRegion('', false);
   }
+}
+
+function setDeliveryAddressEditMode(editing) {
+  const display = document.getElementById('delivery-map-address');
+  const input = document.getElementById('delivery-map-address-input');
+  const btn = document.getElementById('edit-delivery-address-btn');
+  if (!display || !input) return;
+  display.classList.toggle('hidden', editing);
+  input.classList.toggle('hidden', !editing);
+  if (btn) btn.textContent = editing ? 'Done' : 'Edit';
+  if (editing) input.focus();
+}
+
+function toggleDeliveryAddressEdit() {
+  const input = document.getElementById('delivery-map-address-input');
+  const isEditing = input && !input.classList.contains('hidden');
+  setDeliveryAddressEditMode(!isEditing);
+}
+
+// Lets the customer type the correct area/landmark name when the
+// auto-detected one is wrong — the pinned GPS coordinates are unaffected
+// and are always what actually gets saved and sent to the rider.
+function onDeliveryAddressManualEdit(value) {
+  if (!confirmedDeliveryLocation) return;
+  confirmedDeliveryLocation.address = value;
+  document.getElementById('delivery-map-address').textContent = value || 'Choose a point on the map.';
 }
 
 function useCurrentDeliveryLocation() {
@@ -1874,12 +2528,20 @@ async function loadRegionsIntoSelect() {
 
 function renderCheckout() {
   const container = document.getElementById('checkout-items');
-  container.innerHTML = state.cart.map(c => `
-    <div class="flex justify-between text-sm mb-1.5">
-      <span class="text-brand-300">${c.qty}x ${c.item.name}</span>
-      <span class="font-medium">$${(c.item.price * c.qty).toFixed(2)}</span>
+  container.innerHTML = state.cart.map(c => {
+    const unit = cartLineUnitPrice(c);
+    const addonsLine = (c.addons && c.addons.length)
+      ? `<div class="text-xs text-brand-800 mb-1.5 -mt-1">+ ${c.addons.map(a => a.name).join(', ')}</div>` : '';
+    return `
+    <div class="mb-1.5">
+      <div class="flex justify-between text-sm">
+        <span class="text-brand-300">${c.qty}x ${c.item.name}</span>
+        <span class="font-medium">$${(unit * c.qty).toFixed(2)}</span>
+      </div>
+      ${addonsLine}
     </div>
-  `).join('');
+  `;
+  }).join('');
   const sub = getCartSubtotal();
   const tax = sub * 0.08;
   document.getElementById('checkout-subtotal').textContent = '$' + sub.toFixed(2);
@@ -1910,6 +2572,7 @@ function renderCheckout() {
   if (state.customer) {
     document.getElementById('checkout-account-name').textContent = `${state.customer.name} · ${state.customer.phone}`;
   }
+  syncCheckoutOrderTypeWithQrTable();
 }
 
 async function handleCheckout(e) {
@@ -1919,7 +2582,8 @@ async function handleCheckout(e) {
   const address = form.address?.value.trim() || '';
   const region = form.region?.value || '';
   const guestName = form.guestName?.value.trim() || '';
-  const guestPhone = form.guestPhone?.value.trim() || '';
+  const guestPhoneRaw = form.guestPhone?.value.trim() || '';
+  const guestPhone = normalizePKPhone(guestPhoneRaw);
   let deliveryLocation = null;
   try { deliveryLocation = form.deliveryLocation?.value ? JSON.parse(form.deliveryLocation.value) : null; } catch (_) { deliveryLocation = null; }
   const notes = form.notes?.value.trim() || '';
@@ -1929,7 +2593,7 @@ async function handleCheckout(e) {
   if (orderType === 'delivery' && !region) { showFieldError('region', 'Please select your region.'); valid = false; }
   if (orderType === 'delivery' && address.length < 5) { showFieldError('address', 'Please enter a delivery address.'); valid = false; }
   if (orderType === 'delivery' && (!deliveryLocation || deliveryLocation.type !== 'Point')) { showFieldError('deliveryLocation', 'Select and confirm your delivery location on the map.'); valid = false; }
-  if (!state.customer && (guestName.length < 2 || !/^\d{11}$/.test(guestPhone))) { showToast('Enter your name and 11-digit phone number to continue as a guest.', 'error'); valid = false; }
+  if (!state.customer && (guestName.length < 2 || !isValidPKPhone(guestPhoneRaw))) { showToast('Enter your name and a valid phone number (e.g. 03001234567 or +923001234567).', 'error'); valid = false; }
   if (state.cart.length === 0) { showToast('Your cart is empty.', 'error'); valid = false; }
   if (!valid) return;
 
@@ -1938,14 +2602,26 @@ async function handleCheckout(e) {
   submitBtn.textContent = 'Placing order…';
 
   try {
-    const items = state.cart.map(c => ({ menuItemId: c.item.id, name: c.item.name, qty: c.qty, price: c.item.price }));
+    const items = state.cart.map(c => ({
+      menuItemId: c.item.id,
+      name: c.addons && c.addons.length ? `${c.item.name} (+${c.addons.map(a => a.name).join(', +')})` : c.item.name,
+      qty: c.qty,
+      price: cartLineUnitPrice(c)
+    }));
     const order = await apiFetch('/api/orders', {
       method: 'POST',
       headers: state.customerToken ? authHeaders(state.customerToken) : { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, orderType, deliveryAddress: address, deliveryLocation, region, notes, guestName, guestPhone })
+      body: JSON.stringify({
+        items, orderType, deliveryAddress: address, deliveryLocation, region, notes, guestName, guestPhone,
+        // Only meaningful for dine-in orders placed via a scanned table QR —
+        // syncCheckoutOrderTypeWithQrTable() already forces orderType to
+        // 'dine-in' whenever state.qrTable is set, so this stays consistent.
+        tableNumber: orderType === 'dine-in' ? state.qrTable : null
+      })
     });
     state.cart = [];
     updateCartBadge();
+    renderCartItems();
     localStorage.removeItem('eb_return_to_checkout');
     form.reset();
     showToast(`Order ${order.orderNumber} placed successfully!`, 'success');
@@ -1965,6 +2641,36 @@ function showFieldError(field, msg) {
 function clearErrors() {
   document.querySelectorAll('.form-error').forEach(e => e.textContent = '');
   document.getElementById('admin-login-error')?.classList.add('hidden');
+}
+
+// ============================================
+// PHONE NUMBER (Pakistan) — accepts local or international format
+// ============================================
+// Accepted while typing / on submit:
+//   Local:         0320 1234567   (11 digits, starts with 0)
+//   International: +92 320 1234567  (+92 followed by 10 digits)
+//                  92 320 1234567   (92 followed by 10 digits, no plus)
+// Whatever the customer types, we normalize down to the local 11-digit
+// form (0XXXXXXXXXX) before validating or sending to the backend, so
+// every number is stored/looked-up in one consistent shape.
+function normalizePKPhone(raw) {
+  let v = (raw || '').trim();
+  const hasPlus = v.startsWith('+');
+  v = v.replace(/\D/g, ''); // strip everything except digits
+  if (hasPlus) v = '92' + v.replace(/^92/, ''); // keep a single 92 prefix if they had +92
+  if (v.startsWith('92') && v.length === 12) v = '0' + v.slice(2); // +92XXXXXXXXXX / 92XXXXXXXXXX -> 0XXXXXXXXXX
+  return v;
+}
+function isValidPKPhone(raw) {
+  return /^0\d{10}$/.test(normalizePKPhone(raw));
+}
+// Live-formatting for phone inputs: allow a leading "+" (for +92...) and
+// digits only after that, capped at a sane max length either way.
+function formatPKPhoneInput(value) {
+  const hasPlus = value.trim().startsWith('+');
+  const digits = value.replace(/\D/g, '');
+  if (hasPlus) return '+' + digits.slice(0, 12); // +92XXXXXXXXXX = 12 digits after the +
+  return digits.slice(0, 11); // local 0XXXXXXXXXX = 11 digits
 }
 
 // ============================================
@@ -2053,8 +2759,15 @@ async function renderTracking(orderNumber) {
 
   localStorage.setItem('eb_last_order', order.orderNumber);
   const statusFlow = getStatusFlow(order);
-  const statusIdx = statusFlow.indexOf(order.status);
-  const isArrived = order.status === statusFlow[statusFlow.length - 1];
+  // A delivery order's terminal backend status is "completed" (set once the
+  // rider's OTP handoff is confirmed), but the delivery journey's own step
+  // list ends at "delivered" and has no "completed" stop — so treat
+  // "completed" as "reached the end of whichever flow this order uses"
+  // rather than looking it up literally, or the progress bar collapses to 0%.
+  const statusIdx = order.status === 'completed'
+    ? statusFlow.length - 1
+    : Math.max(statusFlow.indexOf(order.status), 0);
+  const isArrived = order.status === 'completed' || order.status === statusFlow[statusFlow.length - 1];
   const placedAt = new Date(order.createdAt);
   container.innerHTML = `
     <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
@@ -2076,8 +2789,8 @@ async function renderTracking(orderNumber) {
           <div class="mover-shadow"></div>
         </div>
         ${statusFlow.map((s, i) => {
-          const cls = i < statusIdx ? 'done' : i === statusIdx ? 'active' : '';
-          const icon = i < statusIdx ? '<i class="fa-solid fa-check"></i>' : `<i class="fa-solid ${STATUS_ICONS[s]}"></i>`;
+          const cls = (i < statusIdx || (i === statusIdx && isArrived)) ? 'done' : i === statusIdx ? 'active' : '';
+          const icon = cls === 'done' ? '<i class="fa-solid fa-check"></i>' : `<i class="fa-solid ${STATUS_ICONS[s]}"></i>`;
           const log = order.statusLog.find(l=>l.status===s);
           return `<div class="journey-stop ${cls}" style="left:${(i/(statusFlow.length-1))*100}%">
             <div class="stop-icon">${icon}${cls==='active' && s==='preparing' ? '<span class="steam s1"></span><span class="steam s2"></span><span class="steam s3"></span>' : ''}</div>
@@ -2094,6 +2807,14 @@ async function renderTracking(orderNumber) {
         <p class="celebrate-sub">Enjoy your meal, ${(order.customerName || '').split(' ')[0]}!</p>
       </div>` : ''}
     </div>`}
+    ${order.orderType === 'delivery' && order.otp ? `
+    <div class="mb-6 bg-brand-400/10 border-2 border-brand-400 rounded-2xl p-5 text-center">
+      <p class="text-brand-400 text-xs tracking-[.2em] uppercase font-semibold mb-1">
+        <i class="fa-solid fa-shield-halved mr-1"></i> Delivery code
+      </p>
+      <p class="text-4xl font-display font-bold tracking-[.3em] text-brand-100 my-2">${order.otp}</p>
+      <p class="text-brand-300 text-xs">Give this code to your rider when they arrive. Don't share it before that.</p>
+    </div>` : ''}
     ${order.orderType === 'delivery' && order.status === 'out-for-delivery' && order.deliveryLocation?.type === 'Point' ? `
     <div class="mb-6 bg-brand-900 border border-brand-400/40 rounded-2xl p-5">
       <div class="flex items-center justify-between gap-3 mb-4">
@@ -2300,10 +3021,11 @@ async function handleReservationSubmit(e) {
   const phone = document.getElementById('resv-phone').value.trim();
   const date = document.getElementById('resv-date').value;
   if (!name || !email || !phone || !date) return;
-  if (!/^\d{11}$/.test(phone)) {
-    showToast('Please enter an 11-digit phone number.', 'error');
+  if (!isValidPKPhone(phone)) {
+    showToast('Please enter a valid phone number (e.g. 03001234567 or +923001234567).', 'error');
     return;
   }
+  const normalizedPhone = normalizePKPhone(phone);
 
   const btn = e.target.querySelector('button[type="submit"]');
   btn.textContent = 'Requesting…';
@@ -2313,7 +3035,7 @@ async function handleReservationSubmit(e) {
     const response = await fetch('/api/reservations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guestName: name, email, phone, date, time: resvSelectedTime, guests: Number(resvSelectedSize) })
+      body: JSON.stringify({ guestName: name, email, phone: normalizedPhone, date, time: resvSelectedTime, guests: Number(resvSelectedSize) })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'Could not submit your reservation.');
@@ -2353,7 +3075,14 @@ function initReservationForm() {
   if (dateInput) dateInput.min = new Date().toISOString().split('T')[0];
   const phoneInput = document.getElementById('resv-phone');
   if (phoneInput) phoneInput.addEventListener('input', () => {
-    phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 11);
+    phoneInput.value = formatPKPhoneInput(phoneInput.value);
+  });
+}
+
+function initGuestPhoneField() {
+  const guestPhoneInput = document.querySelector('input[name="guestPhone"]');
+  if (guestPhoneInput) guestPhoneInput.addEventListener('input', () => {
+    guestPhoneInput.value = formatPKPhoneInput(guestPhoneInput.value);
   });
 }
 
@@ -2382,6 +3111,13 @@ function init() {
   renderFanFavorites();
   setFooterYear();
   initReservationForm();
+  initGuestPhoneField();
+  initQrTableDetection();
+  // Sync the badge and the always-visible inline cart panel with whatever
+  // was already saved in localStorage (e.g. a returning visitor who added
+  // items on a previous visit).
+  updateCartBadge();
+  renderCartItems();
   // If the customer just signed in/registered from the checkout page,
   // send them straight back to checkout — the cart (localStorage) never
   // left, so their items are still there.
@@ -2390,6 +3126,65 @@ function init() {
     if (state.cart.length > 0) {
       navigate('checkout');
     }
+  }
+}
+
+// ============================================
+// QR TABLE ORDERING
+// ============================================
+// A table's printed QR code links to `?table=T-01`. On load we pick that
+// up, remember it (so the whole visit — not just this page load — is tied
+// to the table), and clean the URL so it doesn't linger if they share the
+// link or bookmark the page.
+function initQrTableDetection() {
+  const params = new URLSearchParams(window.location.search);
+  const table = params.get('table');
+  if (table) {
+    state.qrTable = table;
+    localStorage.setItem('eb_qr_table', table);
+    // Strip ?table=... from the visible URL without reloading the page.
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+    showToast(`Ordering for Table ${table}`, 'success');
+  }
+  renderQrTableBanner();
+}
+
+function clearQrTable() {
+  state.qrTable = null;
+  localStorage.removeItem('eb_qr_table');
+  renderQrTableBanner();
+  syncCheckoutOrderTypeWithQrTable();
+}
+
+// Keeps every place that shows the detected table (menu banner + checkout)
+// in sync whenever qrTable changes.
+function renderQrTableBanner() {
+  document.querySelectorAll('.qr-table-banner').forEach(el => {
+    el.classList.toggle('hidden', !state.qrTable);
+    const label = el.querySelector('.qr-table-banner-label');
+    if (label && state.qrTable) label.textContent = `Ordering for Table ${state.qrTable}`;
+  });
+  syncCheckoutOrderTypeWithQrTable();
+}
+
+// When a table was scanned, lock the checkout to Dine In (with the table
+// pre-filled) since that's overwhelmingly the intent of scanning a table
+// QR — but still let the customer break out of it via "Not at this table?".
+function syncCheckoutOrderTypeWithQrTable() {
+  const dineInRadio = document.querySelector('input[name="orderType"][value="dine-in"]');
+  const otherRadios = document.querySelectorAll('input[name="orderType"]:not([value="dine-in"])');
+  const tableNote = document.getElementById('checkout-table-note');
+  const tableNoteLabel = document.getElementById('checkout-table-note-label');
+  if (!dineInRadio) return;
+  if (state.qrTable) {
+    dineInRadio.checked = true;
+    otherRadios.forEach(r => { r.disabled = true; r.closest('label')?.classList.add('opacity-40', 'cursor-not-allowed'); });
+    if (tableNote) tableNote.classList.remove('hidden');
+    if (tableNoteLabel) tableNoteLabel.textContent = `Table ${state.qrTable}`;
+  } else {
+    otherRadios.forEach(r => { r.disabled = false; r.closest('label')?.classList.remove('opacity-40', 'cursor-not-allowed'); });
+    if (tableNote) tableNote.classList.add('hidden');
   }
 }
 

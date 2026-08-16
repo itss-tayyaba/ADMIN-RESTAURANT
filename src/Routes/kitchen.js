@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Order = require("../models/Order");
 const jwt = require("jsonwebtoken");
+const { autoAssignOrder } = require("./delivery");
 
 // =====================================
 // CHEF AUTH
@@ -168,7 +169,7 @@ router.put("/:id/accept", kitchenAuth, async (req,res)=>{
 
         if(!order){
 
-           res.status(404).json({
+           return res.status(404).json({
     success: false,
     message: "Order not found"
 });
@@ -286,16 +287,34 @@ order.status = "ready";
 
         await order.save();
 
+        const io = req.app && req.app.locals && req.app.locals.io;
+
         // emit real-time update to connected clients
         try {
-            const io = req.app && req.app.locals && req.app.locals.io;
             if (io) io.emit('order:update', order);
         } catch (e) { /* ignore emit errors */ }
 
+        // Delivery orders auto-assign a rider the moment they're ready,
+        // matching the "Create Order -> Assign Rider" flow: no admin click
+        // needed. If no rider is free in the region right now, the order
+        // just stays "ready" and can be assigned later (auto-retry or
+        // manual) from the delivery/admin portal.
+        let assignedRider = null;
+        if (order.orderType === "delivery" && order.region) {
+            try {
+                assignedRider = await autoAssignOrder(order, io);
+            } catch (e) { /* assignment failure shouldn't block the kitchen flow */ }
+        }
+
         res.json({
             success:true,
-            message:"Order prepared successfully",
-            order
+            message: assignedRider
+                ? `Order prepared and auto-assigned to ${assignedRider.name || assignedRider.username}.`
+                : "Order prepared successfully",
+            order,
+            rider: assignedRider
+                ? { id: assignedRider._id, name: assignedRider.name || assignedRider.username }
+                : null
         });
 
 
