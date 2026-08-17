@@ -1,4 +1,29 @@
 // =====================================
+// Disable pull-to-refresh (mobile)
+// =====================================
+// overscroll-behavior-y:contain (in delivery.css) handles this on most
+// modern browsers, but older iOS Safari doesn't fully respect it. This is a
+// fallback: block the swipe-down-at-the-top gesture that triggers the
+// browser's native page reload, without blocking normal scrolling anywhere
+// else on the page (so the order list etc. still scroll fine).
+(function preventPullToRefresh() {
+    let touchStartY = 0;
+
+    document.addEventListener('touchstart', e => {
+        if (e.touches.length !== 1) return;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+        if (e.touches.length !== 1) return;
+        const scroller = e.target.closest('.eb-chat-body, .table-scroll') || document.scrollingElement;
+        const atTop = (scroller ? scroller.scrollTop : window.scrollY) <= 0;
+        const pullingDown = e.touches[0].clientY > touchStartY;
+        if (atTop && pullingDown) e.preventDefault();
+    }, { passive: false });
+})();
+
+// =====================================
 // API
 // =====================================
 
@@ -115,6 +140,61 @@ let lastLocationSentAt = 0;
 let lastRiderPosition = null;
 let activeDropoffPoint = null;
 let activeDropoffOrder = null;
+
+// ---- Re-render guards ----
+// The old approach rebuilt these DOM sections from scratch on every 5s
+// refresh / socket event, then tried to patch the OTP value + focus back in
+// afterwards. That still destroyed and recreated the actual <input> element
+// every cycle, which can drop focus and flicker the on-screen keyboard on
+// mobile even with the patch — which is why typing an OTP still felt broken.
+// These track "what's already on screen" so a refresh can skip touching a
+// section entirely when nothing in it actually changed, leaving any
+// in-progress typing completely undisturbed instead of just restoring it
+// after the fact.
+let lastActiveOrderId = undefined; // undefined = not yet rendered, null = showing empty state
+let lastActiveOrderSignature = '';
+const assignedCardNodes = new Map(); // order._id -> { el, hash }
+
+function activeOrderSignature(order) {
+    return [
+        order.orderNumber, order.customerName, order.customerPhone,
+        order.region, order.deliveryAddress, order.total,
+        order.deliveryLocation?.type
+    ].join('|');
+}
+
+function cardSignature(order) {
+    // Sort items by name so a backend that returns the same items in a
+    // different array order each fetch doesn't look like "changed data" and
+    // trigger an unnecessary card rebuild every refresh cycle.
+    const sortedItems = Array.isArray(order.items)
+        ? [...order.items].sort((a, b) => String(a.name).localeCompare(String(b.name))).map(i => `${i.name}x${i.qty}`)
+        : [];
+    return JSON.stringify({
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        region: order.region,
+        deliveryAddress: order.deliveryAddress,
+        items: sortedItems,
+        // ?? '' normalizes null/undefined so a backend that's inconsistent
+        // about how it serializes "no notes" doesn't look like a change.
+        notes: order.notes ?? '',
+        // .toFixed(2) absorbs tiny floating-point rounding differences
+        // (e.g. 13.5 vs 13.500000000000002) that would otherwise make the
+        // signature differ on every single poll even though nothing about
+        // the order actually changed — forcing a needless card rebuild
+        // (and its entrance animation replaying, which reads as a "flash").
+        total: Number(order.total || 0).toFixed(2)
+    });
+}
+
+// A stable identity for tracking a card across refreshes even if a backend
+// response is ever missing _id for some reason — falls back to the human
+// order number, which is always present and unique.
+function orderKey(order) {
+    return order._id || order.orderNumber;
+}
 
 function updateLiveLocationButton() {
     const button = document.getElementById('liveLocationButton');
@@ -365,14 +445,38 @@ function renderActiveDelivery(assigned) {
     const activeOrder = assigned[0] || null;
 
     if (!activeOrder) {
-        stopLiveLocationSharing();
-        panel.innerHTML = `<div class="empty-orders">🛵 No orders out for delivery right now.</div>`;
-        badge.hidden = true;
+        if (lastActiveOrderId !== null) {
+            stopLiveLocationSharing();
+            panel.innerHTML = `<div class="empty-orders">🛵 No orders out for delivery right now.</div>`;
+            badge.hidden = true;
+            lastActiveOrderId = null;
+            lastActiveOrderSignature = '';
+        }
         updateActiveDeliveryMap(null);
         return;
     }
 
     badge.hidden = false;
+
+    const signature = activeOrderSignature(activeOrder);
+    if (lastActiveOrderId === activeOrder._id && lastActiveOrderSignature === signature) {
+        // Same order, nothing about it changed — don't touch the panel at
+        // all. This is the common case on every 5s tick, and it's what
+        // keeps the rider's in-progress OTP typing completely undisturbed.
+        updateActiveDeliveryMap(activeOrder);
+        return;
+    }
+
+    // Only reachable when the active order actually changed (new order, or
+    // one of its fields updated). Preserve any in-progress OTP typing in
+    // case it's the same order with just a minor field update.
+    const existingOtpInput = panel.querySelector('.otp-verification input');
+    const preservedOtpValue = (lastActiveOrderId === activeOrder._id && existingOtpInput) ? existingOtpInput.value : '';
+    const wasOtpFocused = !!preservedOtpValue && document.activeElement === existingOtpInput;
+    const preservedSelectionStart = wasOtpFocused ? existingOtpInput.selectionStart : null;
+
+    lastActiveOrderId = activeOrder._id;
+    lastActiveOrderSignature = signature;
 
     const phoneDigits = (activeOrder.customerPhone || "").replace(/[^0-9+]/g, "");
     const callBtn = phoneDigits ? `<a class="btn call-btn" href="tel:${phoneDigits}">📞 Call Customer</a>` : "";
@@ -407,6 +511,17 @@ function renderActiveDelivery(assigned) {
             </div>
         </div>
     `;
+
+    if (preservedOtpValue) {
+        const newOtpInput = document.getElementById(`otp-active-${activeOrder._id}`);
+        if (newOtpInput) {
+            newOtpInput.value = preservedOtpValue;
+            if (wasOtpFocused) {
+                newOtpInput.focus();
+                try { newOtpInput.setSelectionRange(preservedSelectionStart, preservedSelectionStart); } catch (e) {}
+            }
+        }
+    }
 
     updateActiveDeliveryMap(activeOrder);
     updateLiveLocationButton();
@@ -533,15 +648,7 @@ function renderOrders(orders) {
     renderActiveDelivery(assigned);
 
     // ---- Out for delivery (cards) ----
-    if (!assigned.length) {
-        assignedContainer.innerHTML = `
-            <div class="empty-orders">
-                🛵 No orders out for delivery right now.
-            </div>
-        `;
-    } else {
-        assignedContainer.innerHTML = assigned.map(order => createCard(order)).join('');
-    }
+    renderAssignedCards(assigned);
 
     // ---- Delivered today (table) ----
     if (!delivered.length) {
@@ -550,6 +657,92 @@ function renderOrders(orders) {
         deliveredBody.innerHTML = delivered.map(order => createDeliveredRow(order)).join('');
     }
 
+}
+
+// =====================================
+// Render Order Cards (Out for Delivery) — reconciled, not rebuilt
+// =====================================
+// Only touches the DOM for a card whose underlying order data actually
+// changed. Cards that are identical to last render are left completely
+// alone, so a rider mid-typing an OTP into an untouched card is never
+// interrupted by the 5s auto-refresh or a socket "order:update" event.
+
+function renderAssignedCards(assigned) {
+    if (!assigned.length) {
+        assignedCardNodes.clear();
+        assignedContainer.innerHTML = `
+            <div class="empty-orders">
+                🛵 No orders out for delivery right now.
+            </div>
+        `;
+        return;
+    }
+
+    const seenIds = new Set();
+
+    assigned.forEach(order => {
+        const id = orderKey(order);
+        seenIds.add(id);
+        const hash = cardSignature(order);
+        const existing = assignedCardNodes.get(id);
+
+        if (existing && existing.hash === hash) {
+            // Nothing about this order changed — leave its DOM node (and
+            // whatever the rider is currently typing into it) untouched.
+            return;
+        }
+
+        if (existing) {
+            // Diagnostic: if cards are still rebuilding when they shouldn't,
+            // this shows exactly which field changed between polls. Safe to
+            // leave in — only logs on an actual rebuild, not every refresh.
+            console.debug('[delivery] rebuilding card for', order.orderNumber, {
+                before: existing.hash,
+                after: hash
+            });
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = createCard(order).trim();
+        const newNode = wrapper.firstElementChild;
+
+        if (existing) {
+            // The order changed (rare while it's still "out for delivery"),
+            // but preserve any in-progress OTP typing across the swap.
+            const oldOtp = existing.el.querySelector('.otp-verification input');
+            const newOtp = newNode.querySelector('.otp-verification input');
+            const wasFocused = oldOtp && document.activeElement === oldOtp;
+            const selStart = wasFocused ? oldOtp.selectionStart : null;
+            if (oldOtp && newOtp && oldOtp.value) {
+                newOtp.value = oldOtp.value;
+                if (wasFocused) {
+                    newOtp.focus();
+                    try { newOtp.setSelectionRange(selStart, selStart); } catch (e) {}
+                }
+            }
+            existing.el.replaceWith(newNode);
+        } else {
+            assignedContainer.appendChild(newNode);
+        }
+
+        assignedCardNodes.set(id, { el: newNode, hash });
+    });
+
+    // Remove cards for orders that are no longer assigned to this rider.
+    for (const [id, entry] of assignedCardNodes) {
+        if (!seenIds.has(id)) {
+            entry.el.remove();
+            assignedCardNodes.delete(id);
+        }
+    }
+
+    // Keep DOM order in sync with the assigned list. appendChild on a node
+    // that's already in the document just moves it — it does not destroy
+    // or recreate it, so this never disturbs focus or in-progress typing.
+    assigned.forEach(order => {
+        const entry = assignedCardNodes.get(orderKey(order));
+        if (entry) assignedContainer.appendChild(entry.el);
+    });
 }
 
 // =====================================
