@@ -35,6 +35,24 @@ const orderSchema = new mongoose.Schema({
   // type manually, or arrived via takeaway/delivery).
   tableNumber: { type: String, default: '', trim: true },
   deliveryAddress: String,
+  // ---- Online payment (JazzCash / EasyPaisa) ----
+  // 'unpaid'   — cash / pay-in-person, the default for every order type
+  // 'pending'  — customer was redirected to the gateway, no result yet
+  // 'paid'     — gateway confirmed success (signature verified)
+  // 'failed'   — gateway confirmed failure, or the customer abandoned it
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'pending', 'paid', 'failed'],
+    default: 'unpaid'
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cash', 'jazzcash', 'easypaisa'],
+    default: 'cash'
+  },
+  // The gateway's transaction reference for this attempt — used to match
+  // an incoming callback back to the right order.
+  transactionId: { type: String, default: '' },
   // GeoJSON Point uses [longitude, latitude] (not [latitude, longitude]).
   deliveryLocation: {
     type: {

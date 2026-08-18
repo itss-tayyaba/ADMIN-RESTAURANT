@@ -10,7 +10,7 @@ require("dotenv").config();
 
 console.log("================================");
 console.log("PORT =", process.env.PORT || 3000);
-console.log("MONGODB_URI =", process.env.MONGODB_URI || "not set");
+console.log("MONGODB_URI configured =", Boolean(process.env.MONGODB_URI));
 console.log("================================");
 
 const express = require("express");
@@ -24,6 +24,7 @@ const app = express();
 
 const AdminUser = require("./src/models/AdminUser");
 const RestaurantTable = require("./src/models/RestaurantTable");
+const Branch = require("./src/models/Branch");
 
 // ===================== DATABASE CONNECTION =====================
 
@@ -42,6 +43,7 @@ function connectDatabase() {
                 await AdminUser.createDefaultAdmin();
                 await AdminUser.createDefaultChef();
                 await AdminUser.createDefaultDelivery();
+                await Branch.createDefaultBranch();
             })
             .catch((err) => {
                 databaseConnection = null;
@@ -243,6 +245,8 @@ if (require.main === module) {
             await AdminUser.createDefaultChef();
 
             await AdminUser.createDefaultDelivery();
+
+            await Branch.createDefaultBranch();
 
             try {
                 const tableCount = await RestaurantTable.countDocuments();

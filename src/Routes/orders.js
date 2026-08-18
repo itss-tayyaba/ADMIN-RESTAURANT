@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const MenuItem = require('../models/MenuItem');
+const RestaurantTable = require('../models/RestaurantTable');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { customerAuth, optionalCustomerAuth } = require('./customerAuth');
@@ -222,6 +223,27 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
     });
 
     await order.save();
+
+    // A dine-in order placed via a scanned table QR is the clearest signal
+    // you have that a table is actually in use — reflect that on the Floor
+    // Plan immediately instead of waiting for a reservation or a manual
+    // admin toggle. Deliberately only flips 'available' -> 'occupied':
+    // never downgrades a table already flagged 'maintenance', and it's a
+    // no-op if the table is already 'occupied'. Clearing it back to
+    // 'available' stays a manual admin action (same as today's walk-in
+    // flow) — an order reaching 'completed' doesn't mean the guests have
+    // actually left the table yet.
+    if (order.orderType === 'dine-in' && order.tableNumber) {
+      try {
+        await RestaurantTable.updateOne(
+          { tableNumber: order.tableNumber, manualStatus: 'available' },
+          { $set: { manualStatus: 'occupied' } }
+        );
+      } catch (err) {
+        console.error('Failed to auto-mark table occupied:', err);
+      }
+    }
+
     res.status(201).json(customerOrderPayload(order));
   } catch (err) {
     console.error(err);
