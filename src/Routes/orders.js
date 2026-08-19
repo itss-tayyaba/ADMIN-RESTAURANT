@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const MenuItem = require('../models/MenuItem');
 const RestaurantTable = require('../models/RestaurantTable');
+const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { customerAuth, optionalCustomerAuth } = require('./customerAuth');
@@ -196,8 +197,19 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
 
     const orderNumber = await generateOrderNumber();
 
+    // Until the customer site has a branch/location picker, every new order
+    // is automatically attached to the one active branch. Once there are
+    // multiple branches, this becomes: read a branchId from req.body (set
+    // by the picker), and validate it's an active branch instead of just
+    // grabbing whichever one exists.
+    const branch = await Branch.findOne({ isActive: true });
+    if (!branch) {
+      return res.status(500).json({ error: 'No active branch is configured. Please contact support.' });
+    }
+
     const order = new Order({
       orderNumber,
+      branchId: branch._id,
       customer: customer ? customer._id : null,
       isGuestOrder: !customer,
       items: resolvedItems,
