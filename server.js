@@ -40,10 +40,10 @@ function connectDatabase() {
         databaseConnection = mongoose
             .connect(process.env.MONGODB_URI)
             .then(async () => {
+                await Branch.createDefaultBranch();
                 await AdminUser.createDefaultAdmin();
                 await AdminUser.createDefaultChef();
                 await AdminUser.createDefaultDelivery();
-                await Branch.createDefaultBranch();
             })
             .catch((err) => {
                 databaseConnection = null;
@@ -240,13 +240,13 @@ if (require.main === module) {
         .then(async () => {
             console.log("✅ Connected to MongoDB");
 
+            await Branch.createDefaultBranch();
+
             await AdminUser.createDefaultAdmin();
 
             await AdminUser.createDefaultChef();
 
             await AdminUser.createDefaultDelivery();
-
-            await Branch.createDefaultBranch();
 
             try {
                 const tableCount = await RestaurantTable.countDocuments();

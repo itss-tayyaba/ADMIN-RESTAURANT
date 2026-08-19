@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 
 const Order = require('../src/models/Order');
 const Customer = require('../src/models/Customer');
+const AdminUser = require('../src/models/AdminUser');
 const Branch = require('../src/models/Branch');
 
 async function run() {
@@ -34,6 +35,12 @@ async function run() {
     { $set: { branchId: defaultBranch._id } }
   );
   console.log(`Customers updated: ${customerResult.modifiedCount}`);
+
+  const staffResult = await AdminUser.updateMany(
+    { branchId: null },
+    { $set: { branchId: defaultBranch._id } }
+  );
+  console.log(`Staff accounts updated: ${staffResult.modifiedCount}`);
 
   console.log('Done.');
   await mongoose.disconnect();

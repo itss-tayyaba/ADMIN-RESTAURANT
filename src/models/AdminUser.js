@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const Branch = require("./Branch");
 
 const adminUserSchema = new mongoose.Schema(
 {
@@ -24,6 +25,16 @@ const adminUserSchema = new mongoose.Schema(
         type: String,
         enum: ["admin", "chef", "delivery"],
         default: "chef"
+    },
+
+    // Which branch this staff member works at. Not enforced yet (nothing
+    // reads it), but is now set on every new account so it's ready for
+    // step 5, where dashboards start filtering orders by branch.
+    branchId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Branch",
+        default: null,
+        index: true
     },
 
     active: {
@@ -116,6 +127,8 @@ adminUserSchema.statics.createDefaultAdmin = async function(){
             console.warn("⚠️  DEFAULT_ADMIN_PASSWORD not set — using demo password 'ember2024'. Set it in .env and change it from the admin panel before going live.");
         }
 
+        const branch = await Branch.findOne({ isActive: true });
+
         await this.create({
 
             username: "admin",
@@ -124,7 +137,9 @@ adminUserSchema.statics.createDefaultAdmin = async function(){
 
             name: "Restaurant Administrator",
 
-            role: "admin"
+            role: "admin",
+
+            branchId: branch ? branch._id : null
 
         });
 
@@ -149,6 +164,8 @@ adminUserSchema.statics.createDefaultChef = async function(){
             console.warn("⚠️  DEFAULT_CHEF_PASSWORD not set — using demo password 'chef123'. Set it in .env before going live.");
         }
 
+        const branch = await Branch.findOne({ isActive: true });
+
         await this.create({
 
             username: "chef",
@@ -157,7 +174,9 @@ adminUserSchema.statics.createDefaultChef = async function(){
 
             name: "Head Chef",
 
-            role: "chef"
+            role: "chef",
+
+            branchId: branch ? branch._id : null
 
         });
 
@@ -182,6 +201,8 @@ adminUserSchema.statics.createDefaultDelivery = async function(){
             console.warn("⚠️  DEFAULT_DELIVERY_PASSWORD not set — using demo password 'delivery123'. Set it in .env before going live.");
         }
 
+        const branch = await Branch.findOne({ isActive: true });
+
         await this.create({
 
             username: "delivery",
@@ -192,7 +213,9 @@ adminUserSchema.statics.createDefaultDelivery = async function(){
 
             role: "delivery",
 
-            region: "Gulberg"
+            region: "Gulberg",
+
+            branchId: branch ? branch._id : null
 
         });
 
