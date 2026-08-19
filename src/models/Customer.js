@@ -4,6 +4,9 @@ const bcrypt = require('bcryptjs');
 const customerSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, trim: true, lowercase: true, default: '' },
+  // Which branch this customer originally signed up at. Not enforced — a
+  // customer can still order from other branches later once that's built.
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   phone: {
     type: String,
     required: true,

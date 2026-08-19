@@ -14,6 +14,10 @@ const statusLogSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
+  // Which branch this order belongs to. Not required yet — the order-creation
+  // route doesn't set it until a later step. Existing/legacy orders are
+  // backfilled to the default branch by scripts/backfillBranch.js.
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: false, default: null, index: true },
   // True when this order was placed without a customer account (guest checkout).
   isGuestOrder: { type: Boolean, default: false },
