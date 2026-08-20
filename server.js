@@ -140,6 +140,21 @@ app.get("/customer", (req, res) => {
     );
 });
 
+// Clean per-branch URL, e.g. /customer/london-uk — same single-page app,
+// just with a branch code in the path. customer.js reads it from
+// window.location.pathname and resolves it to a real branchId via
+// GET /api/branches/by-code/:code.
+app.get("/customer/:branchCode", (req, res) => {
+    res.sendFile(
+        path.join(
+            __dirname,
+            "ember-and-brew",
+            "public",
+            "customer.html"
+        )
+    );
+});
+
 // ===================== API =====================
 
 app.use("/api/menu", menuRoutes);

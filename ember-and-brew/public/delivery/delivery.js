@@ -577,7 +577,21 @@ async function loadMyProfile() {
 // Load My Orders
 // =====================================
 
-async function loadOrders() {
+let ordersLoadInFlight = false;
+
+function isEnteringOtp() {
+    const active = document.activeElement;
+    return !!(active && active.matches('.otp-verification input'));
+}
+
+// `background` loads are the timer/socket safety net. Never let them repaint
+// an OTP field while a rider is typing, and never run two order requests at
+// the same time (slow responses otherwise arrive out of order and look like
+// the page is repeatedly refreshing).
+async function loadOrders({ background = false } = {}) {
+
+    if (ordersLoadInFlight || (background && isEnteringOtp())) return;
+    ordersLoadInFlight = true;
 
     try {
 
@@ -612,6 +626,10 @@ async function loadOrders() {
     catch (err) {
 
         console.error(err);
+
+    } finally {
+
+        ordersLoadInFlight = false;
 
     }
 
@@ -903,9 +921,10 @@ function escapeHtml(str) {
 // =====================================
 
 setInterval(() => {
-    loadOrders();
+    if (document.visibilityState !== 'visible') return;
+    loadOrders({ background: true });
     loadMyProfile();
-}, 5000);
+}, 15000);
 
 // =====================================
 // Initial Load
@@ -924,7 +943,7 @@ try {
     socket = io();
     socket.on('connect', () => console.log('delivery socket connected', socket.id));
     socket.on('order:update', (order) => {
-      loadOrders();
+      loadOrders({ background: true });
       loadMyProfile();
     });
   }

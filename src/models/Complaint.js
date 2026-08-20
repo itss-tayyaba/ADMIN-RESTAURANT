@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const complaintSchema = new mongoose.Schema({
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
   customerName: { type: String, required: true },
   customerPhone: { type: String, required: true },

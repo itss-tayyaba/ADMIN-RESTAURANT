@@ -4,6 +4,7 @@ const MenuItem = require('../models/MenuItem');
 const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
 const { isAdminRole, resolveBranchId, BRANCH_ID_RE } = require('../utils/branchScope');
+const { upload, bufferToDataUri } = require('../middleware/upload');
 
 // Middleware: verify admin JWT
 function adminAuth(req, res, next) {
@@ -68,9 +69,17 @@ router.get('/admin', adminAuth, async (req, res) => {
 });
 
 // POST /api/menu — create a new menu item (admin only)
-router.post('/', adminAuth, async (req, res) => {
+// Accepts multipart/form-data with an "image" file field (uploaded to
+// Cloudinary), or a plain "image" URL string in the body for back-compat.
+router.post('/', adminAuth, upload.single('image'), async (req, res) => {
   try {
-    const { name, description, price, category, image, available } = req.body;
+    const { name, description, price, category, available } = req.body;
+    let image = req.body.image;
+
+    if (req.file) {
+      image = bufferToDataUri(req.file);
+    }
+
     if (!name || !description || price == null || !category || !image) {
       return res.status(400).json({ error: 'name, description, price, category, and image are required' });
     }
@@ -90,28 +99,40 @@ router.post('/', adminAuth, async (req, res) => {
     await item.save();
     res.status(201).json(item);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create item' });
+    console.error('CREATE ITEM ERROR:', err);
+    res.status(500).json({ error: err.message || 'Failed to create item' });
   }
 });
 
 // PUT /api/menu/:id — update a menu item (admin only, own branch)
-router.put('/:id', adminAuth, async (req, res) => {
+router.put('/:id', adminAuth, upload.single('image'), async (req, res) => {
   try {
-    const { name, description, price, category, image, available } = req.body;
+    const { name, description, price, category, available } = req.body;
+    let image = req.body.image;
+
+    if (req.file) {
+      image = bufferToDataUri(req.file);
+    }
 
     const branchIdFilter = resolveBranchId(req.admin, req.query);
     const query = { _id: req.params.id };
     await addLegacyDefaultMenuFilter(query, branchIdFilter);
 
+    // Only overwrite image if a new one was actually provided — editing
+    // name/price/etc. shouldn't blank out the existing picture.
+    const update = { name, description, price, category, available };
+    if (image) update.image = image;
+
     const item = await MenuItem.findOneAndUpdate(
       query,
-      { $set: { name, description, price, category, image, available } },
+      { $set: update },
       { new: true, runValidators: true }
     );
     if (!item) return res.status(404).json({ error: 'Item not found' });
     res.json(item);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update item' });
+    console.error('UPDATE ITEM ERROR:', err);
+    res.status(500).json({ error: err.message || 'Failed to update item' });
   }
 });
 

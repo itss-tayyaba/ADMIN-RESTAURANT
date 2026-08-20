@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const RestaurantTable = require('../models/RestaurantTable');
 const Reservation = require('../models/Reservation');
-const { isAdminRole } = require('../utils/branchScope');
+const { isAdminRole, resolveBranchId, addBranchScope } = require('../utils/branchScope');
 const router = express.Router();
 
 // Must match the values the "Add table" dropdown and floor-plan filter tabs
@@ -16,6 +16,7 @@ function adminAuth(req, res, next) {
   try {
     const admin = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
     if (!isAdminRole(admin.role)) return res.status(403).json({ error: 'Admin access only.' });
+    req.admin = admin;
     next();
   } catch { res.status(401).json({ error: 'Invalid token' }); }
 }
@@ -30,22 +31,25 @@ function minutesFromTimeStr(timeStr) {
   return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
 }
 
-async function tablesWithLiveStatus() {
+async function tablesWithLiveStatus(branchId) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const nowMinutes = (() => {
     const now = new Date();
     return now.getHours() * 60 + now.getMinutes();
   })();
 
+  const tableQuery = {};
+  const reservationQuery = { tableNumber: { $ne: '' }, date: todayStr, status: { $in: ['pending', 'confirmed'] } };
+  await Promise.all([addBranchScope(tableQuery, branchId), addBranchScope(reservationQuery, branchId)]);
   const [tables, todaysActive] = await Promise.all([
-    RestaurantTable.find({}).sort({ tableNumber: 1 }),
+    RestaurantTable.find(tableQuery).sort({ tableNumber: 1 }),
     // Every pending/confirmed reservation for TODAY. Reservations on other
     // dates never affect today's floor plan. A table's live status is
     // computed here on every read rather than being written into
     // manualStatus by reservations.js — that avoids a table getting stuck
     // "occupied" all day the moment a same-day booking is confirmed, hours
     // before the guest is actually due.
-    Reservation.find({ tableNumber: { $ne: '' }, date: todayStr, status: { $in: ['pending', 'confirmed'] } })
+    Reservation.find(reservationQuery)
       .select('tableNumber time status')
   ]);
 
@@ -82,7 +86,7 @@ async function tablesWithLiveStatus() {
 }
 
 router.get('/', adminAuth, async (req, res) => {
-  try { res.json(await tablesWithLiveStatus()); }
+  try { res.json(await tablesWithLiveStatus(resolveBranchId(req.admin, req.query))); }
   catch { res.status(500).json({ error: 'Failed to load tables.' }); }
 });
 
@@ -92,7 +96,9 @@ router.post('/', adminAuth, async (req, res) => {
     const seats = Number(req.body.seats);
     const area = req.body.area;
     if (!tableNumber || !Number.isInteger(seats) || seats < 1 || seats > 30 || !VALID_AREAS.includes(area)) return res.status(400).json({ error: 'Enter a table number, area, and seat count.' });
-    const table = await RestaurantTable.create({ tableNumber, seats, area });
+    const branchId = resolveBranchId(req.admin, req.query);
+    if (!branchId) return res.status(400).json({ error: 'Select a branch before adding a table.' });
+    const table = await RestaurantTable.create({ branchId, tableNumber, seats, area });
     res.status(201).json(table);
   } catch (err) {
     res.status(err.code === 11000 ? 409 : 500).json({ error: err.code === 11000 ? 'That table number already exists.' : 'Failed to add table.' });
@@ -103,7 +109,9 @@ router.put('/:id/status', adminAuth, async (req, res) => {
   try {
     const manualStatus = req.body.manualStatus;
     if (!['available', 'occupied', 'maintenance'].includes(manualStatus)) return res.status(400).json({ error: 'Invalid table status.' });
-    const table = await RestaurantTable.findByIdAndUpdate(req.params.id, { manualStatus }, { new: true });
+    const query = { _id: req.params.id };
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const table = await RestaurantTable.findOneAndUpdate(query, { manualStatus }, { new: true });
     if (!table) return res.status(404).json({ error: 'Table not found.' });
     res.json(table);
   } catch { res.status(500).json({ error: 'Failed to update table.' }); }
@@ -115,7 +123,9 @@ router.put('/:id', adminAuth, async (req, res) => {
     const seats = Number(req.body.seats);
     const area = req.body.area;
     if (!tableNumber || !Number.isInteger(seats) || seats < 1 || seats > 30 || !VALID_AREAS.includes(area)) return res.status(400).json({ error: 'Enter a table number, area, and seat count.' });
-    const table = await RestaurantTable.findByIdAndUpdate(req.params.id, { tableNumber, seats, area }, { new: true, runValidators: true, context: 'query' });
+    const query = { _id: req.params.id };
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const table = await RestaurantTable.findOneAndUpdate(query, { tableNumber, seats, area }, { new: true, runValidators: true, context: 'query' });
     if (!table) return res.status(404).json({ error: 'Table not found.' });
     res.json(table);
   } catch (err) {

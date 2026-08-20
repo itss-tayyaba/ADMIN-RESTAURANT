@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const reservationSchema = new mongoose.Schema({
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', index: true },
   guestName: { type: String, required: true, trim: true },
   email: { type: String, required: true, trim: true, lowercase: true },

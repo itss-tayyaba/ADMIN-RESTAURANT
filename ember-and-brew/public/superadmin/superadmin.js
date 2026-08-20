@@ -31,8 +31,9 @@
   const money = (n, symbol) => `${symbol || ''}${Number(n || 0).toFixed(2)}`;
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  async function api(path) {
-    const res = await fetch(path, { headers: { Authorization: 'Bearer ' + token } });
+  async function api(path, options = {}) {
+    const headers = { Authorization: 'Bearer ' + token, ...(options.headers || {}) };
+    const res = await fetch(path, { ...options, headers });
     if (res.status === 401 || res.status === 403) {
       localStorage.removeItem('eb_admin_token');
       localStorage.removeItem('eb_admin_user');
@@ -102,8 +103,17 @@
     content.innerHTML = `
       ${statsHtml}
       <div class="panel">
-        <div class="panel-head"><h3>Branches (${branches.length})</h3></div>
+        <div class="panel-head"><h3>Branches (${branches.length})</h3><button class="btn-ghost" id="showBranchForm">+ Add Branch</button></div>
         <div class="panel-body">
+          <form id="branchForm" class="setup-form hidden">
+            <input name="name" placeholder="Branch name (e.g. Ember & Brew UK)" required>
+            <input name="code" placeholder="Unique code (e.g. uk-london)" required>
+            <input name="country" placeholder="Country" required><input name="countryCode" placeholder="Country code (GB)" maxlength="2" required>
+            <input name="city" placeholder="City" required><input name="currency" placeholder="Currency (GBP)" maxlength="3" required>
+            <input name="currencySymbol" placeholder="Symbol (£)" required><input name="timezone" placeholder="Timezone (Europe/London)" required>
+            <input name="taxRate" type="number" min="0" max="1" step="0.01" placeholder="Tax rate (0.08)" value="0">
+            <button class="btn-ghost" type="submit">Create branch</button><p class="form-note" id="branchFormNote"></p>
+          </form>
           <div class="branch-grid">${cardsHtml}</div>
         </div>
       </div>
@@ -112,6 +122,17 @@
     content.querySelectorAll('.branch-card').forEach(card => {
       card.addEventListener('click', () => renderBranchDetail(card.dataset.id));
     });
+    document.getElementById('showBranchForm').addEventListener('click', () => document.getElementById('branchForm').classList.toggle('hidden'));
+    document.getElementById('branchForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const note = document.getElementById('branchFormNote');
+      const values = Object.fromEntries(new FormData(form).entries());
+      try {
+        await api('/api/branches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
+        renderOverview();
+      } catch (err) { note.textContent = err.message; }
+    });
   }
 
   // ---------------- Branch detail ----------------
@@ -119,13 +140,14 @@
     content.innerHTML = '<div class="loading">Loading branch…</div>';
     breadcrumb.innerHTML = `<button id="backBtn">← All Branches</button>`;
 
-    let branch, stats, riders, orders;
+    let branch, stats, riders, orders, staff;
     try {
-      [branch, stats, riders, orders] = await Promise.all([
+      [branch, stats, riders, orders, staff] = await Promise.all([
         api(`/api/branches/${branchId}`),
         api(`/api/orders/stats/summary?branchId=${branchId}`),
         api(`/api/delivery/riders?branchId=${branchId}`),
-        api(`/api/orders?branchId=${branchId}`)
+        api(`/api/orders?branchId=${branchId}`),
+        api(`/api/branches/${branchId}/staff`)
       ]);
     } catch (err) {
       content.innerHTML = `<div class="error-state">${esc(err.message)}</div>`;
@@ -181,6 +203,22 @@
         </div>
       </div>`;
 
+    const staffHtml = `
+      <div class="panel">
+        <div class="panel-head"><h3>Branch Team</h3></div>
+        <div class="panel-body">
+          <div class="table-scroll"><table><thead><tr><th>Role</th><th>Name</th><th>Username</th><th>Scope</th></tr></thead><tbody>
+            ${staff.length ? staff.map(member => `<tr><td>${esc(member.role)}</td><td>${esc(member.name || '—')}</td><td>${esc(member.username)}</td><td>${member.role === 'delivery' ? esc(member.region || '—') : esc(branch.name)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty-state">No staff assigned yet.</td></tr>'}
+          </tbody></table></div>
+          <form id="staffForm" class="setup-form staff-form">
+            <input name="name" placeholder="Staff name" required><input name="username" placeholder="Login username" required>
+            <input name="password" type="password" minlength="6" placeholder="Temporary password (min. 6)" required>
+            <select name="role"><option value="admin">Admin</option><option value="chef">Chef</option><option value="delivery">Rider</option></select>
+            <input name="region" placeholder="Rider area (optional)"><button class="btn-ghost" type="submit">Add staff member</button><p class="form-note" id="staffFormNote"></p>
+          </form>
+        </div>
+      </div>`;
+
     const recentOrders = orders.slice(0, 15);
     const ordersHtml = `
       <div class="panel">
@@ -204,10 +242,21 @@
 
     content.innerHTML = `
       ${statsHtml}
+      ${staffHtml}
       ${popularHtml}
       ${ridersHtml}
       ${ordersHtml}
     `;
+
+    document.getElementById('staffForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const note = document.getElementById('staffFormNote');
+      const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+      try {
+        await api(`/api/branches/${branchId}/staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
+        renderBranchDetail(branchId);
+      } catch (err) { note.textContent = err.message; }
+    });
   }
 
   renderOverview();

@@ -158,7 +158,13 @@ function renderStationPills() {
 // Load Orders
 // =====================================
 
+let ordersLoadInFlight = false;
+
 async function loadOrders(silent) {
+  // A slow request plus the 5-second timer/socket event used to create
+  // overlapping responses, which repainted the board repeatedly.
+  if (ordersLoadInFlight) return;
+  ordersLoadInFlight = true;
   try {
     setSyncing(true);
     const res = await fetch(`${API}/orders`, { headers: { Authorization: 'Bearer ' + token } });
@@ -184,6 +190,7 @@ async function loadOrders(silent) {
     console.error(err);
     if (!silent) showToast('Connection error', true);
   } finally {
+    ordersLoadInFlight = false;
     setSyncing(false);
   }
 }
@@ -685,4 +692,6 @@ tickClock();
 setInterval(tickClock, 1000);
 setInterval(tickTimers, 1000);
 loadMenuStations().then(() => loadOrders());
-setInterval(() => loadOrders(true), 5000);
+setInterval(() => {
+  if (document.visibilityState === 'visible') loadOrders(true);
+}, 15000);

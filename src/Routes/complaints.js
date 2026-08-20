@@ -4,7 +4,7 @@ const Complaint = require('../models/Complaint');
 const Customer = require('../models/Customer');
 const jwt = require('jsonwebtoken');
 const { customerAuth } = require('./customerAuth');
-const { isAdminRole } = require('../utils/branchScope');
+const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
 
 // Middleware: verify admin JWT
 function adminAuth(req, res, next) {
@@ -36,6 +36,7 @@ router.post('/', customerAuth, async (req, res) => {
     if (!customer) return res.status(401).json({ error: 'Account not found. Please log in again.' });
 
     const complaint = new Complaint({
+      branchId: await resolvePublicBranchId(req.query),
       customer: customer._id,
       customerName: customer.name,
       customerPhone: customer.phone,
@@ -67,7 +68,9 @@ router.get('/mine/list', customerAuth, async (req, res) => {
 // GET /api/complaints/stats/summary — counts by status (admin only)
 router.get('/stats/summary', adminAuth, async (req, res) => {
   try {
-    const all = await Complaint.find({});
+    const query = {};
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const all = await Complaint.find(query);
     res.json({
       total: all.length,
       new: all.filter(c => c.status === 'new').length,
@@ -84,6 +87,7 @@ router.get('/', adminAuth, async (req, res) => {
   try {
     const { status } = req.query;
     const query = status ? { status } : {};
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
     const complaints = await Complaint.find(query).sort({ createdAt: -1 });
     res.json(complaints);
   } catch (err) {
@@ -101,7 +105,9 @@ router.put('/:id/status', adminAuth, async (req, res) => {
     const update = { status };
     if (typeof adminNote === 'string') update.adminNote = adminNote;
 
-    const complaint = await Complaint.findByIdAndUpdate(req.params.id, { $set: update }, { new: true });
+    const query = { _id: req.params.id };
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const complaint = await Complaint.findOneAndUpdate(query, { $set: update }, { new: true });
     if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
     res.json(complaint);
   } catch (err) {
@@ -112,7 +118,9 @@ router.put('/:id/status', adminAuth, async (req, res) => {
 // DELETE /api/complaints/:id — remove a complaint (admin only)
 router.delete('/:id', adminAuth, async (req, res) => {
   try {
-    const complaint = await Complaint.findByIdAndDelete(req.params.id);
+    const query = { _id: req.params.id };
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const complaint = await Complaint.findOneAndDelete(query);
     if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
     res.json({ success: true });
   } catch (err) {

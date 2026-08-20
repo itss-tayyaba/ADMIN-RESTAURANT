@@ -381,8 +381,9 @@
         <!-- Edit Table Modal -->
         
       <div class="field">
-        <span style="font-size:13px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:6px;">Image URL</span>
-        <input type="text" id="itemImage" placeholder="https://…" required />
+        <span style="font-size:13px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:6px;">Image</span>
+        <input type="file" id="itemImage" accept="image/*" />
+        <img id="itemImagePreview" src="" alt="" hidden style="width:100px;height:100px;object-fit:cover;border-radius:8px;margin-top:8px;" />
       </div>
       <label class="checkbox-row" style="margin-bottom:18px;">
         <input type="checkbox" id="itemAvailable" checked />

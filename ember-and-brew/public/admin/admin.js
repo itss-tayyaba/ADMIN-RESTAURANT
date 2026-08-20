@@ -351,6 +351,7 @@
     itemPrice: document.getElementById('itemPrice'),
     itemCategory: document.getElementById('itemCategory'),
     itemImage: document.getElementById('itemImage'),
+    itemImagePreview: document.getElementById('itemImagePreview'),
     itemAvailable: document.getElementById('itemAvailable'),
     itemFormError: document.getElementById('itemFormError'),
     itemModalCancel: document.getElementById('itemModalCancel'),
@@ -1242,8 +1243,11 @@
   }
 
   // ---------- Add/Edit modal ----------
+  let editingItemHasImage = false; // true when editing an item that already has an image on file
+
   function openItemModal(item) {
     els.itemFormError.hidden = true;
+    els.itemImage.value = '';
     if (item) {
       els.itemModalTitle.textContent = 'Edit Menu Item';
       els.itemId.value = item._id;
@@ -1251,13 +1255,18 @@
       els.itemDescription.value = item.description;
       els.itemPrice.value = item.price;
       els.itemCategory.value = item.category;
-      els.itemImage.value = item.image;
       els.itemAvailable.checked = item.available;
+      editingItemHasImage = Boolean(item.image);
+      els.itemImagePreview.src = item.image || '';
+      els.itemImagePreview.hidden = !item.image;
     } else {
       els.itemModalTitle.textContent = 'Add Menu Item';
       els.itemForm.reset();
       els.itemId.value = '';
       els.itemAvailable.checked = true;
+      editingItemHasImage = false;
+      els.itemImagePreview.src = '';
+      els.itemImagePreview.hidden = true;
     }
     els.itemModalBackdrop.hidden = false;
   }
@@ -1267,23 +1276,42 @@
   els.itemModalCancel.addEventListener('click', closeItemModal);
   els.itemModalBackdrop.addEventListener('click', (e) => { if (e.target === els.itemModalBackdrop) closeItemModal(); });
 
+  // Live preview when the admin picks a new file
+  els.itemImage.addEventListener('change', () => {
+    const file = els.itemImage.files[0];
+    if (!file) return;
+    els.itemImagePreview.src = URL.createObjectURL(file);
+    els.itemImagePreview.hidden = false;
+  });
+
   els.itemForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     els.itemFormError.hidden = true;
     const id = els.itemId.value;
-    const payload = {
-      name: els.itemName.value.trim(),
-      description: els.itemDescription.value.trim(),
-      price: parseFloat(els.itemPrice.value),
-      category: els.itemCategory.value.trim(),
-      image: els.itemImage.value.trim(),
-      available: els.itemAvailable.checked
-    };
+    const file = els.itemImage.files[0];
+
+    if (!id && !file) {
+      els.itemFormError.textContent = 'Please choose an image.';
+      els.itemFormError.hidden = false;
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', els.itemName.value.trim());
+    formData.append('description', els.itemDescription.value.trim());
+    formData.append('price', parseFloat(els.itemPrice.value));
+    formData.append('category', els.itemCategory.value.trim());
+    formData.append('available', els.itemAvailable.checked);
+    if (file) formData.append('image', file);
+
     try {
+      // Don't send authHeaders as-is — it hardcodes Content-Type: application/json,
+      // but FormData needs the browser to set its own multipart boundary.
+      const { 'Content-Type': _drop, ...fileUploadHeaders } = authHeaders;
       const res = await fetch(id ? `/api/menu/${id}` : '/api/menu', {
         method: id ? 'PUT' : 'POST',
-        headers: authHeaders,
-        body: JSON.stringify(payload)
+        headers: fileUploadHeaders,
+        body: formData
       });
       if (handleAuthFailure(res)) return;
       const data = await safeJson(res);

@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const Reservation = require('../models/Reservation');
 const Customer = require('../models/Customer');
 const { customerAuth } = require('./customerAuth');
-const { isAdminRole } = require('../utils/branchScope');
+const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
 
 const router = express.Router();
 
@@ -25,14 +25,16 @@ function minutesFromTimeStr(timeStr) {
 // (Deliberately ignores merely "pending" reservations on the same
 // table/time — an admin should be free to choose which of several pending
 // requests to confirm, rather than being blocked by the others.)
-async function hasConfirmedConflict(tableNumber, date, time, excludeReservationId) {
+async function hasConfirmedConflict(tableNumber, date, time, excludeReservationId, branchId) {
   if (!tableNumber) return false;
-  const sameDay = await Reservation.find({
+  const query = {
     _id: { $ne: excludeReservationId },
     tableNumber,
     date,
     status: 'confirmed'
-  }).select('time');
+  };
+  await addBranchScope(query, branchId);
+  const sameDay = await Reservation.find(query).select('time');
 
   const start = minutesFromTimeStr(time);
   return sameDay.some(r => Math.abs(minutesFromTimeStr(r.time) - start) < RESERVATION_WINDOW_MINUTES);
@@ -77,7 +79,9 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const branchId = await resolvePublicBranchId(req.query);
     const reservation = await Reservation.create({
+      branchId,
       guestName,
       email,
       phone: cleanPhone,
@@ -130,6 +134,7 @@ router.get('/mine/list', customerAuth, async (req, res) => {
 router.get('/', adminAuth, async (req, res) => {
   try {
     const query = req.query.status ? { status: req.query.status } : {};
+    await addBranchScope(query, resolveBranchId(req.admin, req.query));
     const reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
     res.json(reservations);
   } catch {
@@ -146,13 +151,16 @@ router.put('/:id', adminAuth, async (req, res) => {
     const table = typeof tableNumber === 'string' ? tableNumber.trim() : '';
     if (status === 'confirmed' && !table) return res.status(400).json({ error: 'Assign a table before confirming this reservation.' });
 
-    const previous = await Reservation.findById(req.params.id);
+    const query = { _id: req.params.id };
+    const branchId = resolveBranchId(req.admin, req.query);
+    await addBranchScope(query, branchId);
+    const previous = await Reservation.findOne(query);
     if (!previous) return res.status(404).json({ error: 'Reservation not found.' });
 
     if (status === 'confirmed') {
       const date = previous.date;
       const time = previous.time;
-      const conflict = await hasConfirmedConflict(table, date, time, previous._id);
+      const conflict = await hasConfirmedConflict(table, date, time, previous._id, branchId);
       if (conflict) {
         return res.status(409).json({
           error: `Table ${table} already has another confirmed booking around ${time} on ${date}. Choose a different table or time.`
@@ -160,7 +168,7 @@ router.put('/:id', adminAuth, async (req, res) => {
       }
     }
 
-    const reservation = await Reservation.findByIdAndUpdate(req.params.id, { status, tableNumber: table }, { new: true, runValidators: true });
+    const reservation = await Reservation.findOneAndUpdate(query, { status, tableNumber: table }, { new: true, runValidators: true });
     if (!reservation) return res.status(404).json({ error: 'Reservation not found.' });
 
     res.json(reservation);
