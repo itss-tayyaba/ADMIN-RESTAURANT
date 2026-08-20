@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const RestaurantTable = require('../models/RestaurantTable');
 const Reservation = require('../models/Reservation');
+const { isAdminRole } = require('../utils/branchScope');
 const router = express.Router();
 
 // Must match the values the "Add table" dropdown and floor-plan filter tabs
@@ -14,7 +15,7 @@ function adminAuth(req, res, next) {
   if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ error: 'No token provided' });
   try {
     const admin = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
-    if (admin.role !== 'admin') return res.status(403).json({ error: 'Admin access only.' });
+    if (!isAdminRole(admin.role)) return res.status(403).json({ error: 'Admin access only.' });
     next();
   } catch { res.status(401).json({ error: 'Invalid token' }); }
 }

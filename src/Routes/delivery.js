@@ -5,6 +5,7 @@ const Order = require("../models/Order");
 const AdminUser = require("../models/AdminUser");
 const jwt = require("jsonwebtoken");
 const REGIONS = require("../data/regions");
+const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
 
 // A rider can't hold more than this many active ("out-for-delivery") orders
 // at once. Once they hit this cap they're skipped by auto-assignment until
@@ -72,7 +73,7 @@ const adminAuth = (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (decoded.role !== "admin") {
+        if (!isAdminRole(decoded.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Admin access only."
@@ -105,7 +106,7 @@ const adminAuth = (req, res, next) => {
 // 5. Assign the order to them and bump their active order count.
 // =====================================
 
-async function findBestRiderForRegion(region) {
+async function findBestRiderForRegion(region, branchId) {
 
     if (!region) return null;
 
@@ -113,6 +114,7 @@ async function findBestRiderForRegion(region) {
         role: "delivery",
         active: true,
         region,
+        branchId,
         activeOrders: { $lt: MAX_ACTIVE_ORDERS }
     }).sort({ activeOrders: 1, createdAt: 1 });
 
@@ -123,7 +125,7 @@ async function autoAssignOrder(order, io) {
     if (!order || order.orderType !== "delivery" || !order.region) return null;
     if (order.deliveryBoy) return null; // already assigned
 
-    const rider = await findBestRiderForRegion(order.region);
+    const rider = await findBestRiderForRegion(order.region, order.branchId);
 
     if (!rider) return null;
 
@@ -160,8 +162,12 @@ router.get("/riders", adminAuth, async (req, res) => {
 
     try {
 
-        const riders = await AdminUser.find({ role: "delivery" })
-            .select("name username region phone activeOrders active createdAt")
+        const branchId = resolveBranchId(req.user, req.query);
+        const filter = { role: "delivery" };
+        if (branchId) filter.branchId = branchId;
+
+        const riders = await AdminUser.find(filter)
+            .select("name username region phone activeOrders active branchId createdAt")
             .sort({ createdAt: -1 });
 
         res.json({
@@ -208,6 +214,20 @@ router.post("/riders", adminAuth, async (req, res) => {
             });
         }
 
+        // A branch admin's riders always belong to their own branch. A
+        // superadmin has no home branch, so they must say which branch this
+        // new rider is for.
+        const branchId = req.user.role === "superadmin"
+            ? req.body.branchId
+            : req.user.branchId;
+
+        if (!branchId) {
+            return res.status(400).json({
+                success: false,
+                message: "branchId is required when adding a rider as a superadmin."
+            });
+        }
+
         const existing = await AdminUser.findOne({ username });
 
         if (existing) {
@@ -224,7 +244,8 @@ router.post("/riders", adminAuth, async (req, res) => {
             role: "delivery",
             region,
             phone: phone || '',
-            active: true
+            active: true,
+            branchId
         });
 
         res.status(201).json({
@@ -271,7 +292,11 @@ router.put("/riders/:id/region", adminAuth, async (req, res) => {
             });
         }
 
-        const rider = await AdminUser.findOne({ _id: req.params.id, role: "delivery" });
+        const branchIdFilter = resolveBranchId(req.user, req.query);
+        const riderQuery = { _id: req.params.id, role: "delivery" };
+        if (branchIdFilter) riderQuery.branchId = branchIdFilter;
+
+        const rider = await AdminUser.findOne(riderQuery);
 
         if (!rider) {
             return res.status(404).json({
@@ -317,7 +342,11 @@ router.put("/riders/:id/toggle", adminAuth, async (req, res) => {
 
     try {
 
-        const rider = await AdminUser.findOne({ _id: req.params.id, role: "delivery" });
+        const branchIdFilter = resolveBranchId(req.user, req.query);
+        const riderQuery = { _id: req.params.id, role: "delivery" };
+        if (branchIdFilter) riderQuery.branchId = branchIdFilter;
+
+        const rider = await AdminUser.findOne(riderQuery);
 
         if (!rider) {
             return res.status(404).json({
@@ -402,7 +431,11 @@ router.put("/:id/assign", adminAuth, async (req, res) => {
             });
         }
 
-        const rider = await AdminUser.findOne({ _id: riderId, role: "delivery" });
+        const branchIdFilter = resolveBranchId(req.user, req.query);
+
+        const riderQuery = { _id: riderId, role: "delivery" };
+        if (branchIdFilter) riderQuery.branchId = branchIdFilter;
+        const rider = await AdminUser.findOne(riderQuery);
 
         if (!rider) {
             return res.status(404).json({
@@ -418,7 +451,9 @@ router.put("/:id/assign", adminAuth, async (req, res) => {
             });
         }
 
-        const order = await Order.findById(req.params.id);
+        const orderQuery = { _id: req.params.id };
+        if (branchIdFilter) orderQuery.branchId = branchIdFilter;
+        const order = await Order.findOne(orderQuery);
 
         if (!order) {
             return res.status(404).json({
@@ -654,7 +689,10 @@ router.put("/:id/auto-assign", adminAuth, async (req, res) => {
 
     try {
 
-        const order = await Order.findById(req.params.id);
+        const branchIdFilter = resolveBranchId(req.user, req.query);
+        const orderQuery = { _id: req.params.id };
+        if (branchIdFilter) orderQuery.branchId = branchIdFilter;
+        const order = await Order.findOne(orderQuery);
 
         if (!order) {
             return res.status(404).json({
@@ -713,9 +751,11 @@ router.get("/admin/orders", adminAuth, async (req, res) => {
 
     try {
 
-        const orders = await Order.find({
-            status: { $in: ["ready", "out-for-delivery", "delivered"] }
-        })
+        const branchId = resolveBranchId(req.user, req.query);
+        const filter = { status: { $in: ["ready", "out-for-delivery", "delivered"] } };
+        if (branchId) filter.branchId = branchId;
+
+        const orders = await Order.find(filter)
 
         .populate("customer", "name email phone")
 

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const Reservation = require('../models/Reservation');
 const Customer = require('../models/Customer');
 const { customerAuth } = require('./customerAuth');
+const { isAdminRole } = require('../utils/branchScope');
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ function adminAuth(req, res, next) {
   if (!header || !header.startsWith('Bearer ')) return res.status(401).json({ error: 'No token provided' });
   try {
     const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
-    if (decoded.role !== 'admin') return res.status(403).json({ error: 'Admin access only.' });
+    if (!isAdminRole(decoded.role)) return res.status(403).json({ error: 'Admin access only.' });
     req.admin = decoded;
     next();
   } catch {

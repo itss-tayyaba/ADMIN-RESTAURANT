@@ -1,16 +1,14 @@
-// One-time migration: tags every existing Order and Customer document with
-// the default branch's _id, since they were created before branches existed.
+// One-time migration: tags every existing MenuItem document with the
+// default branch's _id, since they were created before branches existed.
 // Safe to re-run — it only touches documents where branchId is still null.
 //
-// Run locally with:  node scripts/backfillBranch.js
+// Run locally with:  node scripts/backfillMenuBranch.js
 // (uses the same MONGODB_URI from your .env that server.js uses)
 
 require('dotenv').config();
 const mongoose = require('mongoose');
 
-const Order = require('../src/models/Order');
-const Customer = require('../src/models/Customer');
-const AdminUser = require('../src/models/AdminUser');
+const MenuItem = require('../src/models/MenuItem');
 const Branch = require('../src/models/Branch');
 
 async function run() {
@@ -24,23 +22,11 @@ async function run() {
   }
   console.log(`Backfilling to branch: ${defaultBranch.name} (${defaultBranch._id})`);
 
-  const orderResult = await Order.updateMany(
+  const menuResult = await MenuItem.updateMany(
     { branchId: null },
     { $set: { branchId: defaultBranch._id } }
   );
-  console.log(`Orders updated: ${orderResult.modifiedCount}`);
-
-  const customerResult = await Customer.updateMany(
-    { branchId: null },
-    { $set: { branchId: defaultBranch._id } }
-  );
-  console.log(`Customers updated: ${customerResult.modifiedCount}`);
-
-  const staffResult = await AdminUser.updateMany(
-    { branchId: null },
-    { $set: { branchId: defaultBranch._id } }
-  );
-  console.log(`Staff accounts updated: ${staffResult.modifiedCount}`);
+  console.log(`Menu items updated: ${menuResult.modifiedCount}`);
 
   console.log('Done.');
   await mongoose.disconnect();

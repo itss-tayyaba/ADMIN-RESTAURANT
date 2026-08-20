@@ -4,6 +4,7 @@ const router = express.Router();
 const Order = require("../models/Order");
 const jwt = require("jsonwebtoken");
 const { autoAssignOrder } = require("./delivery");
+const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
 
 // =====================================
 // CHEF AUTH
@@ -66,7 +67,7 @@ const adminAuth = (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (decoded.role !== "admin") {
+        if (!isAdminRole(decoded.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Admin access only."
@@ -101,6 +102,8 @@ router.get("/orders", kitchenAuth, async (req, res) => {
 
 
         const orders = await Order.find({
+
+            branchId: req.user.branchId,
 
             status: {
                 $in: [
@@ -163,7 +166,7 @@ router.put("/:id/accept", kitchenAuth, async (req,res)=>{
     try{
 
 
-        const order = await Order.findById(req.params.id);
+        const order = await Order.findOne({ _id: req.params.id, branchId: req.user.branchId });
 
 
 
@@ -244,7 +247,7 @@ router.put("/:id/prepared", kitchenAuth, async(req,res)=>{
     try{
 
 
-        const order = await Order.findById(req.params.id);
+        const order = await Order.findOne({ _id: req.params.id, branchId: req.user.branchId });
 
 
 
@@ -347,8 +350,10 @@ router.get("/admin/orders", adminAuth, async (req, res) => {
 
     try{
 
+        const branchId = resolveBranchId(req.user, req.query);
+        const filter = branchId ? { branchId } : {};
 
-        const orders = await Order.find()
+        const orders = await Order.find(filter)
 
         .populate(
             "customer",

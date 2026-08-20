@@ -12,6 +12,7 @@ const { customerAuth, optionalCustomerAuth } = require('./customerAuth');
 const REGIONS = require('../data/regions');
 const REGION_CENTERS = require('../data/regionCenters');
 const { haversineKm } = require('../utils/geo');
+const { isAdminRole, resolveBranchId } = require('../utils/branchScope');
 
 // Generates an order number that is NOT guessable/sequential (e.g. EB-4K9QXP).
 // Anyone who has this number can look the order up on the public tracking
@@ -39,7 +40,7 @@ function adminAuth(req, res, next) {
   }
   try {
     const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
-    if (decoded.role !== 'admin') {
+    if (!isAdminRole(decoded.role)) {
       return res.status(403).json({ error: 'Admin access only.' });
     }
     req.admin = decoded;
@@ -297,9 +298,12 @@ router.get('/stats/summary', adminAuth, async (req, res) => {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
+    const branchId = resolveBranchId(req.admin, req.query);
+    const baseFilter = branchId ? { branchId } : {};
+
     const [allOrders, todayOrders] = await Promise.all([
-      Order.find({}),
-      Order.find({ createdAt: { $gte: startOfToday } })
+      Order.find(baseFilter),
+      Order.find({ ...baseFilter, createdAt: { $gte: startOfToday } })
     ]);
 
     const activeStatuses = ['received', 'preparing', 'ready'];
@@ -348,6 +352,8 @@ router.get('/', adminAuth, async (req, res) => {
     const { status } = req.query;
     let query = {};
     if (status) query.status = status;
+    const branchId = resolveBranchId(req.admin, req.query);
+    if (branchId) query.branchId = branchId;
     const orders = await Order.find(query).sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) {

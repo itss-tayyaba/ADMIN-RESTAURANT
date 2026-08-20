@@ -7,6 +7,10 @@ const menuItemSchema = new mongoose.Schema({
   category: { type: String, required: true, index: true },
   image: { type: String, required: true },
   available: { type: Boolean, default: true },
+  // Which branch this item belongs to. Not required yet — same pattern as
+  // Order.branchId: existing/legacy items are backfilled to the default
+  // branch by scripts/backfillMenuBranch.js.
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   pairCounts: {
     type: Map,
     of: Number,

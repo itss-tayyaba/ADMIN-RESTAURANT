@@ -67,6 +67,7 @@ const tableRoutes = require("./src/Routes/tables");
 const kitchenRoutes = require("./src/Routes/kitchen");
 const deliveryRoutes = require("./src/Routes/delivery");
 const chatbotRoutes = require("./src/Routes/chatbot");
+const branchesRoutes = require("./src/Routes/branches");
 
 // ===================== MIDDLEWARE =====================
 
@@ -117,6 +118,15 @@ app.use(
     )
 );
 
+// ===================== SUPERADMIN =====================
+
+app.use(
+    "/superadmin",
+    express.static(
+        path.join(__dirname, "ember-and-brew", "public", "superadmin")
+    )
+);
+
 // ===================== CUSTOMER PORTAL =====================
 
 app.get("/customer", (req, res) => {
@@ -153,6 +163,8 @@ app.use("/api/kitchen", kitchenRoutes);
 app.use("/api/delivery", deliveryRoutes);
 
 app.use("/api/chatbot", chatbotRoutes);
+
+app.use("/api/branches", branchesRoutes);
 
 // ===================== LOGIN PAGE =====================
 
@@ -206,6 +218,20 @@ app.get("/delivery", (req, res) => {
             "public",
             "delivery",
             "delivery.html"
+        )
+    );
+});
+
+// ===================== SUPERADMIN =====================
+
+app.get("/superadmin", (req, res) => {
+    res.sendFile(
+        path.join(
+            __dirname,
+            "ember-and-brew",
+            "public",
+            "superadmin",
+            "superadmin.html"
         )
     );
 });

@@ -4,7 +4,8 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node src/seeds.js",
-    "seed:orders": "node src/seedOrders.js"
+    "seed:orders": "node src/seedOrders.js",
+    "restore:menu": "node scripts/restoreDefaultMenu.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

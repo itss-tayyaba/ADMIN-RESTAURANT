@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const Branch = require("./Branch");
 
 const adminUserSchema = new mongoose.Schema(
 {
@@ -23,13 +22,16 @@ const adminUserSchema = new mongoose.Schema(
 
     role: {
         type: String,
-        enum: ["admin", "chef", "delivery"],
+        enum: ["admin", "chef", "delivery", "superadmin"],
         default: "chef"
     },
 
-    // Which branch this staff member works at. Not enforced yet (nothing
-    // reads it), but is now set on every new account so it's ready for
-    // step 5, where dashboards start filtering orders by branch.
+    // Which branch this staff member belongs to. Required for every role
+    // except superadmin — a superadmin has no home branch (stays null),
+    // which is what makes resolveBranchId() treat them as "see everything"
+    // by default. Every branch-filtered route (kitchen, delivery, orders)
+    // reads this straight off the JWT (see routes/auth.js), so it must be
+    // set at creation time or that staff member ends up unscoped.
     branchId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Branch",
@@ -127,7 +129,10 @@ adminUserSchema.statics.createDefaultAdmin = async function(){
             console.warn("⚠️  DEFAULT_ADMIN_PASSWORD not set — using demo password 'ember2024'. Set it in .env and change it from the admin panel before going live.");
         }
 
-        const branch = await Branch.findOne({ isActive: true });
+        // Required — createDefaultBranch() is idempotent, so this is safe
+        // to call regardless of seeder order at startup.
+        const Branch = require("./Branch");
+        const defaultBranch = await Branch.createDefaultBranch();
 
         await this.create({
 
@@ -139,7 +144,7 @@ adminUserSchema.statics.createDefaultAdmin = async function(){
 
             role: "admin",
 
-            branchId: branch ? branch._id : null
+            branchId: defaultBranch._id
 
         });
 
@@ -164,7 +169,8 @@ adminUserSchema.statics.createDefaultChef = async function(){
             console.warn("⚠️  DEFAULT_CHEF_PASSWORD not set — using demo password 'chef123'. Set it in .env before going live.");
         }
 
-        const branch = await Branch.findOne({ isActive: true });
+        const Branch = require("./Branch");
+        const defaultBranch = await Branch.createDefaultBranch();
 
         await this.create({
 
@@ -176,7 +182,7 @@ adminUserSchema.statics.createDefaultChef = async function(){
 
             role: "chef",
 
-            branchId: branch ? branch._id : null
+            branchId: defaultBranch._id
 
         });
 
@@ -201,7 +207,8 @@ adminUserSchema.statics.createDefaultDelivery = async function(){
             console.warn("⚠️  DEFAULT_DELIVERY_PASSWORD not set — using demo password 'delivery123'. Set it in .env before going live.");
         }
 
-        const branch = await Branch.findOne({ isActive: true });
+        const Branch = require("./Branch");
+        const defaultBranch = await Branch.createDefaultBranch();
 
         await this.create({
 
@@ -215,7 +222,7 @@ adminUserSchema.statics.createDefaultDelivery = async function(){
 
             region: "Gulberg",
 
-            branchId: branch ? branch._id : null
+            branchId: defaultBranch._id
 
         });
 

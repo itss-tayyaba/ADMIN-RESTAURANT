@@ -4,6 +4,7 @@ const Complaint = require('../models/Complaint');
 const Customer = require('../models/Customer');
 const jwt = require('jsonwebtoken');
 const { customerAuth } = require('./customerAuth');
+const { isAdminRole } = require('../utils/branchScope');
 
 // Middleware: verify admin JWT
 function adminAuth(req, res, next) {
@@ -13,7 +14,7 @@ function adminAuth(req, res, next) {
   }
   try {
     const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
-    if (decoded.role !== 'admin') {
+    if (!isAdminRole(decoded.role)) {
       return res.status(403).json({ error: 'Admin access only.' });
     }
     req.admin = decoded;

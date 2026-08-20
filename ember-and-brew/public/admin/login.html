@@ -25,6 +25,7 @@
             <button type="button" class="role-btn" data-role="admin"><span class="role-ic">◆</span>Admin</button>
             <button type="button" class="role-btn" data-role="chef"><span class="role-ic">☕</span>Chef</button>
             <button type="button" class="role-btn" data-role="delivery"><span class="role-ic">🛵</span>Delivery</button>
+            <button type="button" class="role-btn" data-role="superadmin"><span class="role-ic">★</span>Super Admin</button>
           </div>
         </div>
         <label class="field">
@@ -85,7 +86,9 @@ const token = localStorage.getItem("eb_admin_token");
 const user = JSON.parse(localStorage.getItem("eb_admin_user") || 'null');
 
 if (token && user) {
-  if (user.role === "admin") {
+  if (user.role === "superadmin") {
+    window.location.href = "/superadmin";
+  } else if (user.role === "admin") {
     window.location.href = "/admin";
   } else if (user.role === "chef") {
     window.location.href = "/kitchen";
@@ -128,7 +131,9 @@ form.addEventListener("submit", async (e) => {
     localStorage.setItem("eb_admin_token", data.token);
     localStorage.setItem("eb_admin_user", JSON.stringify(data.user));
 
-    if (data.user.role === "admin") {
+    if (data.user.role === "superadmin") {
+      window.location.href = "/superadmin";
+    } else if (data.user.role === "admin") {
       window.location.href = "/admin";
     } else if (data.user.role === "chef") {
       window.location.href = "/kitchen";

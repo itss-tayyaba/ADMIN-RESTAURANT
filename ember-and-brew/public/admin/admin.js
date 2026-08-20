@@ -8,11 +8,52 @@
     return;
   }
   const user = JSON.parse(localStorage.getItem('eb_admin_user') || '{"username":"Admin","role":"admin"}');
+
+  // A superadmin has no home branch of their own, so they can only open
+  // this dashboard "as" a specific branch — reached by clicking into a
+  // branch from /superadmin, which links here as /admin?branchId=<id>.
+  // Without that param there is nothing for this dashboard to show, so
+  // send them back to pick one.
+  let viewingBranchId = null;
   if (user.role !== 'admin') {
-    if (user.role === 'chef') window.location.href = '/kitchen';
-    else if (user.role === 'delivery') window.location.href = '/delivery';
-    else window.location.href = 'login.html';
-    return;
+    if (user.role === 'superadmin') {
+      viewingBranchId = new URLSearchParams(window.location.search).get('branchId');
+      if (!viewingBranchId) {
+        window.location.href = '/superadmin';
+        return;
+      }
+      // Falls through — a superadmin with a branchId is allowed to use
+      // this dashboard exactly like that branch's own admin would.
+    } else if (user.role === 'chef') {
+      window.location.href = '/kitchen';
+      return;
+    } else if (user.role === 'delivery') {
+      window.location.href = '/delivery';
+      return;
+    } else {
+      window.location.href = 'login.html';
+      return;
+    }
+  }
+
+  // Every branch-scoped endpoint in this dashboard (orders, menu,
+  // reservations, tables, complaints, delivery/riders) reads an optional
+  // ?branchId= query param for a superadmin (see src/utils/branchScope.js
+  // on the server). Rather than threading viewingBranchId through all 27
+  // fetch() call sites in this file, transparently stamp it onto every
+  // same-origin /api/ request this dashboard makes. A no-op for a normal
+  // branch admin, since viewingBranchId is null for them.
+  if (viewingBranchId) {
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      try {
+        if (typeof input === 'string' && input.startsWith('/api/')) {
+          const sep = input.includes('?') ? '&' : '?';
+          input = input + sep + 'branchId=' + encodeURIComponent(viewingBranchId);
+        }
+      } catch (_) { /* fall through and fetch the original input untouched */ }
+      return nativeFetch(input, init);
+    };
   }
 
   const authHeaders = {
@@ -562,10 +603,25 @@
 
   // ---------- Init header ----------
   els.userName.textContent = user.username;
-  els.userRole.textContent = user.role;
+  els.userRole.textContent = viewingBranchId ? 'superadmin (viewing branch)' : user.role;
   els.avatarInitial.textContent = (user.username || 'A').charAt(0).toUpperCase();
   els.todayDate.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
   if (els.floorplanDate) els.floorplanDate.textContent = new Date().toLocaleDateString(undefined, { day:'2-digit', month:'short', year:'numeric' });
+
+  // A superadmin browsing a branch's dashboard needs a visible way back to
+  // /superadmin — injected here rather than hardcoded into admin/index.html
+  // markup, so it appears regardless of that file's exact layout.
+  if (viewingBranchId) {
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:sticky;top:0;z-index:60;background:#1A1917;color:#F5F0E8;padding:10px 20px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;font-family:"DM Sans",sans-serif;';
+    banner.innerHTML = '<span>★ Viewing this branch as superadmin</span>';
+    const back = document.createElement('button');
+    back.textContent = '← Back to Superadmin';
+    back.style.cssText = 'background:rgba(245,240,232,0.12);border:1px solid rgba(245,240,232,0.25);color:#F5F0E8;border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer;';
+    back.addEventListener('click', () => { window.location.href = '/superadmin'; });
+    banner.appendChild(back);
+    document.body.insertBefore(banner, document.body.firstChild);
+  }
 
   els.logoutBtn.addEventListener('click', () => {
     localStorage.removeItem('eb_admin_token');
