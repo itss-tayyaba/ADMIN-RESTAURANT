@@ -27,8 +27,8 @@ const orderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   status: {
     type: String,
-    enum: ['received', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'completed', 'cancelled'],
-    default: 'received',
+    enum: ['pending_admin', 'pending_kitchen', 'received', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'completed', 'cancelled'],
+    default: 'pending_admin',
     index: true
   },
   customerName: { type: String, required: true },

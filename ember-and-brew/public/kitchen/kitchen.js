@@ -200,13 +200,13 @@ function setSyncing(on) {
   if (el) el.classList.toggle('syncing', on);
 }
 
-// Detect brand-new "received" tickets since last load -> toast + sound
+// Detect newly admin-approved kitchen tickets since last load -> toast + sound
 function handleNewArrivals(newOrders) {
   const newIds = new Set(newOrders.map(o => o._id));
 
   if (!firstLoad) {
     newOrders.forEach(o => {
-      if (o.status === 'received' && !knownIds.has(o._id)) {
+      if (['pending_kitchen', 'received'].includes(o.status) && !knownIds.has(o._id)) {
         showToast(`New ticket #${o.orderNumber}`);
         playNewOrderBeep();
       }
@@ -394,7 +394,7 @@ function buildCard(o) {
 
   const btn = document.createElement('button');
 
-  if (o.status === 'received') {
+  if (o.status === 'pending_kitchen' || o.status === 'received') {
     btn.className = 'btn-action primary';
     btn.innerHTML = busy ? `<i class="fa-solid fa-spinner spin"></i> Starting…` : `<i class="fa-solid fa-fire"></i> Start Preparing`;
     btn.disabled = busy;
@@ -512,7 +512,7 @@ function bumpAllReady() {
 
 function updateStats() {
   const visible = orders.filter(o => !dismissedIds.has(o._id));
-  const pending = visible.filter(o => o.status === 'received').length;
+  const pending = visible.filter(o => ['pending_kitchen', 'received'].includes(o.status)).length;
   const preparing = visible.filter(o => o.status === 'preparing').length;
   const ready = visible.filter(o => o.status === 'ready').length;
   const late = visible.filter(o => getUrgency(o) === 'late').length;

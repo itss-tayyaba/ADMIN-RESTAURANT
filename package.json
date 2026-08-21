@@ -6,7 +6,10 @@
     "seed": "node src/seeds.js",
     "seed:orders": "node src/seedOrders.js",
     "restore:menu": "node scripts/restoreDefaultMenu.js",
-    "backfill:branch-data": "node scripts/backfillBranchData.js"
+    "backfill:branch-data": "node scripts/backfillBranchData.js",
+    "seed:london": "node scripts/seedLondonBranch.js",
+    "seed:australia": "node scripts/seedAustraliaBranch.js",
+    "merge:london-into-uk": "node scripts/mergeLondonIntoUk.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

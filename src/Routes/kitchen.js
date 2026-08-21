@@ -107,6 +107,7 @@ router.get("/orders", kitchenAuth, async (req, res) => {
 
             status: {
                 $in: [
+                    "pending_kitchen",
                     "received",
                     "preparing",
                     "ready"
@@ -157,7 +158,7 @@ router.get("/orders", kitchenAuth, async (req, res) => {
 
 // =====================================
 // ACCEPT ORDER
-// received --> preparing
+// pending_kitchen --> preparing
 // =====================================
 
 router.put("/:id/accept", kitchenAuth, async (req,res)=>{
@@ -180,11 +181,11 @@ router.put("/:id/accept", kitchenAuth, async (req,res)=>{
         }
 
 
-if (order.status !== "received") {
+if (!["pending_kitchen", "received"].includes(order.status)) {
 
     return res.status(400).json({
         success: false,
-        message: "Only received orders can be accepted."
+        message: "Only admin-approved orders can be accepted."
     });
 
 }

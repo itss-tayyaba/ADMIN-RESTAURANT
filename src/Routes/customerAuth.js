@@ -114,9 +114,9 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    if (!/^\d{11}$/.test(phone)) {
+    if (!/^\+?[1-9]\d{6,14}$/.test(phone)) {
       return res.status(400).json({
-        error: 'Phone number must be exactly 11 digits.'
+        error: 'Enter a valid international phone number.'
       });
     }
 

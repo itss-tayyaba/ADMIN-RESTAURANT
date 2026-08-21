@@ -291,7 +291,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
       <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Customer Portal</a>
       <!--<a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Staff Login</a>-->
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 sm:gap-3">
+      <span id="branch-nav-location" class="inline-flex items-center gap-1.5 text-xs text-brand-300 whitespace-nowrap" aria-label="Current branch location">
+        <i class="fa-solid fa-location-dot text-brand-400"></i>
+        <span>Pakistan</span>
+      </span>
       <button id="cart-btn" onclick="toggleCart()" class="relative p-2 text-brand-300 hover:text-brand-400 transition-colors" aria-label="Open cart">
         <i class="fa-solid fa-bag-shopping text-lg"></i>
         <span id="cart-badge" class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-brand-400 text-brand-950 text-[11px] font-bold rounded-full flex items-center justify-center hidden">0</span>
@@ -335,10 +339,10 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <!-- Copy -->
           <div class="text-center lg:text-left animate-fade-up flex flex-col justify-start min-h-[520px]">
             <div class="pt-10 lg:pt-20">
-              <p class="text-brand-400 text-xs sm:text-sm tracking-[.3em] uppercase font-medium mb-6 inline-flex items-center gap-2 justify-center lg:justify-start">
+              <p id="branch-hero-label" class="text-brand-400 text-xs sm:text-sm tracking-[.3em] uppercase font-medium mb-6 inline-flex items-center gap-2 justify-center lg:justify-start">
                 <span class="w-6 h-px bg-brand-400"></span> Est. 2019 — Artisan Coffee &amp; Kitchen
               </p>
-              <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-900 leading-[1.08] mb-6">Crafted with Care,<br>Served with <span class="text-brand-400">Soul</span></h1>
+              <h1 id="branch-hero-title" class="font-display text-4xl sm:text-5xl md:text-6xl font-900 leading-[1.08] mb-6">Crafted with Care,<br>Served with <span class="text-brand-400">Soul</span></h1>
               <p class="text-brand-300 text-base sm:text-lg max-w-lg mx-auto lg:mx-0 mb-9">Hand-roasted single-origin coffee, seasonal pastries, and plates made from locally sourced ingredients — poured and plated fresh, every morning.</p>
             </div>
             <div>
@@ -360,11 +364,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <div class="relative mx-auto max-w-sm lg:max-w-none w-full animate-fade-up" style="animation-delay:.15s;transform:translateY(-12px)">
             <div class="absolute -inset-8 rounded-[2rem] opacity-50 pointer-events-none" style="background:radial-gradient(circle at 50% 40%,rgba(212,168,83,.35),transparent 70%);filter:blur(30px)"></div>
             <div class="relative rounded-[2rem] overflow-hidden border border-brand-800 shadow-2xl aspect-[4/5]">
-              <img src="images/Avacado toast.jpeg" alt="Avocado toast, freshly plated" class="w-full h-full object-cover">
+              <img id="branch-hero-image" src="/images/Avacado toast.jpeg" alt="Ember &amp; Brew, freshly plated" class="w-full h-full object-cover">
             </div>
             <!-- floating circular inset -->
             <div class="float-slow absolute -left-4 sm:-left-10 bottom-12 sm:bottom-14 w-24 h-24 sm:w-36 sm:h-36 rounded-full border-4 shadow-xl hidden sm:block overflow-hidden" style="border-color:var(--bg)">
-              <img src="images/Cappuccino.jpeg" alt="Cappuccino" class="w-full h-full object-cover">
+              <img src="/images/Cappuccino.jpeg" alt="Cappuccino" class="w-full h-full object-cover">
             </div>
             <!-- floating review badge -->
             <div class="float-slow absolute -top-2 right-2 sm:top-6 sm:-right-8 bg-brand-900/95 backdrop-blur border border-brand-800 rounded-2xl px-5 py-4 shadow-xl max-w-[180px]" style="animation-delay:.6s">
@@ -385,7 +389,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
         <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div class="relative order-2 lg:order-1">
             <div class="rounded-[2rem] overflow-hidden border border-brand-800 shadow-xl aspect-[5/4]">
-              <img src="images/harvest salad.jpeg" alt="Harvest bowl, ready to serve" class="w-full h-full object-cover">
+              <img src="/images/harvest salad.jpeg" alt="Harvest bowl, ready to serve" class="w-full h-full object-cover">
             </div>
           </div>
           <div class="order-1 lg:order-2 text-center lg:text-left">
@@ -637,6 +641,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <label class="text-xs font-medium text-brand-300 mb-1.5 block">Special Instructions</label>
           <textarea name="notes" class="form-input" rows="3" placeholder="Allergies, extra napkins, ring the bell..."></textarea>
         </div>
+        <div id="branch-payment-methods" class="mb-6 hidden bg-brand-900 border border-brand-800 rounded-xl p-4 text-sm"></div>
         <!-- Order summary — just the item rows here; totals live in the fixed footer below -->
         <div class="bg-brand-900 border border-brand-800 rounded-xl p-5">
           <h3 class="font-semibold text-sm mb-3 text-brand-300">Order Summary</h3>
@@ -650,7 +655,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <span class="text-brand-300">Subtotal</span><span id="checkout-subtotal" class="font-medium">$0.00</span>
         </div>
         <div class="flex justify-between text-sm mb-2">
-          <span class="text-brand-300">Tax (8%)</span><span id="checkout-tax" class="font-medium">$0.00</span>
+          <span id="checkout-tax-label" class="text-brand-300">Tax</span><span id="checkout-tax" class="font-medium">Rs 0.00</span>
         </div>
         <div class="flex justify-between text-base mb-3 font-bold">
           <span>Total</span><span id="checkout-total" class="text-brand-400">$0.00</span>
@@ -965,16 +970,80 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 let MENU = [];
 let CATEGORIES = ['All'];
 
+// A public portal is always scoped to one branch.  Use a shareable URL such
+// as /?branch=london-uk (or retain a direct ?branchId= link); this makes a
+// London menu/cart/order independent from the Pakistan branch.
+const branchState = { id: localStorage.getItem('eb_branch_id') || '', info: null };
+function branchUrl(url) {
+  if (!branchState.id || !url.startsWith('/api/')) return url;
+  const joiner = url.includes('?') ? '&' : '?';
+  return `${url}${joiner}branchId=${encodeURIComponent(branchState.id)}`;
+}
+// Images can be uploaded by an admin (stored as a data URI) or entered as a
+// URL/path.  Make only relative public-image paths absolute so they work on
+// clean branch URLs such as /order/uk-london.
+function resolveImageUrl(image) {
+  const value = String(image || '').trim();
+  if (!value) return '';
+  return /^(?:data:|blob:|https?:\/\/|\/\/)/i.test(value) || value.startsWith('/')
+    ? value
+    : `/${value}`;
+}
+function formatMoney(value) {
+  const amount = Number(value) || 0;
+  const symbol = branchState.info?.currencySymbol || 'Rs';
+  return `${symbol}${symbol === 'Rs' ? ' ' : ''}${amount.toFixed(2)}`;
+}
+async function initialiseBranch() {
+  const params = new URLSearchParams(window.location.search);
+  const pathMatch = window.location.pathname.match(/^\/order\/([^/]+)$/);
+  const code = params.get('branch') || (pathMatch ? pathMatch[1] : '');
+  if (code) {
+    const response = await fetch(`/api/branches/by-code/${encodeURIComponent(code)}`);
+    if (!response.ok) throw new Error('That branch is not available.');
+    branchState.info = await response.json();
+    branchState.id = branchState.info._id;
+    localStorage.setItem('eb_branch_id', branchState.id);
+    localStorage.setItem('eb_branch_code', branchState.info.code);
+  }
+  if (!branchState.id) return;
+  if (!branchState.info) {
+    const savedCode = localStorage.getItem('eb_branch_code');
+    if (savedCode) {
+      const response = await fetch(`/api/branches/by-code/${encodeURIComponent(savedCode)}`);
+      if (response.ok) branchState.info = await response.json();
+    }
+  }
+  if (branchState.info) {
+    document.title = `Ember & Brew — ${branchState.info.city}`;
+    document.querySelectorAll('[data-branch-city]').forEach(el => el.textContent = branchState.info.city);
+    document.querySelectorAll('[data-branch-address]').forEach(el => el.textContent = branchState.info.address || `${branchState.info.city} branch`);
+    const heroImage = document.getElementById('branch-hero-image');
+    const navLocation = document.getElementById('branch-nav-location');
+    if (navLocation) {
+      const countryLabel = { PK: 'Pakistan', GB: 'UK', AU: 'Australia' }[branchState.info.countryCode] || branchState.info.country;
+      navLocation.querySelector('span').textContent = countryLabel;
+    }
+    if (heroImage && branchState.info.heroImage) heroImage.src = resolveImageUrl(branchState.info.heroImage);
+    const payments = document.getElementById('branch-payment-methods');
+    if (payments && branchState.info.paymentMethods?.length) {
+      payments.textContent = `Payment methods: ${branchState.info.paymentMethods.join(' · ')}`;
+      payments.classList.remove('hidden');
+    }
+  }
+}
+
 async function loadPublicMenu() {
   const grid = document.getElementById('menu-grid');
   if (grid) grid.innerHTML = '<p class="text-center text-brand-800 py-16 text-sm col-span-full">Loading menu…</p>';
   try {
     const [items, cats] = await Promise.all([
-      fetch('/api/menu').then(r => r.json()),
-      fetch('/api/menu/categories').then(r => r.json())
+      fetch(branchUrl('/api/menu')).then(r => r.json()),
+      fetch(branchUrl('/api/menu/categories')).then(r => r.json())
     ]);
     MENU = (Array.isArray(items) ? items : []).map(i => ({
-      id: i._id, name: i.name, desc: i.description, price: i.price, cat: i.category, img: i.image
+      id: i._id, name: i.name, desc: i.description, price: i.price, cat: i.category,
+      img: resolveImageUrl(i.image)
     }));
     CATEGORIES = Array.isArray(cats) && cats.length ? cats : ['All'];
   } catch (err) {
@@ -986,15 +1055,15 @@ async function loadPublicMenu() {
 }
 
 const STATUS_FLOWS = {
-  delivery: ['received','preparing','ready','out-for-delivery','delivered'],
-  default: ['received','preparing','ready','completed']
+  delivery: ['pending_admin','pending_kitchen','preparing','ready','out-for-delivery','delivered'],
+  default: ['pending_admin','pending_kitchen','preparing','ready','completed']
 };
 function getStatusFlow(order) {
   return order.orderType === 'delivery' ? STATUS_FLOWS.delivery : STATUS_FLOWS.default;
 }
-const STATUS_LABELS = {received:'Order Received',preparing:'Preparing',ready:'Ready for Pickup','out-for-delivery':'Out for Delivery',delivered:'Delivered',completed:'Completed'};
-const STATUS_TIMES = {received:0,preparing:8,ready:16,completed:24};
-const STATUS_ICONS = {received:'fa-receipt',preparing:'fa-fire-burner',ready:'fa-bag-shopping','out-for-delivery':'fa-truck-fast',delivered:'fa-box-open',completed:'fa-champagne-glasses'};
+const STATUS_LABELS = {pending_admin:'Awaiting Admin Approval',pending_kitchen:'Approved — Kitchen Queue',received:'Order Received',preparing:'Preparing',ready:'Ready for Pickup','out-for-delivery':'Out for Delivery',delivered:'Delivered',completed:'Completed'};
+const STATUS_TIMES = {pending_admin:0,pending_kitchen:4,received:4,preparing:8,ready:16,completed:24};
+const STATUS_ICONS = {pending_admin:'fa-user-shield',pending_kitchen:'fa-utensils',received:'fa-receipt',preparing:'fa-fire-burner',ready:'fa-bag-shopping','out-for-delivery':'fa-truck-fast',delivered:'fa-box-open',completed:'fa-champagne-glasses'};
 const CONFETTI_COLORS = ['#D4A853','#C67D5A','#A3B496','#F5F0E8','#D4C4A8','#9A5638'];
 function makeConfetti(count = 32) {
   let html = '';
@@ -1031,7 +1100,7 @@ const state = {
 // API HELPER
 // ============================================
 async function apiFetch(url, options = {}) {
-  const res = await fetch(url, options);
+  const res = await fetch(branchUrl(url), options);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
   return data;
@@ -1266,7 +1335,7 @@ async function renderAccount() {
               </div>
               <div>
                 <p class="text-brand-400 text-[11px] uppercase tracking-[.25em] mb-1">Total</p>
-                <p class="font-semibold text-brand-100">$${o.total.toFixed(2)}</p>
+                <p class="font-semibold text-brand-100">${formatMoney(o.total)}</p>
               </div>
               <div>
                 <p class="text-brand-400 text-[11px] uppercase tracking-[.25em] mb-1">Delivery</p>
@@ -1320,10 +1389,10 @@ async function renderAccount() {
 // FAN FAVORITES — 3D coverflow carousel
 // ============================================
 const FAN_FAVORITES = [
-  { name: 'Tiramisu', tag: 'Signature · Classic', desc: 'Espresso-soaked ladyfingers, mascarpone cream, cocoa dust. House recipe.', price: 7.50, cat: 'Desserts', img: 'images/tiramusu.jpeg', icon: 'fa-solid fa-ice-cream' },
-  { name: 'Crème Brûlée', tag: 'Signature · Torched', desc: 'Madagascar vanilla custard with a caramelized sugar crust. Crackling perfection.', price: 7.75, cat: 'Desserts', img: 'images/creme brulee.jpeg', icon: 'fa-solid fa-fire' },
-  { name: 'Turkey Club', tag: 'Regulars · Loaded', desc: 'Roasted turkey, applewood bacon, heirloom tomato, aioli on ciabatta.', price: 9.75, cat: 'Sandwiches', img: 'images/turkey club sandwich.jpeg', icon: 'fa-solid fa-bacon' },
-  { name: 'Iced Lemonade', tag: 'Refreshing · Cold', desc: 'House-made lemon syrup with sparkling water and fresh mint.', price: 4.00, cat: 'Drinks', img: 'images/iced lemonade.jpeg', icon: 'fa-solid fa-glass-water' }
+  { name: 'Tiramisu', tag: 'Signature · Classic', desc: 'Espresso-soaked ladyfingers, mascarpone cream, cocoa dust. House recipe.', price: 7.50, cat: 'Desserts', img: '/images/tiramusu.jpeg', icon: 'fa-solid fa-ice-cream' },
+  { name: 'Crème Brûlée', tag: 'Signature · Torched', desc: 'Madagascar vanilla custard with a caramelized sugar crust. Crackling perfection.', price: 7.75, cat: 'Desserts', img: '/images/creme brulee.jpeg', icon: 'fa-solid fa-fire' },
+  { name: 'Turkey Club', tag: 'Regulars · Loaded', desc: 'Roasted turkey, applewood bacon, heirloom tomato, aioli on ciabatta.', price: 9.75, cat: 'Sandwiches', img: '/images/turkey club sandwich.jpeg', icon: 'fa-solid fa-bacon' },
+  { name: 'Iced Lemonade', tag: 'Refreshing · Cold', desc: 'House-made lemon syrup with sparkling water and fresh mint.', price: 4.00, cat: 'Drinks', img: '/images/iced lemonade.jpeg', icon: 'fa-solid fa-glass-water' }
 ];
 let ffIndex = 0;
 let ffAutoplayTimer = null;
@@ -1339,7 +1408,7 @@ function renderFanFavorites() {
         <p class="ff-card-tag">${it.tag}</p>
         <div class="ff-card-meta">
           <span class="ff-card-cat">${it.cat}</span>
-          <span class="ff-card-price">$${it.price.toFixed(2)}</span>
+          <span class="ff-card-price">${formatMoney(it.price)}</span>
         </div>
       </div>
     </div>
@@ -1385,7 +1454,7 @@ function ffUpdate() {
   const desc = document.getElementById('ff-desc');
   if (desc) desc.textContent = item.desc;
   const label = document.getElementById('ff-add-label');
-  if (label) label.textContent = `Add to Order · $${item.price.toFixed(2)}`;
+  if (label) label.textContent = `Add to Order · ${formatMoney(item.price)}`;
 }
 
 function ffGoTo(i) { ffIndex = i; ffUpdate(); ffResetAutoplay(); }
@@ -1454,7 +1523,7 @@ function filterMenu() {
       <div class="p-4">
         <div class="flex items-start justify-between gap-3 mb-1.5">
           <h3 class="font-display font-bold text-base leading-snug">${item.name}</h3>
-          <span class="text-brand-400 font-semibold text-sm whitespace-nowrap">$${item.price.toFixed(2)}</span>
+          <span class="text-brand-400 font-semibold text-sm whitespace-nowrap">${formatMoney(item.price)}</span>
         </div>
         <p class="text-brand-800 text-xs leading-relaxed mb-4 line-clamp-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${item.desc}</p>
         <button class="add-btn w-full" onclick="addToCart('${item.id}')" aria-label="Add ${item.name} to cart">
@@ -1551,7 +1620,7 @@ function openDishItem(itemId) {
 
   document.getElementById('dish3d-title').textContent = item.name;
   document.getElementById('dish3d-desc').textContent = item.desc || '';
-  document.getElementById('dish3d-baseprice').textContent = `$${item.price.toFixed(2)}`;
+  document.getElementById('dish3d-baseprice').textContent = formatMoney(item.price);
   const veg = isItemVeg(item);
   const badge = document.getElementById('dish3d-veg-badge');
   badge.classList.toggle('veg', veg);
@@ -1565,7 +1634,7 @@ function openDishItem(itemId) {
     <label class="dishdetail-addon" data-addon-idx="${i}">
       <span class="dishdetail-addon-box"><i class="fa-solid fa-check"></i></span>
       <span class="dishdetail-addon-name">${a.name}</span>
-      <span class="dishdetail-addon-price">${a.price > 0 ? '+$' + a.price.toFixed(2) : 'Free'}</span>
+      <span class="dishdetail-addon-price">${a.price > 0 ? '+' + formatMoney(a.price) : 'Free'}</span>
     </label>
   `).join('');
   grid.querySelectorAll('.dishdetail-addon').forEach(el => {
@@ -1610,7 +1679,7 @@ function updateDishDetailTotal() {
   if (!dishDetail.item) return;
   const addonsSum = [...dishDetail.selected].reduce((s, i) => s + dishDetail.addons[i].price, 0);
   const total = (dishDetail.item.price + addonsSum) * dishDetail.qty;
-  document.getElementById('dish3d-total').textContent = `$${total.toFixed(2)}`;
+  document.getElementById('dish3d-total').textContent = formatMoney(total);
 }
 
 function confirmDishItemAddToCart() {
@@ -1751,7 +1820,7 @@ function renderCartInto(containerId, footerId, subtotalId, taxId, totalId) {
       <div class="flex-1 min-w-0">
         <h4 class="text-sm font-semibold truncate">${c.item.name}</h4>
         ${addonsLine}
-        <p class="text-brand-400 text-sm font-medium mt-0.5">$${(unit * c.qty).toFixed(2)}</p>
+        <p class="text-brand-400 text-sm font-medium mt-0.5">${formatMoney(unit * c.qty)}</p>
         <div class="flex items-center gap-2 mt-1.5">
           <button onclick="updateQty(${i},-1)" class="w-6 h-6 rounded bg-brand-800 text-brand-300 text-xs flex items-center justify-center hover:bg-brand-700 transition-colors" aria-label="Decrease quantity"><i class="fa-solid fa-minus text-[9px]"></i></button>
           <span class="text-sm font-medium w-5 text-center">${c.qty}</span>
@@ -1763,8 +1832,8 @@ function renderCartInto(containerId, footerId, subtotalId, taxId, totalId) {
   `;
   }).join('');
   const sub = getCartSubtotal();
-  const tax = sub * 0.08;
-  document.getElementById(subtotalId).textContent = '$' + sub.toFixed(2);
+  const tax = sub * (branchState.info?.taxRate ?? 0.08);
+  document.getElementById(subtotalId).textContent = formatMoney(sub);
   document.getElementById(taxId).textContent = '$' + tax.toFixed(2);
   document.getElementById(totalId).textContent = '$' + (sub + tax).toFixed(2);
 }
@@ -1830,10 +1899,10 @@ function showUpsell(addedItem, recs) {
     <div class="flex flex-col gap-3">
       ${recs.map(p => `
         <div class="flex items-center gap-3 p-2.5 rounded-lg bg-brand-950/50 border border-brand-800 hover:border-brand-400/30 transition-colors">
-          <img src="${p.image}" alt="${escapeHtml(p.name)}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
+          <img src="${resolveImageUrl(p.image)}" alt="${escapeHtml(p.name)}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">
           <div class="flex-1 min-w-0">
             <h4 class="text-sm font-semibold truncate">${escapeHtml(p.name)}${p.personalized ? ' <span class="text-brand-400 font-normal text-[10px]">· your usual</span>' : ''}</h4>
-            <p class="text-brand-400 text-sm">$${p.price.toFixed(2)}</p>
+            <p class="text-brand-400 text-sm">${formatMoney(p.price)}</p>
           </div>
           <button onclick="addToCart('${p._id}');closeUpsell()" class="px-3 py-1.5 rounded-lg bg-brand-400/10 border border-brand-400/30 text-brand-400 text-xs font-semibold hover:bg-brand-400 hover:text-brand-950 transition-all flex-shrink-0">
             Add
@@ -2536,17 +2605,19 @@ function renderCheckout() {
     <div class="mb-1.5">
       <div class="flex justify-between text-sm">
         <span class="text-brand-300">${c.qty}x ${c.item.name}</span>
-        <span class="font-medium">$${(unit * c.qty).toFixed(2)}</span>
+        <span class="font-medium">${formatMoney(unit * c.qty)}</span>
       </div>
       ${addonsLine}
     </div>
   `;
   }).join('');
   const sub = getCartSubtotal();
-  const tax = sub * 0.08;
-  document.getElementById('checkout-subtotal').textContent = '$' + sub.toFixed(2);
-  document.getElementById('checkout-tax').textContent = '$' + tax.toFixed(2);
-  document.getElementById('checkout-total').textContent = '$' + (sub + tax).toFixed(2);
+  const taxRate = branchState.info?.taxRate ?? 0.08;
+  const tax = sub * taxRate;
+  document.getElementById('checkout-subtotal').textContent = formatMoney(sub);
+  document.getElementById('checkout-tax').textContent = formatMoney(tax);
+  document.getElementById('checkout-total').textContent = formatMoney(sub + tax);
+  document.getElementById('checkout-tax-label').textContent = `Tax (${Math.round(taxRate * 100)}%)`;
   loadRegionsIntoSelect();
   const locationInput = document.querySelector('[name="deliveryLocation"]');
   const locationSummary = document.getElementById('selected-delivery-location');
@@ -2583,7 +2654,10 @@ async function handleCheckout(e) {
   const region = form.region?.value || '';
   const guestName = form.guestName?.value.trim() || '';
   const guestPhoneRaw = form.guestPhone?.value.trim() || '';
-  const guestPhone = normalizePKPhone(guestPhoneRaw);
+  const isPakistanBranch = branchState.info?.countryCode === 'PK' || !branchState.info;
+  const guestPhone = isPakistanBranch
+    ? normalizePKPhone(guestPhoneRaw)
+    : guestPhoneRaw.replace(/[\s()-]/g, '');
   let deliveryLocation = null;
   try { deliveryLocation = form.deliveryLocation?.value ? JSON.parse(form.deliveryLocation.value) : null; } catch (_) { deliveryLocation = null; }
   const notes = form.notes?.value.trim() || '';
@@ -2593,7 +2667,10 @@ async function handleCheckout(e) {
   if (orderType === 'delivery' && !region) { showFieldError('region', 'Please select your region.'); valid = false; }
   if (orderType === 'delivery' && address.length < 5) { showFieldError('address', 'Please enter a delivery address.'); valid = false; }
   if (orderType === 'delivery' && (!deliveryLocation || deliveryLocation.type !== 'Point')) { showFieldError('deliveryLocation', 'Select and confirm your delivery location on the map.'); valid = false; }
-  if (!state.customer && (guestName.length < 2 || !isValidPKPhone(guestPhoneRaw))) { showToast('Enter your name and a valid phone number (e.g. 03001234567 or +923001234567).', 'error'); valid = false; }
+  const guestPhoneValid = isPakistanBranch
+    ? isValidPKPhone(guestPhoneRaw)
+    : /^\+?[1-9]\d{6,14}$/.test(guestPhone);
+  if (!state.customer && (guestName.length < 2 || !guestPhoneValid)) { showToast(isPakistanBranch ? 'Enter your name and a valid Pakistan phone number (e.g. 03001234567 or +923001234567).' : 'Enter your name and a valid phone number including country code.', 'error'); valid = false; }
   if (state.cart.length === 0) { showToast('Your cart is empty.', 'error'); valid = false; }
   if (!valid) return;
 
@@ -2838,11 +2915,11 @@ async function renderTracking(orderNumber) {
       ${order.items.map(it => `
         <div class="flex justify-between text-sm mb-1.5">
           <span class="text-brand-300">${it.qty}x ${it.name}</span>
-          <span>$${(it.price * it.qty).toFixed(2)}</span>
+          <span>${formatMoney(it.price * it.qty)}</span>
         </div>
       `).join('')}
       <div class="border-t border-brand-800 mt-3 pt-3 flex justify-between font-bold">
-        <span>Total</span><span class="text-brand-400">$${order.total.toFixed(2)}</span>
+        <span>Total</span><span class="text-brand-400">${formatMoney(order.total)}</span>
       </div>
     </div>
     <div class="grid grid-cols-2 gap-4 text-sm">
@@ -3103,11 +3180,16 @@ function setFooterYear() {
 // ============================================
 // INIT
 // ============================================
-function init() {
+async function init() {
+  try {
+    await initialiseBranch();
+  } catch (err) {
+    console.warn('Branch selection failed:', err.message);
+  }
   initParticles();
   initNavScroll();
   updateAccountNavLabel();
-  loadPublicMenu();
+  await loadPublicMenu();
   renderFanFavorites();
   setFooterYear();
   initReservationForm();

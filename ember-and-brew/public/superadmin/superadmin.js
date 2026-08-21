@@ -112,6 +112,7 @@
             <input name="city" placeholder="City" required><input name="currency" placeholder="Currency (GBP)" maxlength="3" required>
             <input name="currencySymbol" placeholder="Symbol (£)" required><input name="timezone" placeholder="Timezone (Europe/London)" required>
             <input name="taxRate" type="number" min="0" max="1" step="0.01" placeholder="Tax rate (0.08)" value="0">
+            <input name="heroImage" placeholder="Landing image URL, e.g. /images/london.jpg">
             <button class="btn-ghost" type="submit">Create branch</button><p class="form-note" id="branchFormNote"></p>
           </form>
           <div class="branch-grid">${cardsHtml}</div>
@@ -167,6 +168,19 @@
         ${statCard('Total Orders', stats.totalOrders, 'ember')}
         ${statCard("Today's Orders", stats.todayOrders, 'sage')}
         ${statCard('Pending Orders', stats.pendingCount, 'gold')}
+      </div>`;
+
+    const settingsHtml = `
+      <div class="panel">
+        <div class="panel-head"><h3>Public Branch Settings</h3><a class="btn-ghost" href="/order/${encodeURIComponent(branch.code)}" target="_blank" style="text-decoration:none;">Open customer page →</a></div>
+        <div class="panel-body">
+          <p class="form-note">Status: <strong>${branch.isActive ? 'Active — customers can order' : 'Inactive — customer ordering is disabled'}</strong></p>
+          <button class="btn-ghost" id="toggleBranchActive" type="button">${branch.isActive ? 'Deactivate branch' : 'Activate branch'}</button>
+          <form id="branchSettingsForm" class="setup-form" style="margin-top:14px">
+            <input name="heroImage" value="${esc(branch.heroImage || '')}" placeholder="Landing image URL, e.g. /images/london.jpg">
+            <button class="btn-ghost" type="submit">Save landing image</button><p class="form-note" id="branchSettingsNote">Place a file in public/images, then use /images/your-file.jpg.</p>
+          </form>
+        </div>
       </div>`;
 
     const popularHtml = (stats.popularDishes || []).length
@@ -242,6 +256,7 @@
 
     content.innerHTML = `
       ${statsHtml}
+      ${settingsHtml}
       ${staffHtml}
       ${popularHtml}
       ${ridersHtml}
@@ -255,6 +270,22 @@
       try {
         await api(`/api/branches/${branchId}/staff`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
         renderBranchDetail(branchId);
+      } catch (err) { note.textContent = err.message; }
+    });
+
+    document.getElementById('toggleBranchActive').addEventListener('click', async () => {
+      try {
+        await api(`/api/branches/${branchId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !branch.isActive }) });
+        renderBranchDetail(branchId);
+      } catch (err) { document.getElementById('branchSettingsNote').textContent = err.message; }
+    });
+    document.getElementById('branchSettingsForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const note = document.getElementById('branchSettingsNote');
+      const heroImage = new FormData(event.currentTarget).get('heroImage');
+      try {
+        await api(`/api/branches/${branchId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ heroImage }) });
+        note.textContent = 'Landing image saved.';
       } catch (err) { note.textContent = err.message; }
     });
   }

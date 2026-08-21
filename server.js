@@ -155,6 +155,13 @@ app.get("/customer/:branchCode", (req, res) => {
     );
 });
 
+// Public ordering portal for a specific branch, e.g. /order/london-uk.
+// Keeping the code in the path makes menu links easy to share and avoids a
+// customer accidentally returning to a previously selected country.
+app.get("/order/:branchCode", (req, res) => {
+    res.sendFile(path.join(__dirname, "ember-and-brew", "public", "index.html"));
+});
+
 // ===================== API =====================
 
 app.use("/api/menu", menuRoutes);

@@ -10,6 +10,44 @@ const customerState = {
   authMode: 'login'
 };
 
+// ============================================
+// BRANCH SCOPING
+// ============================================
+// Same convention as index.html: capture ?branchId= from the URL once and
+// persist it, so this portal keeps talking to the same branch even after
+// redirects that don't carry a query string (e.g. login -> back to
+// checkout). Reads/writes the SAME localStorage key as index.html so the
+// two pages always agree on which branch the customer is in.
+(function captureBranchId() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('branchId');
+  if (fromUrl) {
+    localStorage.setItem('eb_branch_id', fromUrl);
+  }
+})();
+// Clean branch links (for example /customer/london-uk) are resolved once to
+// the same branch id used by menu, orders, reservations, and complaints.
+async function resolveBranchFromPath() {
+  const match = window.location.pathname.match(/^\/customer\/([^/]+)$/);
+  if (!match) return null;
+  const response = await fetch(`/api/branches/by-code/${encodeURIComponent(match[1])}`);
+  if (!response.ok) throw new Error('Branch not found');
+  const branch = await response.json();
+  localStorage.setItem('eb_branch_id', branch._id);
+  localStorage.setItem('eb_branch_code', branch.code);
+  document.title = `Ember & Brew — ${branch.city}`;
+  return branch;
+}
+function getBranchId() {
+  return localStorage.getItem('eb_branch_id') || '';
+}
+function withBranch(url) {
+  const branchId = getBranchId();
+  if (!branchId) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}branchId=${encodeURIComponent(branchId)}`;
+}
+
 const STATUS_LABELS = {
   received: 'Order received',
   preparing: 'Preparing',
@@ -78,7 +116,12 @@ async function renderDeliveryRouteEstimate(order) {
 
 let customerTrackingPoll = null;
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await resolveBranchFromPath();
+  } catch (err) {
+    console.warn('Unable to resolve customer branch:', err.message);
+  }
   initPortal();
 });
 
@@ -143,7 +186,7 @@ function initPortal() {
   // (e.g. token restored from localStorage), just bounce straight back
   // instead of showing the dashboard.
   if (customerState.customer && localStorage.getItem('eb_return_to_checkout') === '1') {
-    window.location.href = '/index.html';
+    window.location.href = withBranch('/index.html');
     return;
   }
   renderPortal();
@@ -360,7 +403,7 @@ async function handleLogin(event) {
       // Came here from checkout — go back so the customer can finish
       // placing their order. The cart is untouched (localStorage) and
       // index.html's init() will consume the flag and jump to checkout.
-      window.location.href = '/index.html';
+      window.location.href = withBranch('/index.html');
       return;
     }
     renderPortal();
@@ -401,7 +444,7 @@ async function handleRegister(event) {
       // Came here from checkout — go back so the customer can finish
       // placing their order. The cart is untouched (localStorage) and
       // index.html's init() will consume the flag and jump to checkout.
-      window.location.href = '/index.html';
+      window.location.href = withBranch('/index.html');
       return;
     }
     renderPortal();
@@ -487,7 +530,7 @@ function renderDashboardPaneHtml() {
         <p class="text-xs uppercase tracking-[.4em] text-muted">View Menu</p>
         <h2 class="text-2xl font-semibold mb-4">Browse our full menu</h2>
         <p class="text-muted mb-6">Head back to the main site to choose food, add to cart, and place a fresh order.</p>
-        <a href="/" class="link-button">Open Menu</a>
+        <a href="${withBranch('/')}" class="link-button">Open Menu</a>
       </div>
     `;
   }
@@ -620,7 +663,7 @@ async function handleReservationSubmit(event) {
     await apiFetch('/api/reservations', {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guestName, email: customerState.customer.email || '', phone, date, time, guests, notes })
+      body: JSON.stringify({ guestName, email: customerState.customer.email || '', phone, date, time, guests, notes, branchId: getBranchId() || undefined })
     });
     showToast('Reservation request sent. Admin will confirm it soon.', 'success');
     await loadCustomerData();
@@ -712,7 +755,7 @@ function bindDashboardEvents() {
 
 async function loadCustomerReservations() {
   try {
-    const reservations = await apiFetch('/api/reservations/mine/list', { headers: authHeaders() });
+    const reservations = await apiFetch(withBranch('/api/reservations/mine/list'), { headers: authHeaders() });
     customerState.reservations = Array.isArray(reservations) ? reservations : [];
     renderReservations();
     return customerState.reservations;
@@ -725,9 +768,9 @@ async function loadCustomerReservations() {
 async function loadCustomerData() {
   try {
     const [orders, complaints, reservations] = await Promise.all([
-      apiFetch('/api/orders/mine/list', { headers: authHeaders() }),
-      apiFetch('/api/complaints/mine/list', { headers: authHeaders() }),
-      apiFetch('/api/reservations/mine/list', { headers: authHeaders() })
+      apiFetch(withBranch('/api/orders/mine/list'), { headers: authHeaders() }),
+      apiFetch(withBranch('/api/complaints/mine/list'), { headers: authHeaders() }),
+      apiFetch(withBranch('/api/reservations/mine/list'), { headers: authHeaders() })
     ]);
     customerState.orders = Array.isArray(orders) ? orders : [];
     customerState.complaints = Array.isArray(complaints) ? complaints : [];
@@ -977,7 +1020,7 @@ async function renderTracking(orderNumber) {
   }
   panel.innerHTML = `<div class="portal-card"><p class="text-muted">Loading tracking details…</p></div>`;
   try {
-    const order = await apiFetch('/api/orders/mine/' + encodeURIComponent(orderNumber), { headers: authHeaders() });
+    const order = await apiFetch(withBranch('/api/orders/mine/' + encodeURIComponent(orderNumber)), { headers: authHeaders() });
     if (!order || !order.orderNumber || !order.status) {
       throw new Error('This order could not be loaded. Please choose it again from My Orders.');
     }
@@ -1086,7 +1129,7 @@ async function renderTracking(orderNumber) {
     if (!['completed', 'cancelled'].includes(order.status)) {
       customerTrackingPoll = setInterval(async () => {
         try {
-          const fresh = await apiFetch('/api/orders/mine/' + encodeURIComponent(order.orderNumber), { headers: authHeaders() });
+          const fresh = await apiFetch(withBranch('/api/orders/mine/' + encodeURIComponent(order.orderNumber)), { headers: authHeaders() });
           if (fresh.status !== order.status) {
             if (fresh.status === 'ready') showToast(`Order ${order.orderNumber} is ready!`, 'info');
             if (fresh.status === 'completed') showToast(`Order ${order.orderNumber} completed. Enjoy!`, 'success');

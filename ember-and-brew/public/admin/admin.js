@@ -978,6 +978,10 @@
   function getAdminAllowedStatuses(o) {
     const isDelivery = o.orderType === 'delivery';
     switch (o.status) {
+      case 'pending_admin':
+        // Admin decision point: approve for the kitchen or reject.
+        return ['pending_admin', 'pending_kitchen', 'cancelled'];
+      case 'pending_kitchen':
       case 'received':
       case 'preparing':
         // Kitchen-owned — admin has no status control here at all.
@@ -999,13 +1003,20 @@
   }
 
   function lockedStatusReason(o) {
-    if (o.status === 'received' || o.status === 'preparing') {
+    if (['pending_kitchen', 'received', 'preparing'].includes(o.status)) {
       return 'Controlled by the kitchen — the chef updates this stage';
     }
     if (['completed', 'delivered', 'cancelled'].includes(o.status)) {
       return 'Order finalized — status is locked';
     }
     return '';
+  }
+
+  function adminStatusLabel(status) {
+    if (status === 'pending_admin') return 'Awaiting review';
+    if (status === 'pending_kitchen') return 'Approve — Send to Kitchen';
+    if (status === 'cancelled') return 'Reject — Cancel Order';
+    return status.replace('-', ' ');
   }
 
   function renderOrdersTable(orders) {
@@ -1018,7 +1029,7 @@
       const canEdit = allowed.length > 1; // more than just the current status
       const statusCell = canEdit
         ? `<select class="status-select" data-order="${o.orderNumber}">
-            ${allowed.map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s.replace('-', ' ')}</option>`).join('')}
+            ${allowed.map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${adminStatusLabel(s)}</option>`).join('')}
           </select>`
         : `<span class="status-locked" title="${escapeHtml(lockedStatusReason(o))}">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;">

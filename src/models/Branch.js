@@ -25,6 +25,13 @@ const branchSchema = new mongoose.Schema({
 
   address: { type: String, default: '' },
   phone: { type: String, default: '' },
+  // Branch-specific picture for its public landing page.
+  heroImage: { type: String, default: '' },
+  // Customer-facing delivery areas and payment labels are branch specific.
+  // Keep these on the branch rather than in global constants: a London
+  // customer must never be offered Faisalabad zones or Pakistan-only methods.
+  deliveryZones: { type: [String], default: [] },
+  paymentMethods: { type: [String], default: [] },
 
   // Branch's center point, same GeoJSON convention as Order.deliveryLocation
   // ([longitude, latitude]) — used later for "which branch covers this
@@ -70,7 +77,10 @@ branchSchema.statics.createDefaultBranch = async function () {
     timezone: 'Asia/Karachi',  // <-- set to your real IANA timezone
     taxRate: 0.08,             // <-- set to your real tax rate
     address: '',
-    phone: ''
+    phone: '',
+    heroImage: '',
+    deliveryZones: [],
+    paymentMethods: ['Cash on delivery']
   });
 };
 

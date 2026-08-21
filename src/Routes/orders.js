@@ -12,7 +12,7 @@ const { customerAuth, optionalCustomerAuth } = require('./customerAuth');
 const REGIONS = require('../data/regions');
 const REGION_CENTERS = require('../data/regionCenters');
 const { haversineKm } = require('../utils/geo');
-const { isAdminRole, resolveBranchId } = require('../utils/branchScope');
+const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
 
 // Generates an order number that is NOT guessable/sequential (e.g. EB-4K9QXP).
 // Anyone who has this number can look the order up on the public tracking
@@ -53,10 +53,19 @@ function adminAuth(req, res, next) {
 function customerOrderPayload(order) {
   const payload = order.toObject ? order.toObject() : order;
   const canSeeOtp = payload.orderType === 'delivery'
-    && payload.status !== 'received'
+    && !['pending_admin', 'received'].includes(payload.status)
     && !payload.otpVerified;
   if (!canSeeOtp) delete payload.otp;
   return payload;
+}
+
+function normalizePakistanPhone(raw) {
+  let value = String(raw || '').trim();
+  const hasPlus = value.startsWith('+');
+  value = value.replace(/\D/g, '');
+  if (hasPlus) value = '92' + value.replace(/^92/, '');
+  if (value.startsWith('92') && value.length === 12) value = '0' + value.slice(2);
+  return value;
 }
 
 // Supports delivery orders created before OTP confirmation was introduced.
@@ -76,7 +85,7 @@ async function ensureCustomerDeliveryOtp(order) {
     return order;
   }
 
-  if (order.orderType === 'delivery' && order.status !== 'received' && !order.otpVerified && !order.otp) {
+  if (order.orderType === 'delivery' && !['pending_admin', 'received'].includes(order.status) && !order.otpVerified && !order.otp) {
     const otp = crypto.randomInt(100000, 1000000).toString();
     // Avoid a document save here: Order's post-save hook records menu pair
     // counts and should run only when an order is actually created.
@@ -87,8 +96,10 @@ async function ensureCustomerDeliveryOtp(order) {
 }
 
 // GET /api/orders/meta/regions — public list of valid delivery regions
-router.get('/meta/regions', (req, res) => {
-  res.json({ regions: REGIONS });
+router.get('/meta/regions', async (req, res) => {
+  const branchId = await resolvePublicBranchId(req.query);
+  const branch = branchId ? await Branch.findById(branchId).select('deliveryZones') : null;
+  res.json({ regions: branch?.deliveryZones?.length ? branch.deliveryZones : REGIONS });
 });
 
 // The browser key is intentionally public, but it must be restricted to the
@@ -103,9 +114,13 @@ router.get('/map-config', (req, res) => {
 router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
     const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, tableNumber } = req.body;
+    const branchId = await resolvePublicBranchId(req.query);
+    const branch = branchId ? await Branch.findOne({ _id: branchId, isActive: true }) : null;
+    if (!branch) return res.status(400).json({ error: 'Please select an active branch before ordering.' });
+    const deliveryZones = branch.deliveryZones?.length ? branch.deliveryZones : REGIONS;
     if (!items || items.length === 0) return res.status(400).json({ error: 'Cart is empty' });
 
-    if (orderType === 'delivery' && !REGIONS.includes(region)) {
+    if (orderType === 'delivery' && !deliveryZones.includes(region)) {
       return res.status(400).json({ error: 'Please choose a valid delivery region.' });
     }
 
@@ -152,12 +167,17 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       orderCustomerPhone = customer.phone;
     } else {
       const name = (guestName || '').trim();
-      const phone = (guestPhone || '').trim();
+      let phone = (guestPhone || '').trim();
       if (name.length < 2) {
         return res.status(400).json({ error: 'Please enter your name.' });
       }
-      if (!/^\d{11}$/.test(phone)) {
-        return res.status(400).json({ error: 'Phone number must be exactly 11 digits.' });
+      if (branch.countryCode === 'PK') {
+        phone = normalizePakistanPhone(phone);
+        if (!/^0\d{10}$/.test(phone)) {
+          return res.status(400).json({ error: 'Please enter a valid Pakistan phone number, e.g. 03001234567.' });
+        }
+      } else if (!/^\+?[1-9]\d{6,14}$/.test(phone.replace(/[\s()-]/g, ''))) {
+        return res.status(400).json({ error: 'Please enter a valid phone number including its country code.' });
       }
       orderCustomerName = name;
       orderCustomerPhone = phone;
@@ -175,7 +195,9 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       }
     }
     const menuItemIds = items.map(i => i.menuItemId);
-    const menuItemDocs = await MenuItem.find({ _id: { $in: menuItemIds }, available: true });
+    const menuQuery = { _id: { $in: menuItemIds }, available: true };
+    await addBranchScope(menuQuery, String(branch._id));
+    const menuItemDocs = await MenuItem.find(menuQuery);
     const menuItemById = new Map(menuItemDocs.map(m => [m._id.toString(), m]));
 
     const missing = items.find(i => !menuItemById.has(i.menuItemId));
@@ -194,19 +216,9 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
     });
 
     const subtotal = resolvedItems.reduce((s, i) => s + i.price * i.qty, 0);
-    const tax = subtotal * 0.08;
+    const tax = subtotal * branch.taxRate;
 
     const orderNumber = await generateOrderNumber();
-
-    // Until the customer site has a branch/location picker, every new order
-    // is automatically attached to the one active branch. Once there are
-    // multiple branches, this becomes: read a branchId from req.body (set
-    // by the picker), and validate it's an active branch instead of just
-    // grabbing whichever one exists.
-    const branch = await Branch.findOne({ isActive: true });
-    if (!branch) {
-      return res.status(500).json({ error: 'No active branch is configured. Please contact support.' });
-    }
 
     const order = new Order({
       orderNumber,
@@ -232,7 +244,8 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       // Generated at checkout but not shown until the order is accepted.
       otp: orderType === 'delivery' ? crypto.randomInt(100000, 1000000).toString() : undefined,
       otpVerified: false,
-      statusLog: [{ status: 'received', time: new Date() }]
+      status: 'pending_admin',
+      statusLog: [{ status: 'pending_admin', time: new Date() }]
     });
 
     await order.save();
@@ -306,7 +319,7 @@ router.get('/stats/summary', adminAuth, async (req, res) => {
       Order.find({ ...baseFilter, createdAt: { $gte: startOfToday } })
     ]);
 
-    const activeStatuses = ['received', 'preparing', 'ready'];
+    const activeStatuses = ['pending_admin', 'pending_kitchen', 'received', 'preparing', 'ready'];
     const totalRevenue = allOrders
       .filter(o => o.status !== 'cancelled')
       .reduce((sum, o) => sum + o.total, 0);
@@ -385,11 +398,21 @@ router.get('/:id', async (req, res) => {
 router.put('/:id/status', adminAuth, async (req, res) => {
   try {
     const { status } = req.body;
-    const valid = ['received', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'completed', 'cancelled'];
+    const valid = ['pending_admin', 'pending_kitchen', 'received', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'completed', 'cancelled'];
     if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
     const existing = await Order.findOne({ orderNumber: req.params.id });
     if (!existing) return res.status(404).json({ error: 'Order not found' });
+
+    if (existing.status === 'pending_admin' && !['pending_kitchen', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'A pending admin order can only be approved for the kitchen or rejected.' });
+    }
+    if (status === 'pending_kitchen' && existing.status !== 'pending_admin') {
+      return res.status(400).json({ error: 'Only an admin-approved order can be sent to the kitchen.' });
+    }
+    if (['pending_kitchen', 'received', 'preparing'].includes(existing.status) && status !== existing.status) {
+      return res.status(400).json({ error: 'This order is controlled by the kitchen.' });
+    }
 
     const deliveryOnlyStatuses = ['out-for-delivery', 'delivered'];
     if (existing.orderType !== 'delivery' && deliveryOnlyStatuses.includes(status)) {
