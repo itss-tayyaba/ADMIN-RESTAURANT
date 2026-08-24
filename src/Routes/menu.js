@@ -61,7 +61,7 @@ router.get('/admin', adminAuth, async (req, res) => {
     const branchId = resolveBranchId(req.admin, req.query);
     const filter = {};
     await addLegacyDefaultMenuFilter(filter, branchId);
-    const items = await MenuItem.find(filter).sort({ category: 1, name: 1 });
+    const items = await MenuItem.find(filter).sort({ category: 1, name: 1 }).lean();
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch menu' });
@@ -167,7 +167,9 @@ router.get('/', async (req, res) => {
         { description: { $regex: search, $options: 'i' } }
       ];
     }
-    const items = await MenuItem.find(query).sort({ category: 1, name: 1 });
+    // `lean()` skips Mongoose document hydration because this is a read-only
+    // public response, reducing work for every menu request.
+    const items = await MenuItem.find(query).sort({ category: 1, name: 1 }).lean();
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch menu' });

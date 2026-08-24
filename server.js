@@ -39,12 +39,6 @@ function connectDatabase() {
     if (!databaseConnection) {
         databaseConnection = mongoose
             .connect(process.env.MONGODB_URI)
-            .then(async () => {
-                await Branch.createDefaultBranch();
-                await AdminUser.createDefaultAdmin();
-                await AdminUser.createDefaultChef();
-                await AdminUser.createDefaultDelivery();
-            })
             .catch((err) => {
                 databaseConnection = null;
                 throw err;
@@ -77,12 +71,6 @@ app.use(cors());
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
-
-app.use((req, res, next) => {
-    connectDatabase()
-        .then(() => next())
-        .catch(next);
-});
 
 // ===================== STATIC FILES =====================
 
@@ -164,6 +152,16 @@ app.get("/order/:branchCode", (req, res) => {
 });
 
 // ===================== API =====================
+
+// Static pages, scripts, styles, and images do not require MongoDB. Keep
+// them outside this middleware so a database cold start never delays the
+// initial page render. Every API endpoint below still waits for the shared
+// database connection before accessing data.
+app.use("/api", (req, res, next) => {
+    connectDatabase()
+        .then(() => next())
+        .catch(next);
+});
 
 app.use("/api/menu", menuRoutes);
 

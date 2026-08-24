@@ -1050,18 +1050,37 @@ async function initialiseBranch() {
 
 async function loadPublicMenu() {
   const grid = document.getElementById('menu-grid');
-  if (grid) grid.innerHTML = '<p class="text-center text-brand-800 py-16 text-sm col-span-full">Loading menu…</p>';
+  const cacheKey = `eb_menu_cache_${branchState.id || 'default'}`;
+  let showedCachedMenu = false;
+
+  // Render the last successful menu while the live request refreshes it.
+  // This avoids an empty page during a serverless cold start.
   try {
-    const [items, cats] = await Promise.all([
-      fetch(branchUrl('/api/menu')).then(r => r.json()),
-      fetch(branchUrl('/api/menu/categories')).then(r => r.json())
-    ]);
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (Array.isArray(cached?.items) && cached.items.length) {
+      MENU = cached.items;
+      CATEGORIES = Array.isArray(cached.categories) && cached.categories.length
+        ? cached.categories
+        : ['All', ...new Set(MENU.map(item => item.cat).filter(Boolean))];
+      showedCachedMenu = true;
+      if (state.currentView === 'menu') renderMenu();
+    }
+  } catch {
+    localStorage.removeItem(cacheKey);
+  }
+  if (!showedCachedMenu && grid) grid.innerHTML = '<p class="text-center text-brand-800 py-16 text-sm col-span-full">Loading menu…</p>';
+  try {
+    const response = await fetch(branchUrl('/api/menu'));
+    if (!response.ok) throw new Error('Menu request failed');
+    const items = await response.json();
     MENU = (Array.isArray(items) ? items : []).map(i => ({
       id: i._id, name: i.name, desc: i.description, price: i.price, cat: i.category,
       img: resolveImageUrl(i.image)
     }));
-    CATEGORIES = Array.isArray(cats) && cats.length ? cats : ['All'];
+    CATEGORIES = ['All', ...new Set(MENU.map(item => item.cat).filter(Boolean))];
+    localStorage.setItem(cacheKey, JSON.stringify({ items: MENU, categories: CATEGORIES }));
   } catch (err) {
+    if (showedCachedMenu) return;
     MENU = [];
     CATEGORIES = ['All'];
     if (grid) grid.innerHTML = '<div class="text-center py-16 col-span-full"><p class="text-terra-400 text-sm mb-3">Could not load the menu. Is the server running and connected to the database?</p><button onclick="loadPublicMenu()" class="text-brand-400 text-sm underline">Try again</button></div>';
