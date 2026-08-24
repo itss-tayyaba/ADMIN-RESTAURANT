@@ -13,6 +13,7 @@ const REGIONS = require('../data/regions');
 const REGION_CENTERS = require('../data/regionCenters');
 const { haversineKm } = require('../utils/geo');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
+const { notifyCustomer } = require('../services/notificationService');
 
 // Generates an order number that is NOT guessable/sequential (e.g. EB-4K9QXP).
 // Anyone who has this number can look the order up on the public tracking
@@ -113,7 +114,7 @@ router.get('/map-config', (req, res) => {
 // required instead and no account is created or required).
 router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
-    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, tableNumber } = req.body;
+    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, tableNumber, pushToken } = req.body;
     const branchId = await resolvePublicBranchId(req.query);
     const branch = branchId ? await Branch.findOne({ _id: branchId, isActive: true }) : null;
     if (!branch) return res.status(400).json({ error: 'Please select an active branch before ordering.' });
@@ -231,6 +232,7 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       total: subtotal + tax,
       customerName: orderCustomerName,
       customerPhone: orderCustomerPhone,
+      pushTokens: typeof pushToken === 'string' && pushToken.length <= 4096 ? [pushToken] : [],
       orderType: orderType || 'dine-in',
       // Only meaningful for dine-in — ignore it entirely for takeaway/delivery
       // even if a stray value is sent, so it can never mislabel those orders.
@@ -249,6 +251,7 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
     });
 
     await order.save();
+    await notifyCustomer(order, 'pending_admin');
 
     // A dine-in order placed via a scanned table QR is the clearest signal
     // you have that a table is actually in use — reflect that on the Floor
@@ -434,6 +437,7 @@ router.put('/:id/status', adminAuth, async (req, res) => {
       { new: true }
     );
     if (!order) return res.status(404).json({ error: 'Order not found' });
+    await notifyCustomer(order, status);
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order' });

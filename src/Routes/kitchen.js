@@ -2,15 +2,17 @@ const express = require("express");
 const router = express.Router();
 
 const Order = require("../models/Order");
+const AdminUser = require("../models/AdminUser");
 const jwt = require("jsonwebtoken");
 const { autoAssignOrder } = require("./delivery");
 const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
+const { notifyCustomer } = require("../services/notificationService");
 
 // =====================================
 // CHEF AUTH
 // =====================================
 
-const kitchenAuth = (req, res, next) => {
+const kitchenAuth = async (req, res, next) => {
 
     try {
 
@@ -32,7 +34,16 @@ const kitchenAuth = (req, res, next) => {
             });
         }
 
-        req.user = decoded;
+        // Read the current staff record rather than trusting a branchId in an
+        // old JWT. A chef is never allowed to fall back to another branch.
+        const chef = await AdminUser.findOne({ _id: decoded.id, role: "chef", active: true }).select("branchId");
+        if (!chef?.branchId) {
+            return res.status(403).json({
+                success: false,
+                message: "This kitchen account is not assigned to a branch. Ask a superadmin to assign it."
+            });
+        }
+        req.user = { ...decoded, branchId: String(chef.branchId) };
 
         next();
 
@@ -101,20 +112,19 @@ router.get("/orders", kitchenAuth, async (req, res) => {
     try {
 
 
-        const orders = await Order.find({
-
+        const filter = {
             branchId: req.user.branchId,
-
             status: {
                 $in: [
+                    "pending_admin",
                     "pending_kitchen",
                     "received",
                     "preparing",
                     "ready"
                 ]
             }
-
-        })
+        };
+        const orders = await Order.find(filter)
 
         .populate(
             "customer",
@@ -167,7 +177,8 @@ router.put("/:id/accept", kitchenAuth, async (req,res)=>{
     try{
 
 
-        const order = await Order.findOne({ _id: req.params.id, branchId: req.user.branchId });
+        const orderFilter = { _id: req.params.id, branchId: req.user.branchId };
+        const order = await Order.findOne(orderFilter);
 
 
 
@@ -204,6 +215,7 @@ order.status = "preparing";
 
 
         await order.save();
+        await notifyCustomer(order, "preparing");
 
         // emit real-time update to connected clients
         try {
@@ -248,7 +260,8 @@ router.put("/:id/prepared", kitchenAuth, async(req,res)=>{
     try{
 
 
-        const order = await Order.findOne({ _id: req.params.id, branchId: req.user.branchId });
+        const orderFilter = { _id: req.params.id, branchId: req.user.branchId };
+        const order = await Order.findOne(orderFilter);
 
 
 
@@ -290,6 +303,7 @@ order.status = "ready";
 
 
         await order.save();
+        await notifyCustomer(order, "ready");
 
         const io = req.app && req.app.locals && req.app.locals.io;
 

@@ -57,6 +57,20 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 .menu-card:hover img{transform:scale(1.05)}
 .menu-card .add-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:8px 16px;font-weight:600;cursor:pointer;transition:all .25s;font-family:inherit;font-size:14px}
 .menu-card .add-btn:hover{background:var(--accent);color:var(--bg)}
+.menu-card .card-qty-control{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;min-height:38px;border:1px solid var(--accent);border-radius:8px;overflow:hidden;color:var(--accent);background:rgba(212,168,83,.08)}
+.menu-card .card-qty-control button{height:100%;border:0;background:transparent;color:inherit;cursor:pointer;font-size:14px;transition:background .2s,color .2s}
+.menu-card .card-qty-control button:hover{background:var(--accent);color:var(--bg)}
+.menu-card .card-qty-control span{text-align:center;font-size:14px;font-weight:700;color:var(--text)}
+
+/* Compact cart summary for phones, mirroring the quick-shop experience. */
+#mobile-cart-bar{position:fixed;z-index:190;right:16px;bottom:16px;left:16px;display:none;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border:1px solid rgba(212,168,83,.5);border-radius:16px;background:rgba(36,34,32,.96);box-shadow:0 12px 38px rgba(0,0,0,.45);backdrop-filter:blur(14px);color:var(--text);cursor:pointer;transition:transform .22s ease,opacity .22s ease}
+#mobile-cart-bar.visible{display:flex}
+.mobile-cart-summary{display:flex;align-items:center;gap:10px;min-width:0;text-align:left}
+.mobile-cart-count{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;border-radius:50%;background:var(--accent);color:var(--bg);font-size:13px;font-weight:800}
+.mobile-cart-label{font-size:12px;color:var(--muted);line-height:1.1}
+.mobile-cart-total{font-size:15px;font-weight:700;margin-top:2px}
+.mobile-cart-action{display:inline-flex;align-items:center;gap:7px;color:var(--accent);font-size:14px;font-weight:700;white-space:nowrap}
+@media(min-width:1280px){#mobile-cart-bar{display:none!important}}
 
 /* Dish flip card — click the real menu photo to flip it over and
    reveal the description, using an actual CSS 3D rotation. */
@@ -959,6 +973,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 <!-- Toast container -->
 <div id="toast-container" class="fixed bottom-6 right-6 z-[400] flex flex-col gap-3" aria-live="polite"></div>
 
+<script src="/order-notifications.js"></script>
 <script>
 // ============================================
 // MENU DATA
@@ -1526,12 +1541,37 @@ function filterMenu() {
           <span class="text-brand-400 font-semibold text-sm whitespace-nowrap">${formatMoney(item.price)}</span>
         </div>
         <p class="text-brand-800 text-xs leading-relaxed mb-4 line-clamp-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${item.desc}</p>
-        <button class="add-btn w-full" onclick="addToCart('${item.id}')" aria-label="Add ${item.name} to cart">
-          <i class="fa-solid fa-plus text-xs mr-1"></i> Add to Cart
-        </button>
+        ${renderMenuCardAction(item)}
       </div>
     </article>
   `).join('');
+}
+
+function getSimpleCartLine(itemId) {
+  return state.cart.find(c => c.item.id === itemId && !(c.addons && c.addons.length));
+}
+
+function renderMenuCardAction(item) {
+  const line = getSimpleCartLine(item.id);
+  if (!line) {
+    return `<button class="add-btn w-full" onclick="addToCart('${item.id}')" aria-label="Add ${item.name} to cart">
+      <i class="fa-solid fa-plus text-xs mr-1"></i> Add to Cart
+    </button>`;
+  }
+  return `<div class="card-qty-control" role="group" aria-label="${item.name} quantity">
+    <button type="button" onclick="changeMenuItemQty('${item.id}', -1)" aria-label="Remove one ${item.name}"><i class="fa-solid fa-minus text-xs"></i></button>
+    <span aria-live="polite">${line.qty}</span>
+    <button type="button" onclick="changeMenuItemQty('${item.id}', 1)" aria-label="Add one more ${item.name}"><i class="fa-solid fa-plus text-xs"></i></button>
+  </div>`;
+}
+
+function changeMenuItemQty(itemId, delta) {
+  const lineIndex = state.cart.findIndex(c => c.item.id === itemId && !(c.addons && c.addons.length));
+  if (lineIndex === -1) {
+    if (delta > 0) addToCart(itemId);
+    return;
+  }
+  updateQty(lineIndex, delta);
 }
 
 function renderMenu() {
@@ -1715,6 +1755,7 @@ function addItemToCart(item, addons = [], qty = 1) {
   }
   updateCartBadge();
   renderCartItems();
+  refreshMenuCardActions();
   showToast(`${item.name} added to cart`, 'success');
   // AI upsell — powered by the real /api/recommendations endpoint.
   // Personalized (ranks the customer's own past pairings first) when
@@ -1751,6 +1792,7 @@ function removeFromCart(index) {
   state.cart.splice(index, 1);
   renderCartItems();
   updateCartBadge();
+  refreshMenuCardActions();
 }
 
 function updateQty(index, delta) {
@@ -1758,6 +1800,7 @@ function updateQty(index, delta) {
   if (state.cart[index].qty <= 0) state.cart.splice(index, 1);
   renderCartItems();
   updateCartBadge();
+  refreshMenuCardActions();
 }
 
 function clearCart() {
@@ -1766,6 +1809,11 @@ function clearCart() {
   state.cart = [];
   renderCartItems();
   updateCartBadge();
+  refreshMenuCardActions();
+}
+
+function refreshMenuCardActions() {
+  if (document.getElementById('menu-grid')) filterMenu();
 }
 
 function cartLineUnitPrice(c) {
@@ -1841,6 +1889,21 @@ function renderCartInto(containerId, footerId, subtotalId, taxId, totalId) {
 function renderCartItems() {
   renderCartInto('cart-items', 'cart-footer', 'cart-subtotal', 'cart-tax', 'cart-total');
   renderCartInto('inline-cart-items', 'inline-cart-footer', 'inline-cart-subtotal', 'inline-cart-tax', 'inline-cart-total');
+  renderMobileCartBar();
+}
+
+function renderMobileCartBar() {
+  const bar = document.getElementById('mobile-cart-bar');
+  if (!bar) return;
+  const count = state.cart.reduce((sum, line) => sum + line.qty, 0);
+  if (!count) {
+    bar.classList.remove('visible');
+    return;
+  }
+  const total = getCartSubtotal() * (1 + (branchState.info?.taxRate ?? 0.08));
+  document.getElementById('mobile-cart-count').textContent = count;
+  document.getElementById('mobile-cart-total').textContent = formatMoney(total);
+  bar.classList.add('visible');
 }
 
 function toggleCart() {
@@ -2679,6 +2742,7 @@ async function handleCheckout(e) {
   submitBtn.textContent = 'Placing order…';
 
   try {
+    const pushToken = await window.getOrderPushToken?.() || '';
     const items = state.cart.map(c => ({
       menuItemId: c.item.id,
       name: c.addons && c.addons.length ? `${c.item.name} (+${c.addons.map(a => a.name).join(', +')})` : c.item.name,
@@ -2689,7 +2753,7 @@ async function handleCheckout(e) {
       method: 'POST',
       headers: state.customerToken ? authHeaders(state.customerToken) : { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        items, orderType, deliveryAddress: address, deliveryLocation, region, notes, guestName, guestPhone,
+        items, orderType, deliveryAddress: address, deliveryLocation, region, notes, guestName, guestPhone, pushToken,
         // Only meaningful for dine-in orders placed via a scanned table QR —
         // syncCheckoutOrderTypeWithQrTable() already forces orderType to
         // 'dine-in' whenever state.qrTable is set, so this stays consistent.

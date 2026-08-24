@@ -19,6 +19,16 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: `This account is registered as "${user.role}", not "${role}". Please select the correct role.` });
     }
 
+    // Migrate pre-branch staff accounts as they next sign in. They all belong
+    // to the original restaurant branch; without this, new branch-scoped
+    // orders are invisible to an old chef/admin/rider session.
+    if (user.role !== 'superadmin' && !user.branchId) {
+      const Branch = require('../models/Branch');
+      const defaultBranch = await Branch.createDefaultBranch();
+      user.branchId = defaultBranch._id;
+      await user.save();
+    }
+
     const token = jwt.sign(
       { id: user._id, username: user.username, role: user.role, branchId: user.branchId || null },
       process.env.JWT_SECRET,

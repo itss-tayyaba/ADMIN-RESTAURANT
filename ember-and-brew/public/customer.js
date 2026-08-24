@@ -10,6 +10,10 @@ const customerState = {
   authMode: 'login'
 };
 
+// Push notifications open the customer portal with this order selected.
+const notificationOrderNumber = new URLSearchParams(window.location.search).get('order');
+if (notificationOrderNumber) customerState.selectedOrderNumber = notificationOrderNumber.trim();
+
 // ============================================
 // BRANCH SCOPING
 // ============================================

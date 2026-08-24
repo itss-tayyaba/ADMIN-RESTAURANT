@@ -149,6 +149,20 @@ ember-and-brew/public/       Frontend — one folder per portal
 
 ## Notes
 
+### Customer order notifications
+
+Order creation and every customer-facing status transition call
+`src/services/notificationService.js`. Web push is opt-in at checkout and uses
+Firebase Cloud Messaging; its browser token is stored with the order, so guest
+checkout works too. Copy the Firebase variables from `.env.example` into the
+deployment environment, including either the server credential variables or
+`FIREBASE_SERVICE_ACCOUNT_JSON`.
+
+WhatsApp is optional and uses Twilio when its `TWILIO_*` variables are
+configured. Set `TWILIO_WHATSAPP_CONTENT_SID` to an approved template whose
+variables `{{1}}` and `{{2}}` are the title and message body; this is required
+for proactive WhatsApp updates outside the customer chat window.
+
 - The order status flow is `received → preparing → ready → out-for-delivery
   → delivered → completed` (`cancelled` also exists in the schema).
 - `npm run seed` wipes and re-inserts menu items (not orders or accounts).

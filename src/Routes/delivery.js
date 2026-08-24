@@ -6,6 +6,7 @@ const AdminUser = require("../models/AdminUser");
 const jwt = require("jsonwebtoken");
 const REGIONS = require("../data/regions");
 const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
+const { notifyCustomer } = require("../services/notificationService");
 
 // A rider can't hold more than this many active ("out-for-delivery") orders
 // at once. Once they hit this cap they're skipped by auto-assignment until
@@ -16,7 +17,7 @@ const MAX_ACTIVE_ORDERS = 5;
 // DELIVERY BOY AUTH
 // =====================================
 
-const deliveryAuth = (req, res, next) => {
+const deliveryAuth = async (req, res, next) => {
 
     try {
 
@@ -38,7 +39,16 @@ const deliveryAuth = (req, res, next) => {
             });
         }
 
-        req.user = decoded;
+        // Enforce the rider's live database assignment. Do not allow an old
+        // token without a branch to access a different branch's workload.
+        const rider = await AdminUser.findOne({ _id: decoded.id, role: "delivery", active: true }).select("branchId");
+        if (!rider?.branchId) {
+            return res.status(403).json({
+                success: false,
+                message: "This rider account is not assigned to a branch. Ask a superadmin to assign it."
+            });
+        }
+        req.user = { ...decoded, branchId: String(rider.branchId) };
 
         next();
 
@@ -141,6 +151,7 @@ async function autoAssignOrder(order, io) {
     });
 
     await order.save();
+    await notifyCustomer(order, "out-for-delivery");
 
     rider.activeOrders += 1;
     await rider.save();
@@ -494,6 +505,7 @@ router.put("/:id/assign", adminAuth, async (req, res) => {
         });
 
         await order.save();
+        await notifyCustomer(order, "out-for-delivery");
 
         rider.activeOrders += 1;
         await rider.save();
@@ -532,6 +544,7 @@ router.get("/orders", deliveryAuth, async (req, res) => {
 
         const orders = await Order.find({
             deliveryBoy: req.user.id,
+            branchId: req.user.branchId,
             status: { $in: ["out-for-delivery", "delivered", "completed"] }
         })
 
@@ -572,7 +585,7 @@ router.put("/location", deliveryAuth, async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid rider coordinates." });
         }
         const update = await Order.updateMany(
-            { deliveryBoy: req.user.id, status: "out-for-delivery" },
+            { deliveryBoy: req.user.id, branchId: req.user.branchId, status: "out-for-delivery" },
             { $set: { riderLocation: { type: "Point", coordinates: [longitude, latitude], updatedAt: new Date() } } }
         );
         if (!update.matchedCount) return res.status(409).json({ success: false, message: "There is no active delivery to share." });
@@ -595,19 +608,16 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
         }
 
         // otp is select:false and is retrieved only for this comparison.
-        const order = await Order.findById(req.params.id).select("+otp");
+        const order = await Order.findOne({
+            _id: req.params.id,
+            deliveryBoy: req.user.id,
+            branchId: req.user.branchId
+        }).select("+otp");
 
         if (!order) {
             return res.status(404).json({
                 success: false,
                 message: "Order not found"
-            });
-        }
-
-        if (String(order.deliveryBoy) !== String(req.user.id)) {
-            return res.status(403).json({
-                success: false,
-                message: "This order is not assigned to you."
             });
         }
 
@@ -642,6 +652,7 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
         });
 
         await order.save();
+        await notifyCustomer(order, "completed");
 
         // Free up a slot for this rider so they can be auto-assigned again.
         await AdminUser.findByIdAndUpdate(req.user.id, {

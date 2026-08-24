@@ -68,6 +68,7 @@ const kitchenRoutes = require("./src/Routes/kitchen");
 const deliveryRoutes = require("./src/Routes/delivery");
 const chatbotRoutes = require("./src/Routes/chatbot");
 const branchesRoutes = require("./src/Routes/branches");
+const notificationRoutes = require("./src/Routes/notifications");
 
 // ===================== MIDDLEWARE =====================
 
@@ -187,6 +188,8 @@ app.use("/api/delivery", deliveryRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 
 app.use("/api/branches", branchesRoutes);
+
+app.use("/api/notifications", notificationRoutes);
 
 // ===================== LOGIN PAGE =====================
 

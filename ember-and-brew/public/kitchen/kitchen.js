@@ -412,7 +412,7 @@ function buildCard(o) {
     btn.addEventListener('click', () => bumpOrder(o._id));
   } else {
     btn.className = 'btn-action waiting';
-    btn.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Waiting For Admin`;
+    btn.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Awaiting Admin Approval`;
     btn.disabled = true;
   }
   foot.appendChild(btn);
