@@ -2824,6 +2824,10 @@ async function handleCheckout(e) {
     showToast(`Enter your name and a valid ${phone.country} phone number beginning with +${phone.dialCode}.`, 'error');
     valid = false;
   }
+  if (!state.customer && guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
+    showToast('Please enter a valid email address (e.g. name@gmail.com).', 'error');
+    valid = false;
+  }
   if (state.cart.length === 0) { showToast('Your cart is empty.', 'error'); valid = false; }
   if (!valid) return;
 

@@ -209,6 +209,9 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       }
       orderCustomerName = name;
       orderCustomerPhone = phone;
+      if (guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) {
+        return res.status(400).json({ error: 'Please enter a valid email address.' });
+      }
       orderCustomerEmail = (guestEmail || '').trim();
     }
 
