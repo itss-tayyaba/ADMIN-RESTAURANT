@@ -124,21 +124,23 @@ async function sendPush(order, message) {
 let emailTransporter = null;
 
 function getEmailTransporter() {
-  if (emailTransporter) return emailTransporter;
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE, EMAIL_SERVICE } = process.env;
-  if (EMAIL_SERVICE) {
+  if (!SMTP_USER || !SMTP_PASS) return null;
+  if (emailTransporter) return emailTransporter;
+
+  if (EMAIL_SERVICE || (SMTP_HOST && SMTP_HOST.includes('gmail.com'))) {
     emailTransporter = nodemailer.createTransport({
-      service: EMAIL_SERVICE,
-      auth: { user: SMTP_USER, pass: SMTP_PASS }
+      service: 'gmail',
+      auth: { user: SMTP_USER, pass: String(SMTP_PASS).replace(/\s+/g, '') }
     });
     return emailTransporter;
   }
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+  if (SMTP_HOST) {
     emailTransporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: Number(SMTP_PORT) || 587,
       secure: SMTP_SECURE === 'true' || Number(SMTP_PORT) === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS }
+      auth: { user: SMTP_USER, pass: String(SMTP_PASS).replace(/\s+/g, '') }
     });
     return emailTransporter;
   }
