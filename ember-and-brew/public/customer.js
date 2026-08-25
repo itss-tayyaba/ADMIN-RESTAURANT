@@ -66,18 +66,12 @@ const STATUS_ICONS = {
   preparing: 'fa-utensils',
   ready: 'fa-box-open',
   'out-for-delivery': 'fa-motorcycle',
-  // Was 'fa-check-circle' — a checkmark icon used here made the "Delivered"
-  // step look already completed even while it was still pending, since the
-  // journey UI shows this icon for any stop that hasn't been reached yet.
   delivered: 'fa-truck-ramp-box',
   completed: 'fa-gift',
   cancelled: 'fa-ban'
 };
 const TRACKING_FLOW = ['received', 'preparing', 'ready', 'out-for-delivery', 'delivered', 'completed'];
 
-// Same branch coordinates and route-estimate logic as the public tracking
-// page, so the customer portal's "live status" shows an actual rider
-// distance/ETA instead of just a status label once a delivery is out.
 const PICKUP_LOCATION = { lat: 31.4187, lng: 73.0791 };
 
 function straightLineKm(from, to) {
@@ -173,12 +167,10 @@ function clearSession() {
   customerState.dashboardView = 'orders';
   customerState.selectedOrderNumber = null;
   customerState.authMode = 'login';
-  // Remove stored session and any remembered credential keys
   localStorage.removeItem('eb_customer_token');
   localStorage.removeItem('eb_customer');
   localStorage.removeItem('eb_customer_identifier');
   localStorage.removeItem('eb_customer_password');
-  // Clear visible auth inputs (if the auth form is present)
   setTimeout(() => {
     const authInputs = document.querySelectorAll('#auth-forms input');
     authInputs.forEach(i => { i.value = ''; i.autocomplete = 'off'; i.removeAttribute('autofocus'); });
@@ -186,9 +178,6 @@ function clearSession() {
 }
 
 function initPortal() {
-  // If we were sent here from checkout and already have a session
-  // (e.g. token restored from localStorage), just bounce straight back
-  // instead of showing the dashboard.
   if (customerState.customer && localStorage.getItem('eb_return_to_checkout') === '1') {
     window.location.href = withBranch('/index.html');
     return;
@@ -310,7 +299,7 @@ function renderRegisterForm() {
         <div class="field-error" id="error-name"></div>
       </div>
       <div>
-        <input name="phone" class="form-input" placeholder="Phone number" autocomplete="off" value="" inputmode="numeric" maxlength="11" pattern="[0-9]{11}">
+        <input type="tel" name="phone" class="form-input" placeholder="Phone number (e.g. 03206551696 or +92306551696)" autocomplete="off" value="" inputmode="tel" maxlength="16">
         <div class="field-error" id="error-phone"></div>
       </div>
       <div>
@@ -341,14 +330,19 @@ function sanitizePhoneInput(el) {
   el.addEventListener('input', () => {
     const cursorFromEnd = el.value.length - el.selectionStart;
     let v = el.value;
-    // auto-correct common lookalike characters (O/o -> 0, l/I -> 1)
     v = v.replace(/[oO]/g, '0').replace(/[lI]/g, '1');
-    // strip anything that still isn't a digit
-    v = v.replace(/\D/g, '').slice(0, 11);
+    const hasPlus = v.trim().startsWith('+');
+    const digits = v.replace(/\D/g, '');
+    v = hasPlus ? `+${digits.slice(0, 15)}` : digits.slice(0, 15);
     el.value = v;
     const pos = Math.max(0, v.length - cursorFromEnd);
     el.setSelectionRange(pos, pos);
   });
+}
+
+function isValidCustomerPhone(phone) {
+  const clean = String(phone || '').trim().replace(/[\s()-]/g, '');
+  return /^(0\d{9,11}|\+?[1-9]\d{6,14})$/.test(clean);
 }
 
 function switchAuthMode(mode) {
@@ -365,7 +359,6 @@ function switchAuthMode(mode) {
     const phoneInput = document.querySelector('#register-form input[name="phone"]');
     if (phoneInput) sanitizePhoneInput(phoneInput);
   }
-  // Ensure fields aren't autofilled and are empty after rendering
   setTimeout(() => {
     const inputs = authForms.querySelectorAll('input');
     inputs.forEach(i => { i.value = ''; i.autocomplete = 'off'; });
@@ -404,9 +397,6 @@ async function handleLogin(event) {
     });
     saveSession(data.token, data.customer);
     if (localStorage.getItem('eb_return_to_checkout') === '1') {
-      // Came here from checkout — go back so the customer can finish
-      // placing their order. The cart is untouched (localStorage) and
-      // index.html's init() will consume the flag and jump to checkout.
       window.location.href = withBranch('/index.html');
       return;
     }
@@ -430,7 +420,7 @@ async function handleRegister(event) {
   let valid = true;
 
   if (name.length < 2) { showFieldError('error-name', 'Please enter your name.'); valid = false; }
-  if (!/^\d{11}$/.test(phone)) { showFieldError('error-phone', 'Phone number must be exactly 11 digits.'); valid = false; }
+  if (!isValidCustomerPhone(phone)) { showFieldError('error-phone', 'Enter a valid phone number (e.g. 03206551696 or +92306551696).'); valid = false; }
   if (password.length < 6) { showFieldError('error-password', 'Use at least 6 characters.'); valid = false; }
   if (!valid) return;
 
@@ -445,9 +435,6 @@ async function handleRegister(event) {
     });
     saveSession(data.token, data.customer);
     if (localStorage.getItem('eb_return_to_checkout') === '1') {
-      // Came here from checkout — go back so the customer can finish
-      // placing their order. The cart is untouched (localStorage) and
-      // index.html's init() will consume the flag and jump to checkout.
       window.location.href = withBranch('/index.html');
       return;
     }
@@ -615,7 +602,7 @@ function renderReservationFormHtml() {
         </div>
         <div>
           <label class="text-sm text-brand-300 mb-2 block">Phone</label>
-          <input name="phone" class="form-input" value="${escapeHtml(customerState.customer.phone || '')}" required inputmode="numeric" maxlength="11">
+          <input name="phone" type="tel" class="form-input" value="${escapeHtml(customerState.customer.phone || '')}" required inputmode="tel" maxlength="16" placeholder="03206551696 or +92306551696">
         </div>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
@@ -658,6 +645,10 @@ async function handleReservationSubmit(event) {
   const notes = form.notes.value.trim();
   if (!guestName || !phone || !date || !time || !guests) {
     document.getElementById('error-reservation').textContent = 'Please complete all required reservation details.';
+    return;
+  }
+  if (!isValidCustomerPhone(phone)) {
+    document.getElementById('error-reservation').textContent = 'Enter a valid phone number (e.g. 03206551696 or +92306551696).';
     return;
   }
   const button = form.querySelector('button[type="submit"]');
@@ -1028,14 +1019,11 @@ async function renderTracking(orderNumber) {
     if (!order || !order.orderNumber || !order.status) {
       throw new Error('This order could not be loaded. Please choose it again from My Orders.');
     }
-    // Choose a tracking flow based on order type.
-    // Delivery orders include the 'out-for-delivery' step; dine-in/takeaway do not.
     const ot = (order.orderType || '').toLowerCase();
     let statusFlow = TRACKING_FLOW;
     if (!/deliver|delivery|out-for-delivery/.test(ot)) {
       statusFlow = ['received', 'preparing', 'ready', 'completed'];
     }
-    // If the order has a status not present in the chosen flow, append it so it renders.
     if (!statusFlow.includes(order.status)) statusFlow = statusFlow.concat(order.status);
     const statusIdx = statusFlow.indexOf(order.status);
     const isArrived = order.status === statusFlow[statusFlow.length - 1];
@@ -1114,7 +1102,12 @@ async function renderTracking(orderNumber) {
           <div class="portal-card mt-6">
             <p class="text-xs uppercase tracking-[.3em] text-muted mb-2">Delivery rider</p>
             <p class="font-semibold text-xl mb-2">${order.deliveryBoyName}</p>
-            ${order.deliveryBoyPhone ? `<a href="tel:${order.deliveryBoyPhone}" class="link-button">Call rider</a>` : ''}
+            ${order.deliveryBoyPhone ? `
+              <div class="flex gap-2 flex-wrap mt-2">
+                <a href="https://wa.me/${String(order.deliveryBoyPhone).replace(/\D/g, '').replace(/^0/, '92')}?text=${encodeURIComponent('Hello! I am the customer for order #' + order.orderNumber + '. My OTP is ' + (order.otp || ''))}" target="_blank" class="link-button" style="background:#25D366;border-color:#25D366;color:#ffffff;">💬 WhatsApp Rider</a>
+                <a href="tel:${order.deliveryBoyPhone}" class="link-button">Call rider</a>
+              </div>
+            ` : ''}
           </div>
         ` : ''}
         ${order.otp ? `
@@ -1139,13 +1132,9 @@ async function renderTracking(orderNumber) {
             if (fresh.status === 'completed') showToast(`Order ${order.orderNumber} completed. Enjoy!`, 'success');
             renderTracking(order.orderNumber);
           } else if (fresh.status === 'out-for-delivery') {
-            // Status hasn't changed, but the rider's GPS may have — refresh
-            // just the distance/ETA readout instead of re-rendering the
-            // whole panel, so the live tracking widget actually updates.
             renderDeliveryRouteEstimate(fresh);
           }
         } catch (err) {
-          // ignore polling errors silently
         }
       }, 8000);
     }

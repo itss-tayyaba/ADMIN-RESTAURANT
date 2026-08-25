@@ -69,6 +69,26 @@ function normalizePakistanPhone(raw) {
   return value;
 }
 
+const COUNTRY_PHONE_CONFIG = {
+  PK: { country: 'Pakistan', dialCode: '92', nationalLength: 10 },
+  GB: { country: 'United Kingdom', dialCode: '44', nationalLength: 10 },
+  AU: { country: 'Australia', dialCode: '61', nationalLength: 9 }
+};
+
+function normalizeInternationalPhone(raw) {
+  let value = String(raw || '').trim();
+  if (value.startsWith('0') && value.length === 11) {
+    return `+92${value.slice(1)}`;
+  }
+  return value.startsWith('+') ? `+${value.slice(1).replace(/\D/g, '')}` : value.replace(/[\s()-]/g, '');
+}
+
+function isValidBranchPhone(phone, countryCode) {
+  if (!/^\+[1-9]\d{6,14}$/.test(phone)) return false;
+  const config = COUNTRY_PHONE_CONFIG[countryCode];
+  return !config || (phone.startsWith(`+${config.dialCode}`) && phone.length === config.dialCode.length + config.nationalLength + 1);
+}
+
 // Supports delivery orders created before OTP confirmation was introduced.
 // New orders always receive a code at checkout; legacy accepted orders receive
 // one the first time their owner opens the private customer portal.
@@ -109,12 +129,18 @@ router.get('/map-config', (req, res) => {
   res.json({ apiKey: process.env.GOOGLE_MAPS_API_KEY || '' });
 });
 
+// The browser key is intentionally public, but it must be restricted to the
+// website origins in Google Cloud Console.
+router.get('/map-config', (req, res) => {
+  res.json({ apiKey: process.env.GOOGLE_MAPS_API_KEY || '' });
+});
+
 // POST /api/orders — create a new order. Works for a logged-in customer
 // (order is linked to their account) or a guest (guestName/guestPhone are
 // required instead and no account is created or required).
 router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
-    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, tableNumber, pushToken } = req.body;
+    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, guestEmail, tableNumber, pushToken } = req.body;
     const branchId = await resolvePublicBranchId(req.query);
     const branch = branchId ? await Branch.findOne({ _id: branchId, isActive: true }) : null;
     if (!branch) return res.status(400).json({ error: 'Please select an active branch before ordering.' });
@@ -160,28 +186,30 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
     let customer = null;
     let orderCustomerName;
     let orderCustomerPhone;
+    let orderCustomerEmail = '';
 
     if (req.customer) {
       customer = await Customer.findById(req.customer.id);
       if (!customer) return res.status(401).json({ error: 'Account not found. Please log in again.' });
       orderCustomerName = customer.name;
       orderCustomerPhone = customer.phone;
+      orderCustomerEmail = customer.email || '';
     } else {
       const name = (guestName || '').trim();
       let phone = (guestPhone || '').trim();
       if (name.length < 2) {
         return res.status(400).json({ error: 'Please enter your name.' });
       }
-      if (branch.countryCode === 'PK') {
-        phone = normalizePakistanPhone(phone);
-        if (!/^0\d{10}$/.test(phone)) {
-          return res.status(400).json({ error: 'Please enter a valid Pakistan phone number, e.g. 03001234567.' });
-        }
-      } else if (!/^\+?[1-9]\d{6,14}$/.test(phone.replace(/[\s()-]/g, ''))) {
-        return res.status(400).json({ error: 'Please enter a valid phone number including its country code.' });
+      phone = normalizeInternationalPhone(phone);
+      if (!isValidBranchPhone(phone, branch.countryCode)) {
+        const config = COUNTRY_PHONE_CONFIG[branch.countryCode];
+        const country = config?.country || branch.country;
+        const prefix = config ? ` beginning with +${config.dialCode}` : ' including its country code';
+        return res.status(400).json({ error: `Please enter a valid ${country} phone number${prefix}.` });
       }
       orderCustomerName = name;
       orderCustomerPhone = phone;
+      orderCustomerEmail = (guestEmail || '').trim();
     }
 
     // Never trust client-submitted prices — look up every item's real price
@@ -232,6 +260,7 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       total: subtotal + tax,
       customerName: orderCustomerName,
       customerPhone: orderCustomerPhone,
+      customerEmail: orderCustomerEmail,
       pushTokens: typeof pushToken === 'string' && pushToken.length <= 4096 ? [pushToken] : [],
       orderType: orderType || 'dine-in',
       // Only meaningful for dine-in — ignore it entirely for takeaway/delivery
@@ -239,9 +268,9 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       tableNumber: (orderType || 'dine-in') === 'dine-in' && typeof tableNumber === 'string'
         ? tableNumber.trim().slice(0, 20)
         : '',
-      deliveryAddress: deliveryAddress || '',
-      deliveryLocation: validatedLocation,
-      region: orderType === 'delivery' ? region : '',
+      deliveryAddress: orderType === 'delivery' ? (deliveryAddress || '') : '',
+      deliveryLocation: orderType === 'delivery' ? validatedLocation : undefined,
+      region: orderType === 'delivery' ? (region || '') : '',
       notes: notes || '',
       // Generated at checkout but not shown until the order is accepted.
       otp: orderType === 'delivery' ? crypto.randomInt(100000, 1000000).toString() : undefined,

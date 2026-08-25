@@ -31,9 +31,34 @@ const Branch = require("./src/models/Branch");
 // Reuse the connection while a Vercel serverless instance is warm.
 let databaseConnection;
 
+// Default accounts/data must be seeded on EVERY deploy target — both local
+// `node server.js` and Vercel, where this file is require()'d as a module
+// rather than run directly. Seeding used to live only inside the
+// `require.main === module` block below, which never executes on Vercel,
+// so accounts like superadmin silently never got created there. Guard with
+// a flag so it still only runs once per warm connection/instance.
+let defaultsSeeded = false;
+
+async function seedDefaults() {
+    if (defaultsSeeded) return;
+    defaultsSeeded = true;
+
+    try {
+        await Branch.createDefaultBranch();
+        await AdminUser.createDefaultAdmin();
+        await AdminUser.createDefaultChef();
+        await AdminUser.createDefaultDelivery();
+        await AdminUser.createDefaultSuperadmin();
+        console.log("✅ Default Users Ready");
+    } catch (err) {
+        defaultsSeeded = false; // allow retry on next request if seeding failed
+        console.error("Seeding defaults failed:", err);
+    }
+}
+
 function connectDatabase() {
     if (mongoose.connection.readyState === 1) {
-        return Promise.resolve();
+        return seedDefaults();
     }
 
     if (!databaseConnection) {
@@ -45,7 +70,7 @@ function connectDatabase() {
             });
     }
 
-    return databaseConnection;
+    return databaseConnection.then(() => seedDefaults());
 }
 
 // ===================== ROUTES =====================
@@ -289,13 +314,7 @@ if (require.main === module) {
         .then(async () => {
             console.log("✅ Connected to MongoDB");
 
-            await Branch.createDefaultBranch();
-
-            await AdminUser.createDefaultAdmin();
-
-            await AdminUser.createDefaultChef();
-
-            await AdminUser.createDefaultDelivery();
+            await seedDefaults();
 
             try {
                 const tableCount = await RestaurantTable.countDocuments();

@@ -79,6 +79,28 @@ function signCustomerToken(customer) {
   );
 }
 
+function getPhoneVariations(phone) {
+  const raw = String(phone || '').trim().replace(/[\s()-]/g, '');
+  if (!raw) return [];
+  const digits = raw.replace(/\D/g, '');
+  const list = new Set([raw]);
+  if (raw.startsWith('+')) {
+    list.add(raw.slice(1));
+  } else {
+    list.add(`+${raw}`);
+  }
+  if (digits.startsWith('92') && digits.length >= 10) {
+    list.add(`0${digits.slice(2)}`);
+    list.add(`+${digits}`);
+    list.add(digits);
+  } else if (digits.startsWith('0') && digits.length >= 10) {
+    list.add(`+92${digits.slice(1)}`);
+    list.add(`92${digits.slice(1)}`);
+    list.add(digits);
+  }
+  return Array.from(list);
+}
+
 // Link any orders placed as a guest (customer: null) with this phone number
 // to the now-authenticated account, so past guest orders show up in "My
 // Orders" instead of being stranded forever. Runs on both register and
@@ -87,8 +109,9 @@ function signCustomerToken(customer) {
 async function claimGuestOrders(customer) {
   if (!customer?.phone) return;
   try {
+    const phones = getPhoneVariations(customer.phone);
     await Order.updateMany(
-      { customer: null, customerPhone: customer.phone },
+      { customer: null, customerPhone: { $in: phones } },
       { $set: { customer: customer._id } }
     );
   } catch (err) {
@@ -114,9 +137,10 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    if (!/^\+?[1-9]\d{6,14}$/.test(phone)) {
+    const cleanPhone = String(phone || '').trim().replace(/[\s()-]/g, '');
+    if (!/^(0\d{9,11}|\+?[1-9]\d{6,14})$/.test(cleanPhone)) {
       return res.status(400).json({
-        error: 'Enter a valid international phone number.'
+        error: 'Enter a valid phone number (e.g. 03206551696 or +92306551696).'
       });
     }
 
@@ -132,10 +156,18 @@ router.post('/register', async (req, res) => {
       }
     }
 
+    const phoneCandidates = getPhoneVariations(cleanPhone);
+    const existingPhone = await Customer.findOne({ phone: { $in: phoneCandidates } });
+    if (existingPhone) {
+      return res.status(409).json({
+        error: 'An account with this phone number already exists. Please sign in.'
+      });
+    }
+
     const customer = new Customer({
       name,
       email: email || '',
-      phone,
+      phone: cleanPhone,
       password
     });
 
@@ -174,9 +206,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const query = identifier.includes('@')
-      ? { email: identifier.toLowerCase() }
-      : { phone: identifier.trim() };
+    const cleanId = String(identifier || '').trim();
+    let query;
+    if (cleanId.includes('@')) {
+      query = { email: cleanId.toLowerCase() };
+    } else {
+      const phoneVars = getPhoneVariations(cleanId);
+      query = { phone: { $in: phoneVars } };
+    }
 
     const customer = await Customer.findOne(query);
 

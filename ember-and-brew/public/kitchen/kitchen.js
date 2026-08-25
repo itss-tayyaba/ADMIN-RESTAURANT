@@ -1,4 +1,4 @@
-﻿// =====================================
+// =====================================
 // API
 // =====================================
 
@@ -365,9 +365,11 @@ function buildCard(o) {
     const panel = document.createElement('div');
     panel.className = 'details-panel';
     const allItems = (o.items || []).map(i => `${i.qty}× ${escapeHtml(i.name)}`).join('<br>');
+    const addressHtml = (o.orderType === 'delivery' && o.deliveryAddress)
+      ? `<br><br><strong>Delivery address</strong><br>${escapeHtml(o.deliveryAddress)}`
+      : '';
     panel.innerHTML = `
-      <strong>All items</strong><br>${allItems || '—'}<br><br>
-      <strong>Delivery address</strong><br>${escapeHtml(o.deliveryAddress || '—')}
+      <strong>All items</strong><br>${allItems || '—'}${addressHtml}
     `;
     card.appendChild(panel);
   }

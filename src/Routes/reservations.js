@@ -4,6 +4,7 @@ const Reservation = require('../models/Reservation');
 const Customer = require('../models/Customer');
 const { customerAuth } = require('./customerAuth');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
+const { notifyReservation } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -58,8 +59,8 @@ router.post('/', async (req, res) => {
   try {
     const { guestName, email, phone, date, time, guests, notes } = req.body;
     const partySize = Number(guests);
-    const cleanPhone = String(phone || '').trim();
-    if (!guestName?.trim() || !email?.trim() || !/^\d{11}$/.test(cleanPhone) || !date || !time || !Number.isInteger(partySize) || partySize < 1 || partySize > 20) {
+    const cleanPhone = String(phone || '').trim().replace(/[\s()-]/g, '');
+    if (!guestName?.trim() || !email?.trim() || !/^(0\d{9,11}|\+?[1-9]\d{6,14})$/.test(cleanPhone) || !date || !time || !Number.isInteger(partySize) || partySize < 1 || partySize > 20) {
       return res.status(400).json({ error: 'Please provide valid reservation details.' });
     }
     if (new Date(`${date}T00:00:00`).getTime() < new Date().setHours(0, 0, 0, 0)) {
@@ -91,6 +92,7 @@ router.post('/', async (req, res) => {
       notes: notes || '',
       customerId
     });
+    notifyReservation(reservation, 'pending').catch(e => console.warn('[Reservation Notify Error]', e.message));
     res.status(201).json(reservation);
   } catch (err) {
     res.status(500).json({ error: 'Unable to save the reservation. Please try again.' });
@@ -120,7 +122,14 @@ router.get('/mine/list', customerAuth, async (req, res) => {
       query.$or.push({ email: customerEmail });
     }
     if (customerPhone) {
-      query.$or.push({ phone: customerPhone });
+      const phoneVars = [customerPhone];
+      const digits = customerPhone.replace(/\D/g, '');
+      if (digits.startsWith('92') && digits.length >= 10) {
+        phoneVars.push(`0${digits.slice(2)}`, `+${digits}`, digits);
+      } else if (digits.startsWith('0') && digits.length >= 10) {
+        phoneVars.push(`+92${digits.slice(1)}`, `92${digits.slice(1)}`, digits);
+      }
+      query.$or.push({ phone: { $in: Array.from(new Set(phoneVars)) } });
     }
     const reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
     res.json(reservations);
@@ -170,6 +179,8 @@ router.put('/:id', adminAuth, async (req, res) => {
 
     const reservation = await Reservation.findOneAndUpdate(query, { status, tableNumber: table }, { new: true, runValidators: true });
     if (!reservation) return res.status(404).json({ error: 'Reservation not found.' });
+
+    notifyReservation(reservation, status).catch(e => console.warn('[Reservation Notify Error]', e.message));
 
     res.json(reservation);
   } catch {

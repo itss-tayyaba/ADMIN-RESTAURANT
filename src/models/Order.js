@@ -14,12 +14,8 @@ const statusLogSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
-  // Which branch this order belongs to. Not required yet — the order-creation
-  // route doesn't set it until a later step. Existing/legacy orders are
-  // backfilled to the default branch by scripts/backfillBranch.js.
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: false, default: null, index: true },
-  // True when this order was placed without a customer account (guest checkout).
   isGuestOrder: { type: Boolean, default: false },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true },
@@ -33,19 +29,11 @@ const orderSchema = new mongoose.Schema({
   },
   customerName: { type: String, required: true },
   customerPhone: { type: String, required: true },
-  // Browser-specific FCM tokens also support guest checkout notifications.
+  customerEmail: { type: String, default: '', trim: true },
   pushTokens: { type: [String], default: [] },
-  orderType: { type: String, enum: ['dine-in', 'takeaway', 'delivery'] },
-  // Set only for dine-in orders placed via a scanned table QR (?table=T-01).
-  // Empty for orders placed without scanning a table (customer typed order
-  // type manually, or arrived via takeaway/delivery).
+  orderType: { type: String, enum: ['dine-in', 'takeaway', 'delivery'], default: 'dine-in' },
   tableNumber: { type: String, default: '', trim: true },
-  deliveryAddress: String,
-  // ---- Online payment (JazzCash / EasyPaisa) ----
-  // 'unpaid'   — cash / pay-in-person, the default for every order type
-  // 'pending'  — customer was redirected to the gateway, no result yet
-  // 'paid'     — gateway confirmed success (signature verified)
-  // 'failed'   — gateway confirmed failure, or the customer abandoned it
+  deliveryAddress: { type: String, default: '' },
   paymentStatus: {
     type: String,
     enum: ['unpaid', 'pending', 'paid', 'failed'],
@@ -56,10 +44,7 @@ const orderSchema = new mongoose.Schema({
     enum: ['cash', 'jazzcash', 'easypaisa'],
     default: 'cash'
   },
-  // The gateway's transaction reference for this attempt — used to match
-  // an incoming callback back to the right order.
   transactionId: { type: String, default: '' },
-  // GeoJSON Point uses [longitude, latitude] (not [latitude, longitude]).
   deliveryLocation: {
     type: {
       type: String,
@@ -71,7 +56,6 @@ const orderSchema = new mongoose.Schema({
       required: false
     }
   },
-  // Updated only by the assigned rider while an order is out for delivery.
   riderLocation: {
     type: {
       type: String,
@@ -81,16 +65,13 @@ const orderSchema = new mongoose.Schema({
     coordinates: { type: [Number], required: false },
     updatedAt: { type: Date, required: false }
   },
-  // Fixed region the order falls under (only used for orderType 'delivery').
-  // This is what the auto-assignment system matches against a rider's region.
   region: { type: String, default: '' },
-  notes: String,
+  notes: { type: String, default: '' },
   deliveryBoy: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser', default: null },
   deliveryBoyName: { type: String, default: '' },
   deliveryBoyPhone: { type: String, default: '' },
   assignedAt: Date,
   deliveredAt: Date,
-  // Hidden from standard query results; selected only while the server verifies it.
   otp: { type: String, select: false },
   otpVerified: { type: Boolean, default: false },
   statusLog: [statusLogSchema]
@@ -98,7 +79,6 @@ const orderSchema = new mongoose.Schema({
 
 orderSchema.index({ deliveryLocation: '2dsphere' });
 
-// After saving an order, update pair counts for AI recommendations
 orderSchema.post('save', async function() {
   if (this.items.length < 2) return;
   const MenuItem = mongoose.model('MenuItem');

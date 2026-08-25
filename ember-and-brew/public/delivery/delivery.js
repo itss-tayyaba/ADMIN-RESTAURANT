@@ -479,6 +479,11 @@ function renderActiveDelivery(assigned) {
     lastActiveOrderSignature = signature;
 
     const phoneDigits = (activeOrder.customerPhone || "").replace(/[^0-9+]/g, "");
+    let waDigits = phoneDigits.replace(/\D/g, "");
+    if (waDigits.startsWith("0") && waDigits.length === 11) waDigits = "92" + waDigits.slice(1);
+    else if (!waDigits.startsWith("92") && waDigits.length === 10) waDigits = "92" + waDigits;
+    const waText = encodeURIComponent(`Hello ${activeOrder.customerName || 'Customer'}! 🛵 Your Ember & Brew order #${activeOrder.orderNumber} is on the way with your rider.${activeOrder.otp ? '\n\n🔑 YOUR DELIVERY OTP IS: ' + activeOrder.otp + '\nPlease share this OTP code when I arrive.' : ''}\n\nSee you soon!`);
+    const waBtn = waDigits ? `<a class="btn" target="_blank" href="https://wa.me/${waDigits}?text=${waText}" style="background:#25D366;color:#ffffff;border:none;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">💬 WhatsApp</a>` : "";
     const callBtn = phoneDigits ? `<a class="btn call-btn" href="tel:${phoneDigits}">📞 Call Customer</a>` : "";
 
     panel.innerHTML = `
@@ -502,6 +507,7 @@ function renderActiveDelivery(assigned) {
         <div class="footer" style="border-top:none; padding-top:0; margin-top:2px;">
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 ${callBtn}
+                ${waBtn}
                 <button id="liveLocationButton" class="btn" onclick="startLiveLocationSharing()">Start Live Location</button>
                 <div class="otp-verification">
                     <label for="otp-active-${activeOrder._id}">Customer OTP</label>

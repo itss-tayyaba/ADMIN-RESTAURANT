@@ -1054,7 +1054,11 @@
       return `
       <tr>
         <td><span class="order-id">${o.orderNumber}</span><br><span class="cust">${timeAgo(o.createdAt)}</span></td>
-        <td>${escapeHtml(o.customerName)}<br><span class="cust">${escapeHtml(o.customerPhone || '')}</span></td>
+        <td>
+          ${escapeHtml(o.customerName)}<br>
+          <span class="cust">${escapeHtml(o.customerPhone || '')}</span>
+          ${o.customerPhone ? `<a href="https://wa.me/${String(o.customerPhone).replace(/\D/g, '').replace(/^0/, '92')}?text=${encodeURIComponent(`Hello ${o.customerName || 'Customer'}! Regarding your Ember & Brew order #${o.orderNumber} (Status: ${o.status})`)}" target="_blank" title="WhatsApp Customer (Free)" style="display:inline-flex;align-items:center;margin-left:4px;color:#25D366;text-decoration:none;font-size:12px;font-weight:600;">💬</a>` : ''}
+        </td>
         <td style="text-transform:capitalize;">${o.orderType || '—'}</td>
         <td class="cust">${renderRegionOrTableCell(o)}</td>
         <td class="cust">${o.items.map(i => `${i.qty}× ${escapeHtml(i.name)}`).join(', ')}</td>

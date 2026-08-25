@@ -34,13 +34,12 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 #main-nav{position:fixed;top:0;left:0;right:0;z-index:100;transition:background .3s,backdrop-filter .3s,box-shadow .3s}
 #main-nav.scrolled{background:rgba(15,14,12,.85);backdrop-filter:blur(16px);box-shadow:0 1px 0 var(--border)}
 
-/* Checkout — fixed shell so the item list scrolls but the header and the
-   totals/Place Order button never move as items are added. */
-.checkout-shell{display:flex;flex-direction:column;height:calc(100dvh - 64px);max-width:42rem;margin:0 auto;width:100%}
-.checkout-top{flex-shrink:0;padding:1.75rem 1rem .75rem}
-.checkout-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 1rem 1rem}
-.checkout-bottom{flex-shrink:0;padding:1rem;border-top:1px solid var(--border);background:rgba(15,14,12,.92);backdrop-filter:blur(12px)}
-@media(min-width:640px){.checkout-top{padding-left:1.5rem;padding-right:1.5rem}.checkout-scroll{padding-left:1.5rem;padding-right:1.5rem}.checkout-bottom{padding-left:1.5rem;padding-right:1.5rem}}
+/* Checkout */
+.checkout-shell{display:flex;flex-direction:column;max-width:44rem;margin:0 auto;width:100%;min-height:calc(100vh - 80px);padding:0 0 2.5rem}
+.checkout-top{padding:1.5rem 1rem 0.5rem}
+.checkout-scroll{padding:0.5rem 1rem 0}
+.checkout-bottom{padding:1.25rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);margin:1rem 1rem 0}
+@media(min-width:640px){.checkout-top{padding:2rem 1.5rem 0.5rem}.checkout-scroll{padding:0.5rem 1.5rem 0}.checkout-bottom{margin:1.25rem 1.5rem 0;padding:1.5rem}}
 
 /* Cart panel */
 #cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
@@ -222,7 +221,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 .order-card:hover{border-color:rgba(212,168,83,.25)}
 
 /* Form inputs */
-.form-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;color:var(--text);font-family:inherit;font-size:14px;transition:border-color .2s;outline:none}
+.form-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:inherit;font-size:14px;transition:border-color .2s;outline:none}
+input.form-input,select.form-input{height:44px;min-height:44px}
+textarea.form-input{min-height:80px;resize:vertical}
 .form-input:focus{border-color:var(--accent)}
 .form-input::placeholder{color:var(--muted)}
 .form-error{color:var(--accent2);font-size:12px;margin-top:4px;min-height:18px}
@@ -522,7 +523,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
             </div>
             <div>
               <label class="block text-[11px] uppercase tracking-wider text-brand-800 mb-2"><i class="fa-solid fa-phone mr-1"></i> Phone</label>
-              <input type="tel" id="resv-phone" placeholder="03001234567 or +923001234567" class="form-input" required inputmode="tel" minlength="11" maxlength="13" pattern="^(0\d{10}|\+?92\d{10})$" title="Enter a valid Pakistani phone number, e.g. 03001234567 or +923001234567">
+              <input type="tel" id="resv-phone" placeholder="03206551696 or +92306551696" class="form-input" required inputmode="tel" minlength="10" maxlength="16" pattern="^(0\d{9,11}|\+?92\d{9,10}|\+[1-9]\d{6,14})$" title="Enter a valid phone number, e.g. 03206551696 or +92306551696">
             </div>
             <div>
               <label class="block text-[11px] uppercase tracking-wider text-brand-800 mb-2"><i class="fa-solid fa-calendar mr-1"></i> Date</label>
@@ -586,18 +587,18 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 
       <!-- Fixed header: stays put while the fields/items below scroll -->
       <div class="checkout-top">
-        <button type="button" onclick="navigate('menu')" class="text-brand-400 text-sm mb-4 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
-        <h2 class="font-display text-2xl sm:text-3xl font-bold mb-4">Checkout</h2>
+        <button type="button" onclick="navigate('menu')" class="text-brand-400 text-sm mb-2 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold mb-3">Checkout</h2>
         <div>
-          <label class="text-xs font-medium text-brand-300 mb-2 block">Order Type</label>
-          <div class="flex gap-3 flex-wrap">
-            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+          <label class="text-xs font-medium text-brand-300 mb-1.5 block">Order Type</label>
+          <div class="flex gap-2.5 flex-wrap">
+            <label class="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
               <input type="radio" name="orderType" value="dine-in" class="accent-[#D4A853]" checked> <span class="text-sm">Dine In</span>
             </label>
-            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+            <label class="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
               <input type="radio" name="orderType" value="takeaway" class="accent-[#D4A853]"> <span class="text-sm">Takeaway</span>
             </label>
-            <label class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
+            <label class="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-brand-800 cursor-pointer hover:border-brand-400 transition-colors has-[:checked]:border-brand-400 has-[:checked]:bg-brand-400/10">
               <input type="radio" name="orderType" value="delivery" class="accent-[#D4A853]"> <span class="text-sm">Delivery</span>
             </label>
           </div>
@@ -614,25 +615,33 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 
       <!-- Scrollable middle: account/address/notes + the item list -->
       <div class="checkout-scroll">
-        <div id="checkout-account-card" class="mb-6 bg-brand-900 border border-brand-800 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div id="checkout-account-card" class="mb-4 bg-brand-900 border border-brand-800 rounded-xl p-4 flex items-center justify-between gap-4">
           <div>
             <span class="text-brand-800 text-xs block mb-0.5">Ordering as</span>
             <span id="checkout-account-name" class="font-medium text-sm"></span>
           </div>
           <a href="#" onclick="navigate('account');return false" class="text-xs text-brand-400 hover:text-brand-300">Not you?</a>
         </div>
-        <div id="guest-checkout-fields" class="mb-6 bg-brand-900 border border-brand-800 rounded-xl p-4 hidden">
+        <div id="guest-checkout-fields" class="mb-4 bg-brand-900 border border-brand-800 rounded-xl p-4 hidden">
           <div class="flex items-center justify-between gap-4 mb-3">
             <p class="text-sm font-semibold text-brand-200">Continue as guest</p>
             <a href="#" onclick="goToAccountLogin();return false" class="text-xs text-brand-400 hover:text-brand-300 whitespace-nowrap">Sign in / Register</a>
           </div>
-          <div class="grid sm:grid-cols-2 gap-3">
-            <input name="guestName" class="form-input" placeholder="Your name" autocomplete="name">
-            <input name="guestPhone" class="form-input" placeholder="03XXXXXXXXX or +923XXXXXXXXX" inputmode="tel" autocomplete="tel">
+          <div class="grid sm:grid-cols-2 gap-3 items-start mb-3">
+            <div>
+              <input name="guestName" class="form-input" placeholder="Your name" autocomplete="name">
+            </div>
+            <div>
+              <input id="guest-phone" name="guestPhone" type="tel" class="form-input" placeholder="Phone number" inputmode="tel" autocomplete="tel">
+              <p id="guest-phone-help" class="text-xs text-brand-400/80 mt-1.5"></p>
+            </div>
           </div>
-          <p class="text-xs text-brand-800 mt-2">Use your order number to track this guest order, or sign in above to save it to your account.</p>
+          <div>
+            <input name="guestEmail" type="email" class="form-input" placeholder="Email address (optional, for email receipt & OTP)" autocomplete="email">
+          </div>
+          <p class="text-xs text-brand-400/70 mt-2.5">We will send instant order confirmation and delivery OTP to your phone &amp; email.</p>
         </div>
-        <div id="address-field" class="mb-6 hidden">
+        <div id="address-field" class="mb-4 hidden">
           <label class="text-xs font-medium text-brand-300 mb-1.5 block">Delivery Address</label>
           <input type="text" name="address" class="form-input" placeholder="123 Main St, Apt 4B">
           <div class="form-error" data-error="address"></div>
@@ -651,13 +660,13 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <p id="selected-delivery-region" class="mt-1 text-xs text-brand-300 hidden"></p>
           <div class="form-error" data-error="deliveryLocation"></div>
         </div>
-        <div class="mb-6">
+        <div class="mb-4">
           <label class="text-xs font-medium text-brand-300 mb-1.5 block">Special Instructions</label>
-          <textarea name="notes" class="form-input" rows="3" placeholder="Allergies, extra napkins, ring the bell..."></textarea>
+          <textarea name="notes" class="form-input" rows="2" placeholder="Allergies, extra napkins, ring the bell..."></textarea>
         </div>
-        <div id="branch-payment-methods" class="mb-6 hidden bg-brand-900 border border-brand-800 rounded-xl p-4 text-sm"></div>
+        <div id="branch-payment-methods" class="mb-4 hidden bg-brand-900 border border-brand-800 rounded-xl p-4 text-sm"></div>
         <!-- Order summary — just the item rows here; totals live in the fixed footer below -->
-        <div class="bg-brand-900 border border-brand-800 rounded-xl p-5">
+        <div class="bg-brand-900 border border-brand-800 rounded-xl p-4">
           <h3 class="font-semibold text-sm mb-3 text-brand-300">Order Summary</h3>
           <div id="checkout-items"></div>
         </div>
@@ -721,24 +730,9 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
           <div class="form-error" data-error="cr-name"></div>
         </div>
         <div class="mb-4">
-          <input type="tel" name="phone" id="cr-phone-input" class="form-input" placeholder="03XXXXXXXXX or +923XXXXXXXXX" autocomplete="tel" inputmode="tel" maxlength="13" pattern="^(0\d{10}|\+?92\d{10})$">
+          <input type="tel" name="phone" id="cr-phone-input" class="form-input" placeholder="Phone number" autocomplete="tel" inputmode="tel">
           <div class="form-error" data-error="cr-phone"></div>
-          <script>
-            (function () {
-              var el = document.getElementById('cr-phone-input');
-              el.addEventListener('input', function () {
-                var cursorFromEnd = el.value.length - el.selectionStart;
-                var v = el.value;
-                // auto-correct common lookalike characters (O/o -> 0, l/I -> 1)
-                v = v.replace(/[oO]/g, '0').replace(/[lI]/g, '1');
-                // allow local (0XXXXXXXXXX) or international (+92XXXXXXXXXX) format
-                v = formatPKPhoneInput(v);
-                el.value = v;
-                var pos = Math.max(0, v.length - cursorFromEnd);
-                el.setSelectionRange(pos, pos);
-              });
-            })();
-          </script>
+          <p id="cr-phone-help" class="text-xs text-brand-800 mt-2"></p>
         </div>
         <div class="mb-4">
           <input type="email" name="email" class="form-input" placeholder="Email (optional, recommended)" autocomplete="email">
@@ -1254,7 +1248,7 @@ async function handleCustomerRegister(e) {
   const form = e.target;
   const name = form.name.value.trim();
   const phoneRaw = form.phone.value.trim();
-  const phone = normalizePKPhone(phoneRaw);
+  const phone = normalizeBranchPhone(phoneRaw);
   const email = form.email.value.trim();
   const password = form.password.value;
   const errBox = document.getElementById('customer-register-error');
@@ -1262,7 +1256,11 @@ async function handleCustomerRegister(e) {
 
   let valid = true;
   if (name.length < 2) { showFieldError('cr-name', 'Please enter your name.'); valid = false; }
-  if (!isValidPKPhone(phoneRaw)) { showFieldError('cr-phone', 'Enter a valid phone number, e.g. 03001234567 or +923001234567.'); valid = false; }
+  if (!isValidBranchPhone(phone)) {
+    const config = branchPhoneConfig();
+    showFieldError('cr-phone', `Enter a valid ${config.country} number beginning with +${config.dialCode}.`);
+    valid = false;
+  }
   if (password.length < 6) { showFieldError('cr-password', 'At least 6 characters.'); valid = false; }
   if (!valid) return;
 
@@ -1560,7 +1558,7 @@ function filterMenu() {
           <span class="text-brand-400 font-semibold text-sm whitespace-nowrap">${formatMoney(item.price)}</span>
         </div>
         <p class="text-brand-800 text-xs leading-relaxed mb-4 line-clamp-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${item.desc}</p>
-        ${renderMenuCardAction(item)}
+        <div class="menu-card-action" data-menu-item-id="${item.id}">${renderMenuCardAction(item)}</div>
       </div>
     </article>
   `).join('');
@@ -1773,9 +1771,12 @@ function addItemToCart(item, addons = [], qty = 1) {
     state.cart.push({ item, qty, addons, addonSignature: signature });
   }
   updateCartBadge();
-  renderCartItems();
   refreshMenuCardActions();
   showToast(`${item.name} added to cart`, 'success');
+  // Updating the cart drawer/inline panel can involve several image rows.
+  // Defer that work one event-loop turn so the button, badge, and toast paint
+  // immediately after the customer taps Add to Cart.
+  scheduleCartRender();
   // AI upsell — powered by the real /api/recommendations endpoint.
   // Personalized (ranks the customer's own past pairings first) when
   // logged in; falls back to global frequently-bought-together for guests.
@@ -1832,7 +1833,19 @@ function clearCart() {
 }
 
 function refreshMenuCardActions() {
-  if (document.getElementById('menu-grid')) filterMenu();
+  document.querySelectorAll('.menu-card-action[data-menu-item-id]').forEach(action => {
+    const item = MENU.find(entry => entry.id === action.dataset.menuItemId);
+    if (item) action.innerHTML = renderMenuCardAction(item);
+  });
+}
+
+let pendingCartRender = null;
+function scheduleCartRender() {
+  if (pendingCartRender !== null) return;
+  pendingCartRender = setTimeout(() => {
+    pendingCartRender = null;
+    renderCartItems();
+  }, 0);
 }
 
 function cartLineUnitPrice(c) {
@@ -2064,6 +2077,9 @@ let cachedRegions = null;
 let confirmedDeliveryLocation = null;
 let deliveryMap = null;
 let deliveryMarker = null;
+let currentLocationMarker = null;
+let currentLocationAccuracyCircle = null;
+let currentLocationWatchId = null;
 let deliveryGeocoder = null;
 let deliveryAutocomplete = null;
 let deliveryMapsLoadPromise = null;
@@ -2114,6 +2130,7 @@ async function openGoogleDeliveryLocationPicker() {
 }
 
 function closeDeliveryLocationPicker() {
+  stopCurrentLocationTracking();
   const modal = document.getElementById('delivery-location-modal');
   modal.classList.add('hidden');
   modal.classList.remove('flex');
@@ -2321,6 +2338,48 @@ function initialiseOpenStreetMapDeliveryPicker() {
   }
   setOpenStreetMapDeliveryPoint(initial, confirmedDeliveryLocation?.address, false);
   setDeliveryMapMessage('Search, use GPS, click the map, or drag the pin to your exact delivery point.');
+  startCurrentLocationTracking(true);
+}
+
+function updateCurrentLocationMarker(position, centerMap = false) {
+  if (!deliveryMap || !window.L) return;
+  const lat = Number(position.coords.latitude);
+  const lng = Number(position.coords.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  const latLng = [lat, lng];
+  const accuracy = Math.max(Number(position.coords.accuracy) || 0, 5);
+  if (!currentLocationMarker) {
+    const icon = L.divIcon({
+      className: 'current-location-marker',
+      html: '<div style="width:44px;height:44px;border-radius:14px;background:#fff;color:#1d4ed8;border:3px solid #1d4ed8;box-shadow:0 3px 12px rgba(0,0,0,.35);display:grid;place-items:center;font-size:20px"><i class="fa-solid fa-person-walking"></i></div>',
+      iconSize: [44, 44], iconAnchor: [22, 22]
+    });
+    currentLocationMarker = L.marker(latLng, { icon, interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(deliveryMap);
+    currentLocationAccuracyCircle = L.circle(latLng, { radius: accuracy, color: '#60a5fa', weight: 1, fillColor: '#3b82f6', fillOpacity: .16, interactive: false }).addTo(deliveryMap);
+  } else {
+    currentLocationMarker.setLatLng(latLng);
+    currentLocationAccuracyCircle.setLatLng(latLng).setRadius(accuracy);
+  }
+  if (centerMap) deliveryMap.setView(latLng, Math.max(deliveryMap.getZoom(), 16));
+}
+
+function startCurrentLocationTracking(centerOnFirstFix = false) {
+  if (!navigator.geolocation || currentLocationWatchId !== null) return;
+  let isFirstFix = true;
+  currentLocationWatchId = navigator.geolocation.watchPosition(
+    position => {
+      updateCurrentLocationMarker(position, centerOnFirstFix && isFirstFix);
+      isFirstFix = false;
+    },
+    () => setDeliveryMapMessage('Live location is off. Allow location access to see your moving position on the map.', true),
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+  );
+}
+
+function stopCurrentLocationTracking() {
+  if (currentLocationWatchId === null) return;
+  navigator.geolocation.clearWatch(currentLocationWatchId);
+  currentLocationWatchId = null;
 }
 
 function setOpenStreetMapDeliveryPoint(position, knownAddress = '', pan = true) {
@@ -2655,8 +2714,12 @@ function useCurrentDeliveryLocation() {
     return;
   }
   setDeliveryMapMessage('Getting your current location…');
+  startCurrentLocationTracking();
   navigator.geolocation.getCurrentPosition(
-    position => setOpenStreetMapDeliveryPoint({ lat: position.coords.latitude, lng: position.coords.longitude }),
+    position => {
+      updateCurrentLocationMarker(position, true);
+      setOpenStreetMapDeliveryPoint({ lat: position.coords.latitude, lng: position.coords.longitude });
+    },
     () => setDeliveryMapMessage('Location access was denied. Search or place the pin manually instead.', true),
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
   );
@@ -2717,10 +2780,18 @@ function renderCheckout() {
     regionSummary.classList.add('hidden');
   }
   // Toggle address field
+  const currentOrderType = document.querySelector('input[name="orderType"]:checked')?.value || 'dine-in';
+  document.getElementById('address-field').classList.toggle('hidden', currentOrderType !== 'delivery');
   document.querySelectorAll('input[name="orderType"]').forEach(r => r.onchange = () => {
-    document.getElementById('address-field').classList.toggle('hidden', r.value !== 'delivery' || !r.checked);
+    const isDelivery = r.value === 'delivery' && r.checked;
+    document.getElementById('address-field').classList.toggle('hidden', !isDelivery);
+    if (!isDelivery) {
+      const addrInput = document.querySelector('input[name="address"]');
+      if (addrInput) addrInput.value = '';
+    }
   });
   document.getElementById('guest-checkout-fields').classList.toggle('hidden', Boolean(state.customer));
+  configureBranchPhoneFields();
   document.getElementById('checkout-account-card').classList.toggle('hidden', !state.customer);
   if (state.customer) {
     document.getElementById('checkout-account-name').textContent = `${state.customer.name} · ${state.customer.phone}`;
@@ -2736,10 +2807,8 @@ async function handleCheckout(e) {
   const region = form.region?.value || '';
   const guestName = form.guestName?.value.trim() || '';
   const guestPhoneRaw = form.guestPhone?.value.trim() || '';
-  const isPakistanBranch = branchState.info?.countryCode === 'PK' || !branchState.info;
-  const guestPhone = isPakistanBranch
-    ? normalizePKPhone(guestPhoneRaw)
-    : guestPhoneRaw.replace(/[\s()-]/g, '');
+  const guestPhone = normalizeBranchPhone(guestPhoneRaw);
+  const guestEmail = form.guestEmail?.value.trim() || '';
   let deliveryLocation = null;
   try { deliveryLocation = form.deliveryLocation?.value ? JSON.parse(form.deliveryLocation.value) : null; } catch (_) { deliveryLocation = null; }
   const notes = form.notes?.value.trim() || '';
@@ -2749,10 +2818,12 @@ async function handleCheckout(e) {
   if (orderType === 'delivery' && !region) { showFieldError('region', 'Please select your region.'); valid = false; }
   if (orderType === 'delivery' && address.length < 5) { showFieldError('address', 'Please enter a delivery address.'); valid = false; }
   if (orderType === 'delivery' && (!deliveryLocation || deliveryLocation.type !== 'Point')) { showFieldError('deliveryLocation', 'Select and confirm your delivery location on the map.'); valid = false; }
-  const guestPhoneValid = isPakistanBranch
-    ? isValidPKPhone(guestPhoneRaw)
-    : /^\+?[1-9]\d{6,14}$/.test(guestPhone);
-  if (!state.customer && (guestName.length < 2 || !guestPhoneValid)) { showToast(isPakistanBranch ? 'Enter your name and a valid Pakistan phone number (e.g. 03001234567 or +923001234567).' : 'Enter your name and a valid phone number including country code.', 'error'); valid = false; }
+  const guestPhoneValid = isValidBranchPhone(guestPhone);
+  if (!state.customer && (guestName.length < 2 || !guestPhoneValid)) {
+    const phone = branchPhoneConfig();
+    showToast(`Enter your name and a valid ${phone.country} phone number beginning with +${phone.dialCode}.`, 'error');
+    valid = false;
+  }
   if (state.cart.length === 0) { showToast('Your cart is empty.', 'error'); valid = false; }
   if (!valid) return;
 
@@ -2772,7 +2843,16 @@ async function handleCheckout(e) {
       method: 'POST',
       headers: state.customerToken ? authHeaders(state.customerToken) : { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        items, orderType, deliveryAddress: address, deliveryLocation, region, notes, guestName, guestPhone, pushToken,
+        items,
+        orderType,
+        deliveryAddress: orderType === 'delivery' ? address : '',
+        deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
+        region: orderType === 'delivery' ? region : '',
+        notes,
+        guestName,
+        guestPhone,
+        guestEmail,
+        pushToken,
         // Only meaningful for dine-in orders placed via a scanned table QR —
         // syncCheckoutOrderTypeWithQrTable() already forces orderType to
         // 'dine-in' whenever state.qrTable is set, so this stays consistent.
@@ -2831,6 +2911,54 @@ function formatPKPhoneInput(value) {
   const digits = value.replace(/\D/g, '');
   if (hasPlus) return '+' + digits.slice(0, 12); // +92XXXXXXXXXX = 12 digits after the +
   return digits.slice(0, 11); // local 0XXXXXXXXXX = 11 digits
+}
+
+const BRANCH_PHONE_CONFIG = {
+  PK: { country: 'Pakistan', dialCode: '92', nationalLength: 10, example: '+92 300 1234567' },
+  GB: { country: 'United Kingdom', dialCode: '44', nationalLength: 10, example: '+44 7700 900123' },
+  AU: { country: 'Australia', dialCode: '61', nationalLength: 9, example: '+61 412 345 678' }
+};
+function branchPhoneConfig() {
+  const countryCode = branchState.info?.countryCode || 'PK';
+  return BRANCH_PHONE_CONFIG[countryCode] || { country: branchState.info?.country || 'selected country', dialCode: '', nationalLength: null, example: '+<country code> phone number' };
+}
+function normalizeBranchPhone(raw) {
+  let value = String(raw || '').trim();
+  if (value.startsWith('0') && value.length === 11) {
+    const config = branchPhoneConfig();
+    if (!config.dialCode || config.dialCode === '92') {
+      return `+92${value.slice(1)}`;
+    }
+  }
+  return value.startsWith('+') ? `+${value.slice(1).replace(/\D/g, '')}` : value.replace(/[\s()-]/g, '');
+}
+function isValidBranchPhone(phone) {
+  const config = branchPhoneConfig();
+  if (!/^(\+[1-9]\d{6,14}|0\d{9,11})$/.test(phone)) return false;
+  if (!config.dialCode) return true;
+  if (phone.startsWith(`+${config.dialCode}`)) {
+    return phone.length >= config.dialCode.length + (config.nationalLength || 9);
+  }
+  if (phone.startsWith('0') && config.dialCode === '92') {
+    return phone.length === 11;
+  }
+  return true;
+}
+function configureBranchPhoneFields() {
+  const config = branchPhoneConfig();
+  const helpText = config.dialCode ? `Use ${config.country}'s code: +${config.dialCode} (example: ${config.example}).` : 'Include your country code, for example +44.';
+  ['guest-phone', 'cr-phone-input'].forEach(id => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.placeholder = config.example;
+    input.maxLength = config.dialCode ? config.dialCode.length + config.nationalLength + 1 : 16;
+    input.pattern = config.dialCode ? `\\+${config.dialCode}\\d{${config.nationalLength}}` : '\\+[1-9]\\d{6,14}';
+    input.title = config.dialCode ? `Enter your number with the ${config.country} country code, for example ${config.example}.` : 'Enter a phone number including its country code.';
+  });
+  ['guest-phone-help', 'cr-phone-help'].forEach(id => {
+    const help = document.getElementById(id);
+    if (help) help.textContent = helpText;
+  });
 }
 
 // ============================================
@@ -3028,7 +3156,12 @@ async function renderTracking(orderNumber) {
           <span class="font-medium text-sm">${order.deliveryBoyName}</span>
         </div>
       </div>
-      ${order.deliveryBoyPhone ? `<a href="tel:${order.deliveryBoyPhone}" class="bg-brand-400 text-brand-950 font-semibold text-xs px-4 py-2.5 rounded-xl hover:bg-brand-500 transition-colors flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-phone"></i> Call</a>` : ''}
+      ${order.deliveryBoyPhone ? `
+        <div class="flex gap-2 shrink-0">
+          <a href="https://wa.me/${String(order.deliveryBoyPhone).replace(/\D/g, '').replace(/^0/, '92')}?text=${encodeURIComponent('Hello! I am the customer for order #' + order.orderNumber + '. My OTP is ' + (order.otp || ''))}" target="_blank" class="bg-[#25D366] text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center gap-1.5 shrink-0"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+          <a href="tel:${order.deliveryBoyPhone}" class="bg-brand-400 text-brand-950 font-semibold text-xs px-3.5 py-2.5 rounded-xl hover:bg-brand-500 transition-colors flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-phone"></i> Call</a>
+        </div>
+      ` : ''}
     </div>` : ''}
   `;
 
@@ -3240,10 +3373,11 @@ function initReservationForm() {
 }
 
 function initGuestPhoneField() {
-  const guestPhoneInput = document.querySelector('input[name="guestPhone"]');
-  if (guestPhoneInput) guestPhoneInput.addEventListener('input', () => {
-    guestPhoneInput.value = formatPKPhoneInput(guestPhoneInput.value);
-  });
+  document.querySelectorAll('input[name="guestPhone"], #cr-phone-input').forEach(phoneInput => phoneInput.addEventListener('input', () => {
+    const hasPlus = phoneInput.value.trim().startsWith('+');
+    const digits = phoneInput.value.replace(/\D/g, '');
+    phoneInput.value = hasPlus ? `+${digits.slice(0, 15)}` : digits.slice(0, 15);
+  }));
 }
 
 // ============================================
@@ -3277,6 +3411,7 @@ async function init() {
   setFooterYear();
   initReservationForm();
   initGuestPhoneField();
+  configureBranchPhoneFields();
   initQrTableDetection();
   // Sync the badge and the always-visible inline cart panel with whatever
   // was already saved in localStorage (e.g. a returning visitor who added

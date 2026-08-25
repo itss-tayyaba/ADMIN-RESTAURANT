@@ -232,4 +232,40 @@ adminUserSchema.statics.createDefaultDelivery = async function(){
 
 };
 
+// ================================
+// Create Default Superadmin
+// ================================
+
+adminUserSchema.statics.createDefaultSuperadmin = async function(){
+
+    const superadmin = await this.findOne({ username: "superadmin" });
+
+    if(!superadmin){
+
+        const password = process.env.DEFAULT_SUPERADMIN_PASSWORD || "superadmin2024";
+        if (!process.env.DEFAULT_SUPERADMIN_PASSWORD) {
+            console.warn("⚠️  DEFAULT_SUPERADMIN_PASSWORD not set — using demo password 'superadmin2024'. Set it in .env and change it from the login panel before going live.");
+        }
+
+        // No Branch lookup here on purpose — a superadmin has no home
+        // branch (branchId stays null), which is what makes
+        // resolveBranchId() treat them as "see everything" by default.
+        await this.create({
+
+            username: "superadmin",
+
+            password,
+
+            name: "Platform Owner",
+
+            role: "superadmin"
+
+        });
+
+        console.log("✅ Default Superadmin Created");
+
+    }
+
+};
+
 module.exports = mongoose.model("AdminUser", adminUserSchema);
