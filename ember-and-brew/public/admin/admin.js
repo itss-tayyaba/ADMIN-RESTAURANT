@@ -1590,18 +1590,83 @@
       return;
     }
     const statuses = ['pending', 'confirmed', 'completed', 'cancelled'];
-    // Offer any table that can seat the party (not just an exact match),
-    // closest fit first, so e.g. a party of 2 can still be seated at a free
-    // 4-top when no 2-top is available.
-    const tableOptionsByReservation = (guests) => restaurantTables
-      .filter(t => Number(t.seats) >= Number(guests))
-      .sort((a, b) => Number(a.seats) - Number(b.seats))
-      .map(table => `${table.tableNumber}|${table.seats}`);
-    els.reservationsBody.innerHTML = reservations.map(r => `
+    function minutesFromTimeStr(timeStr) {
+      if (!timeStr) return 0;
+      const str = String(timeStr).trim();
+      const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (match12) {
+        let h = Number(match12[1]);
+        const m = Number(match12[2]);
+        const period = match12[3].toUpperCase();
+        if (period === 'PM' && h < 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        return h * 60 + m;
+      }
+      const match24 = str.match(/^(\d{1,2}):(\d{2})/);
+      if (match24) {
+        const h = Number(match24[1]);
+        const m = Number(match24[2]);
+        return h * 60 + m;
+      }
+      return 0;
+    }
+
+    // Only offer FREE tables that are not already assigned to another confirmed reservation
+    // at an overlapping time on the same date.
+    const freeTableOptionsForReservation = (r) => {
+      const partySize = Number(r.guests) || 1;
+      const rStart = minutesFromTimeStr(r.time);
+
+      const busyTableNumbers = new Set();
+      reservations.forEach(other => {
+        if (String(other._id) === String(r._id)) return;
+        if (other.date !== r.date) return;
+        if (!['confirmed'].includes(other.status)) return;
+        if (!other.tableNumber) return;
+
+        const otherStart = minutesFromTimeStr(other.time);
+        if (Math.abs(otherStart - rStart) < 120) {
+          busyTableNumbers.add(other.tableNumber);
+        }
+      });
+
+      return restaurantTables
+        .filter(t => {
+          const seatsOk = Number(t.seats) >= partySize;
+          const isFree = !busyTableNumbers.has(t.tableNumber) || (r.tableNumber && t.tableNumber === r.tableNumber);
+          return seatsOk && isFree;
+        })
+        .sort((a, b) => Number(a.seats) - Number(b.seats))
+        .map(table => `${table.tableNumber}|${table.seats}`);
+    };
+
+    const statusPriority = { pending: 0, confirmed: 1, completed: 2, cancelled: 3 };
+    const sortedReservations = [...reservations].sort((a, b) => {
+      const pA = statusPriority[a.status] !== undefined ? statusPriority[a.status] : 99;
+      const pB = statusPriority[b.status] !== undefined ? statusPriority[b.status] : 99;
+      if (pA !== pB) return pA - pB;
+      if (a.date !== b.date) return (a.date || '').localeCompare(b.date || '');
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
+    els.reservationsBody.innerHTML = sortedReservations.map(r => `
       <tr>
-        <td><div class="reservation-guest"><span class="guest-initial">${escapeHtml((r.guestName || '?').trim().charAt(0).toUpperCase())}</span><span><strong>${escapeHtml(r.guestName)}</strong><small>${escapeHtml(r.email)}<br>${escapeHtml(r.phone)}</small></span></div></td>
+        <td>
+          <div class="reservation-guest">
+            <span class="guest-initial">${escapeHtml((r.guestName || '?').trim().charAt(0).toUpperCase())}</span>
+            <span>
+              <strong>${escapeHtml(r.guestName)}</strong>
+              <small>${escapeHtml(r.email)}<br>${escapeHtml(r.phone)}</small>
+              ${r.phone ? `
+                <a href="https://wa.me/${String(r.phone).replace(/\D/g, '').replace(/^0/, '92')}?text=${encodeURIComponent('Hello ' + r.guestName + '! Ember & Brew is writing regarding your table reservation for ' + r.date + ' at ' + r.time + (r.tableNumber ? ' (Table ' + r.tableNumber + ')' : '') + '.')}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;color:#25D366;font-weight:700;font-size:11.5px;margin-top:4px;text-decoration:none;">
+                  <i class="fa-brands fa-whatsapp"></i> WhatsApp Guest
+                </a>
+              ` : ''}
+            </span>
+          </div>
+        </td>
         <td>${reservationDateTime(r)}</td><td>${Number(r.guests)}</td>
-        <td><select class="reservation-table-select" data-reservation="${r._id}"><option value="">Assign table</option>${tableOptionsByReservation(r.guests).map(entry => { const [t, seats] = entry.split('|'); return `<option value="${t}" ${r.tableNumber === t ? 'selected' : ''}>${t} (${seats} seats)</option>`; }).join('') || '<option value="" disabled>No table big enough</option>'}</select></td>
+        <td><select class="reservation-table-select" data-reservation="${r._id}"><option value="">Assign table</option>${freeTableOptionsForReservation(r).map(entry => { const [t, seats] = entry.split('|'); return `<option value="${t}" ${r.tableNumber === t ? 'selected' : ''}>${t} (${seats} seats)</option>`; }).join('') || '<option value="" disabled>No free tables for this time</option>'}</select></td>
         <td><select class="reservation-status-select status-${escapeHtml(r.status)}" data-reservation="${r._id}">${statuses.map(s => `<option value="${s}" ${r.status === s ? 'selected' : ''}>${reservationStatusLabel(s)}</option>`).join('')}</select></td>
         <td><button class="btn-primary reservation-save-btn" data-reservation="${r._id}">Save</button></td>
       </tr>`).join('');

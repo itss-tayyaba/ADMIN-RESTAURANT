@@ -293,28 +293,39 @@ textarea.form-input{min-height:80px;resize:vertical}
 <!-- Particle canvas -->
 <canvas id="particles-canvas" aria-hidden="true"></canvas>
 
-<!-- Navigation -->
-<nav id="main-nav" role="navigation" aria-label="Main navigation">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-    <a href="#" onclick="navigate('menu');return false" class="font-display text-xl font-bold tracking-wide text-brand-100 hover:text-brand-400 transition-colors" aria-label="Home">
-      Ember <span class="text-brand-400">&</span> Brew
+<!-- Navigation (Matching Luxury Menu Navbar) -->
+<nav id="main-nav" role="navigation" aria-label="Main navigation" class="fixed top-0 left-0 right-0 z-50 transition-all duration-200 border-b border-brand-800/60" style="background:rgba(9,14,12,0.95);backdrop-filter:blur(12px);height:70px;">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between gap-4">
+    <a href="/" class="flex items-center gap-2.5 text-decoration-none text-brand-100 hover:text-brand-400 transition-colors" aria-label="Home">
+      <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:radial-gradient(circle at 30% 30%, #D4A853, #9A5638);box-shadow:0 0 12px rgba(212,168,83,0.8);"></span>
+      <span class="font-display text-xl sm:text-2xl font-bold tracking-wide">Ember <em class="text-brand-400 not-italic">&amp;</em> Brew</span>
     </a>
-    <div class="hidden md:flex items-center gap-8">
-      <a href="#" onclick="navigate('menu');window.scrollTo({top:0,behavior:'smooth'});return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Home</a>
-      <a href="#" onclick="navigate('menu');return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Menu</a>
-      <a href="#" onclick="scrollToReservation();return false" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Reservations</a>
-      <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Customer Portal</a>
-      <!--<a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 transition-colors">Staff Login</a>-->
+
+    <div class="hidden md:flex items-center gap-7">
+      <a href="/" class="text-sm font-bold text-brand-400 transition-colors">Home</a>
+      <a href="/menu.html" class="text-sm font-medium text-brand-300 hover:text-brand-100 transition-colors">Menu</a>
+      <a href="#reservation-section" onclick="scrollToReservation();return false" class="text-sm font-medium text-brand-300 hover:text-brand-100 transition-colors">Reservation</a>
+      <a href="/customer.html" class="text-sm font-medium text-brand-300 hover:text-brand-100 transition-colors">Customer Portal</a>
     </div>
-    <div class="flex items-center gap-2 sm:gap-3">
-      <span id="branch-nav-location" class="inline-flex items-center gap-1.5 text-xs text-brand-300 whitespace-nowrap" aria-label="Current branch location">
+
+    <div class="flex items-center gap-3">
+      <!-- Branch Selector Pill Dropdown -->
+      <div class="flex items-center gap-2 bg-brand-900/90 border border-brand-800 rounded-full px-3.5 py-1.5 text-xs text-brand-200 shadow-sm" title="Select Branch">
         <i class="fa-solid fa-location-dot text-brand-400"></i>
-        <span>Pakistan</span>
-      </span>
-      <button id="cart-btn" onclick="toggleCart()" class="relative p-2 text-brand-300 hover:text-brand-400 transition-colors" aria-label="Open cart">
-        <i class="fa-solid fa-bag-shopping text-lg"></i>
-        <span id="cart-badge" class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-brand-400 text-brand-950 text-[11px] font-bold rounded-full flex items-center justify-center hidden">0</span>
+        <select id="branchNavSelect" class="bg-transparent border-none text-brand-400 font-bold text-xs outline-none cursor-pointer" onchange="onNavbarBranchChange(this.value)">
+          <option value="default" selected>🇵🇰 Pakistan (Rs)</option><option value="uk-london">🇬🇧 London (£)</option><option value="australia">🇦🇺 Sydney (A$)</option>
+        </select>
+      </div>
+
+      <a href="#reservation-section" onclick="scrollToReservation();return false" class="hidden sm:inline-flex items-center gap-1.5 font-bold text-xs bg-brand-400 text-brand-950 px-4 py-2 rounded-full hover:bg-brand-500 transition-transform shadow-md">
+        <i class="fa-regular fa-calendar-check"></i> Reserve
+      </a>
+
+      <button id="cart-btn" onclick="toggleCart()" class="relative w-9 h-9 rounded-full bg-brand-900/90 border border-brand-800 flex items-center justify-center text-brand-300 hover:text-brand-400 transition-colors" aria-label="Open cart">
+        <i class="fa-solid fa-bag-shopping text-sm"></i>
+        <span id="cart-badge" class="absolute -top-1 -right-1 w-5 h-5 bg-brand-400 text-brand-950 text-[10.5px] font-extrabold rounded-full flex items-center justify-center hidden">0</span>
       </button>
+
       <button id="mobile-menu-btn" onclick="toggleMobileNav()" class="md:hidden p-2 text-brand-300 hover:text-brand-100 transition-colors" aria-label="Toggle menu">
         <i class="fa-solid fa-bars text-lg"></i>
       </button>
@@ -323,14 +334,14 @@ textarea.form-input{min-height:80px;resize:vertical}
 </nav>
 
 <!-- Mobile nav dropdown -->
-<div id="mobile-nav" class="fixed top-16 left-0 right-0 bg-brand-900/95 backdrop-blur-lg border-b border-brand-800 z-99 hidden md:hidden" style="z-index:99">
+<div id="mobile-nav" class="fixed top-[70px] left-0 right-0 bg-brand-950/98 backdrop-blur-xl border-b border-brand-800 z-99 hidden md:hidden" style="z-index:99">
   <div class="px-6 py-4 flex flex-col gap-3">
-    <a href="#" onclick="navigate('menu');window.scrollTo({top:0,behavior:'smooth'});closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Home</a>
-    <a href="#" onclick="navigate('menu');closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Menu</a>
-    <a href="#" onclick="scrollToReservation();closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Reservations</a>
+    <a href="/" class="text-sm text-brand-400 font-bold py-2">Home</a>
+    <a href="/menu.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Menu</a>
+    <a href="#reservation-section" onclick="scrollToReservation();closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Reservation</a>
     <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Customer Portal</a>
-    <a href="/admin/login.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Staff Login</a>
   </div>
+</div>
 </div>
 
 <!-- Main content -->
@@ -454,44 +465,166 @@ textarea.form-input{min-height:80px;resize:vertical}
       </div>
     </div>
 
-    <!-- Menu section -->
-    <div id="menu-section" class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 border-t border-brand-800">
-      <div class="text-center mb-10">
-        <p class="text-brand-400 text-xs tracking-[.3em] uppercase font-medium mb-4">The Full Menu</p>
-        <h2 class="font-display text-3xl sm:text-4xl font-bold">Order Ahead, Skip the Line</h2>
+    <!-- Culinary Excellence & About Our Dishes Showcase -->
+    <div id="menu-section" class="relative max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 border-t border-brand-800/80 overflow-hidden">
+      <!-- Atmospheric Ambient Glows -->
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] pointer-events-none rounded-full" style="background:radial-gradient(ellipse at center, rgba(212,168,83,0.12) 0%, rgba(198,125,90,0.04) 50%, transparent 75%);filter:blur(60px);"></div>
+      <div class="absolute -top-10 -left-20 w-80 h-80 rounded-full pointer-events-none opacity-20" style="background:radial-gradient(circle, #D4A853, transparent 70%);filter:blur(50px);"></div>
+
+      <!-- Section Header -->
+      <div class="text-center max-w-3xl mx-auto mb-16 relative z-10">
+        <div class="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-brand-800/90 shadow-lg mb-5" style="background:rgba(26,25,23,0.75);backdrop-filter:blur(10px);">
+          <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse shadow-[0_0_8px_#D4A853]"></span>
+          <span class="text-brand-400 text-[11px] tracking-[.32em] uppercase font-extrabold">Artisan Craft &amp; Culinary Heritage</span>
+        </div>
+        <h2 class="font-display text-4xl sm:text-5xl lg:text-6xl font-900 mb-6 leading-[1.12] text-brand-100">
+          Crafted with <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-brand-400 to-amber-500">Soul</span>,<br class="hidden sm:block">
+          Served with <span class="italic font-normal text-brand-400">Passion</span>
+        </h2>
+        <p class="text-brand-300 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+          At Ember &amp; Brew, every recipe is a celebration of culinary mastery. From small-batch hand-roasted beans to flame-seared prime cuts, we combine timeless culinary techniques with fresh local produce across Pakistan, the UK, and Australia.
+        </p>
       </div>
-      <!-- Search -->
-      <div class="max-w-md mx-auto mb-8">
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-brand-800 text-sm"></i>
-          <input type="text" id="menu-search" placeholder="Search our menu..." class="form-input pl-11" oninput="filterMenu()">
+
+      <!-- 4 Pillars of Culinary Mastery Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7 mb-16 relative z-10">
+        
+        <!-- Card 1: Single-Origin Specialty Roasts -->
+        <article class="group relative rounded-3xl border border-brand-800/90 overflow-hidden flex flex-col transition-all duration-400 hover:-translate-y-2 hover:border-brand-400/60 hover:shadow-[0_20px_45px_rgba(0,0,0,0.6)]" style="background:linear-gradient(180deg, #1C1B18 0%, #141311 100%);">
+          <div class="h-52 w-full relative overflow-hidden bg-brand-950">
+            <img src="/images/cold%20brew.jpeg" alt="Single-Origin Roasts" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80';">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#1C1B18] via-transparent to-black/30"></div>
+            <span class="absolute top-3.5 left-3.5 bg-black/70 backdrop-blur-md border border-white/10 text-amber-300 text-[10.5px] font-extrabold uppercase px-3 py-1 rounded-full tracking-wider">
+              ☕ Micro-Roasts
+            </span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="font-display text-2xl font-bold text-brand-100 mb-2.5 group-hover:text-brand-400 transition-colors">
+              Specialty Roasts
+            </h3>
+            <p class="text-brand-300 text-[13px] leading-relaxed mb-6 flex-1">
+              Direct-trade single-origin Arabica beans roasted in small batches. Experience velvety microfoam, 16-hour slow cold extraction, and rich cocoa aromatics.
+            </p>
+            <div class="pt-4 border-t border-brand-800/60 flex items-center justify-between text-xs">
+              <span class="text-brand-400 font-bold flex items-center gap-1.5"><i class="fa-solid fa-medal"></i> Master Baristas</span>
+              <span class="text-brand-300 font-medium">Fresh Roasted</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 2: Flame-Seared Gourmet Kitchen -->
+        <article class="group relative rounded-3xl border border-brand-800/90 overflow-hidden flex flex-col transition-all duration-400 hover:-translate-y-2 hover:border-brand-400/60 hover:shadow-[0_20px_45px_rgba(0,0,0,0.6)]" style="background:linear-gradient(180deg, #1C1B18 0%, #141311 100%);">
+          <div class="h-52 w-full relative overflow-hidden bg-brand-950">
+            <img src="/images/Avacado%20toast.jpeg" alt="Flame-Seared & Gourmet Kitchen" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#1C1B18] via-transparent to-black/30"></div>
+            <span class="absolute top-3.5 left-3.5 bg-black/70 backdrop-blur-md border border-white/10 text-amber-300 text-[10.5px] font-extrabold uppercase px-3 py-1 rounded-full tracking-wider">
+              🥩 Gourmet Grill
+            </span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="font-display text-2xl font-bold text-brand-100 mb-2.5 group-hover:text-brand-400 transition-colors">
+              Prime Cuts &amp; Kitchen
+            </h3>
+            <p class="text-brand-300 text-[13px] leading-relaxed mb-6 flex-1">
+              Prime steaks char-grilled over natural embers, basted with rosemary-garlic butter, paired with creamy mashed potatoes and fresh seasonal greens.
+            </p>
+            <div class="pt-4 border-t border-brand-800/60 flex items-center justify-between text-xs">
+              <span class="text-brand-400 font-bold flex items-center gap-1.5"><i class="fa-solid fa-fire"></i> Flame-Grilled</span>
+              <span class="text-brand-300 font-medium">100% Prime</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 3: Handmade Pastas & Risotto -->
+        <article class="group relative rounded-3xl border border-brand-800/90 overflow-hidden flex flex-col transition-all duration-400 hover:-translate-y-2 hover:border-brand-400/60 hover:shadow-[0_20px_45px_rgba(0,0,0,0.6)]" style="background:linear-gradient(180deg, #1C1B18 0%, #141311 100%);">
+          <div class="h-52 w-full relative overflow-hidden bg-brand-950">
+            <img src="/images/harvest%20salad.jpeg" alt="Handmade Pastas & Risottos" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80';">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#1C1B18] via-transparent to-black/30"></div>
+            <span class="absolute top-3.5 left-3.5 bg-black/70 backdrop-blur-md border border-white/10 text-amber-300 text-[10.5px] font-extrabold uppercase px-3 py-1 rounded-full tracking-wider">
+              🍝 Cucina Artigianale
+            </span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="font-display text-2xl font-bold text-brand-100 mb-2.5 group-hover:text-brand-400 transition-colors">
+              Artisan Pastas
+            </h3>
+            <p class="text-brand-300 text-[13px] leading-relaxed mb-6 flex-1">
+              Creamy Arborio risottos, truffle mushroom pasta ribbons, and slow-simmered artisanal sauces finished with 24-month aged Italian parmesan cheese.
+            </p>
+            <div class="pt-4 border-t border-brand-800/60 flex items-center justify-between text-xs">
+              <span class="text-brand-400 font-bold flex items-center gap-1.5"><i class="fa-solid fa-leaf"></i> Wild Truffles</span>
+              <span class="text-brand-300 font-medium">Made Daily</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card 4: Decadent Patisserie & Desserts -->
+        <article class="group relative rounded-3xl border border-brand-800/90 overflow-hidden flex flex-col transition-all duration-400 hover:-translate-y-2 hover:border-brand-400/60 hover:shadow-[0_20px_45px_rgba(0,0,0,0.6)]" style="background:linear-gradient(180deg, #1C1B18 0%, #141311 100%);">
+          <div class="h-52 w-full relative overflow-hidden bg-brand-950">
+            <img src="/images/tiramusu.jpeg" alt="Decadent Patisserie & Desserts" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=600&q=80';">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#1C1B18] via-transparent to-black/30"></div>
+            <span class="absolute top-3.5 left-3.5 bg-black/70 backdrop-blur-md border border-white/10 text-amber-300 text-[10.5px] font-extrabold uppercase px-3 py-1 rounded-full tracking-wider">
+              🍰 House Patisserie
+            </span>
+          </div>
+          <div class="p-6 flex flex-col flex-1">
+            <h3 class="font-display text-2xl font-bold text-brand-100 mb-2.5 group-hover:text-brand-400 transition-colors">
+              House Patisserie
+            </h3>
+            <p class="text-brand-300 text-[13px] leading-relaxed mb-6 flex-1">
+              Espresso-soaked ladyfinger tiramisu, torched vanilla bean crème brûlée, molten Belgian chocolate lava cakes, and classic berry cheesecakes.
+            </p>
+            <div class="pt-4 border-t border-brand-800/60 flex items-center justify-between text-xs">
+              <span class="text-brand-400 font-bold flex items-center gap-1.5"><i class="fa-solid fa-award"></i> Signature Recipe</span>
+              <span class="text-brand-300 font-medium">Baked Fresh</span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <!-- Trust Badges Strip -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-14 relative z-10">
+        <div class="flex items-center gap-3.5 p-4 rounded-2xl border border-brand-800/70 bg-brand-950/50 backdrop-blur">
+          <div class="w-10 h-10 rounded-xl bg-brand-400/10 border border-brand-400/30 flex items-center justify-center text-brand-400 shrink-0"><i class="fa-solid fa-leaf text-base"></i></div>
+          <div><strong class="text-brand-100 text-sm block">100% Farm-Fresh</strong><span class="text-brand-400 text-xs font-semibold">Local Sourcing</span></div>
+        </div>
+        <div class="flex items-center gap-3.5 p-4 rounded-2xl border border-brand-800/70 bg-brand-950/50 backdrop-blur">
+          <div class="w-10 h-10 rounded-xl bg-brand-400/10 border border-brand-400/30 flex items-center justify-center text-brand-400 shrink-0"><i class="fa-solid fa-globe text-base"></i></div>
+          <div><strong class="text-brand-100 text-sm block">Global Branches</strong><span class="text-brand-400 text-xs font-semibold">PK · UK · AU</span></div>
+        </div>
+        <div class="flex items-center gap-3.5 p-4 rounded-2xl border border-brand-800/70 bg-brand-950/50 backdrop-blur">
+          <div class="w-10 h-10 rounded-xl bg-brand-400/10 border border-brand-400/30 flex items-center justify-center text-brand-400 shrink-0"><i class="fa-solid fa-star text-base"></i></div>
+          <div><strong class="text-brand-100 text-sm block">4.9 ★ Rating</strong><span class="text-brand-400 text-xs font-semibold">2,500+ Reviews</span></div>
+        </div>
+        <div class="flex items-center gap-3.5 p-4 rounded-2xl border border-brand-800/70 bg-brand-950/50 backdrop-blur">
+          <div class="w-10 h-10 rounded-xl bg-brand-400/10 border border-brand-400/30 flex items-center justify-center text-brand-400 shrink-0"><i class="fa-solid fa-shield-halved text-base"></i></div>
+          <div><strong class="text-brand-100 text-sm block">Zero Additives</strong><span class="text-brand-400 text-xs font-semibold">Pure Ingredients</span></div>
         </div>
       </div>
-      <!-- Category pills -->
-      <div id="category-pills" class="flex gap-2 mb-10 overflow-x-auto pb-2 justify-center flex-wrap" role="tablist" aria-label="Menu categories"></div>
 
-      <div class="xl:grid xl:grid-cols-[1fr_340px] xl:gap-8 xl:items-start">
-        <div>
-          <!-- Menu grid -->
-          <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-          <p id="menu-empty" class="hidden text-center text-brand-800 py-16 text-sm">No items match your search.</p>
+      <!-- Feature Quality Highlights Banner & Explore Full Menu CTA -->
+      <div class="rounded-3xl border border-brand-400/30 p-8 sm:p-12 relative overflow-hidden text-center sm:text-left flex flex-col lg:flex-row items-center justify-between gap-8 z-10 shadow-[0_20px_60px_rgba(0,0,0,0.7)]" style="background:linear-gradient(135deg, #1C1B18 0%, #12110F 100%);">
+        <div class="absolute -right-20 -bottom-20 w-80 h-80 rounded-full opacity-20 pointer-events-none" style="background:radial-gradient(circle, #D4A853, transparent 70%);filter:blur(40px);"></div>
+
+        <div class="max-w-2xl relative z-10">
+          <span class="text-brand-400 text-xs uppercase tracking-[.25em] font-extrabold block mb-2">Ready to Taste the Craft?</span>
+          <h3 class="font-display text-3xl sm:text-4xl font-bold text-brand-100 mb-3 leading-tight">
+            Explore Our Complete Menu Collection
+          </h3>
+          <p class="text-brand-300 text-sm sm:text-base leading-relaxed">
+            Discover our complete seasonal menu with branch pricing in your currency, interactive ingredient customizations, and instant doorstep delivery.
+          </p>
         </div>
 
-        <!-- Inline order panel: desktop-only, always visible next to the menu so
-             added items show up here immediately without opening the cart drawer. -->
-        <aside id="inline-cart-panel" class="hidden xl:flex xl:flex-col xl:sticky xl:top-24 bg-brand-950/40 border border-brand-800 rounded-2xl overflow-hidden">
-          <div class="flex items-center justify-between p-5 border-b border-brand-800">
-            <h3 class="font-display text-lg font-bold">Your Order</h3>
-            <span id="inline-cart-count" class="text-xs text-brand-400 font-semibold"></span>
-          </div>
-          <div id="inline-cart-items" class="max-h-[420px] overflow-y-auto p-5"></div>
-          <div id="inline-cart-footer" class="border-t border-brand-800 p-5">
-            <div class="flex justify-between mb-1 text-sm"><span class="text-brand-300">Subtotal</span><span id="inline-cart-subtotal" class="font-medium">$0.00</span></div>
-            <div class="flex justify-between mb-4 text-sm"><span class="text-brand-300">Tax (8%)</span><span id="inline-cart-tax" class="font-medium">$0.00</span></div>
-            <div class="flex justify-between mb-5 font-bold"><span>Total</span><span id="inline-cart-total" class="text-brand-400">$0.00</span></div>
-            <button onclick="goToCheckout()" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm">Checkout</button>
-          </div>
-        </aside>
+        <div class="flex flex-col sm:flex-row gap-4 shrink-0 w-full sm:w-auto relative z-10">
+          <a href="/menu.html" class="inline-flex items-center justify-center gap-2.5 font-bold text-sm bg-gradient-to-r from-amber-300 via-brand-400 to-amber-500 text-brand-950 px-9 py-4 rounded-full hover:brightness-110 transition-all shadow-[0_8px_25px_rgba(212,168,83,0.4)] hover:scale-105">
+            <i class="fa-solid fa-utensils"></i> Open Full Menu <i class="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+          <a href="#reservation-section" onclick="scrollToReservation();return false" class="inline-flex items-center justify-center gap-2 font-bold text-sm border border-brand-400/50 text-brand-200 px-7 py-4 rounded-full hover:border-brand-400 hover:text-brand-400 hover:bg-brand-400/10 transition-colors">
+            <i class="fa-regular fa-calendar-check"></i> Book a Table
+          </a>
+        </div>
       </div>
     </div>
 
@@ -759,7 +892,7 @@ textarea.form-input{min-height:80px;resize:vertical}
      capped by main's own stacking context — otherwise it renders behind
      the fixed nav bar) -->
 <div id="delivery-location-modal" class="fixed inset-0 z-[100] hidden items-start sm:items-center justify-center overflow-y-auto p-4 bg-black/60" role="dialog" aria-modal="true" aria-labelledby="delivery-location-title">
-  <div class="w-full max-w-3xl my-4 sm:my-auto rounded-2xl bg-brand-950 border border-brand-800 shadow-2xl overflow-hidden">
+  <div class="w-full max-w-2xl my-auto rounded-2xl bg-brand-950 border border-brand-800 shadow-2xl overflow-hidden">
     <div class="p-5 border-b border-brand-800 flex items-start justify-between gap-4">
       <div>
         <p class="text-xs uppercase tracking-[.3em] text-brand-400 mb-1">Delivery location</p>
@@ -774,8 +907,17 @@ textarea.form-input{min-height:80px;resize:vertical}
         <button type="button" onclick="useCurrentDeliveryLocation()" class="border border-brand-800 text-brand-300 rounded-xl px-4 py-3 text-sm hover:bg-brand-900"><i class="fa-solid fa-location-crosshairs mr-2"></i>Use current location</button>
       </div>
       <div id="delivery-search-results" class="hidden mb-3 rounded-xl border border-brand-800 bg-brand-900 divide-y divide-brand-800 max-h-56 overflow-y-auto"></div>
+      <!-- Quick Location Chips -->
+      <div class="flex items-center gap-2 mb-3 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <span class="text-brand-400 text-[11px] font-semibold shrink-0">Quick Pick:</span>
+        <button type="button" onclick="selectQuickLocation('Muhammad Nagar, Faisalabad')" class="shrink-0 px-3 py-1 rounded-full border border-brand-800 bg-brand-900/80 hover:border-brand-400 hover:text-brand-400 text-brand-300 transition-colors">📍 Muhammad Nagar</button>
+        <button type="button" onclick="selectQuickLocation('D Ground, Faisalabad')" class="shrink-0 px-3 py-1 rounded-full border border-brand-800 bg-brand-900/80 hover:border-brand-400 hover:text-brand-400 text-brand-300 transition-colors">📍 D Ground</button>
+        <button type="button" onclick="selectQuickLocation('Susan Road, Madina Town, Faisalabad')" class="shrink-0 px-3 py-1 rounded-full border border-brand-800 bg-brand-900/80 hover:border-brand-400 hover:text-brand-400 text-brand-300 transition-colors">📍 Susan Road</button>
+        <button type="button" onclick="selectQuickLocation('Peoples Colony No. 1, Faisalabad')" class="shrink-0 px-3 py-1 rounded-full border border-brand-800 bg-brand-900/80 hover:border-brand-400 hover:text-brand-400 text-brand-300 transition-colors">📍 Peoples Colony</button>
+        <button type="button" onclick="selectQuickLocation('Madina Town, Faisalabad')" class="shrink-0 px-3 py-1 rounded-full border border-brand-800 bg-brand-900/80 hover:border-brand-400 hover:text-brand-400 text-brand-300 transition-colors">📍 Madina Town</button>
+      </div>
       <p id="delivery-map-message" class="text-xs text-brand-400 mb-3">Search, use GPS, or drag the pin to your exact delivery point.</p>
-      <div id="delivery-location-map" class="h-80 rounded-xl overflow-hidden bg-brand-900 border border-brand-800"></div>
+      <div id="delivery-location-map" class="h-64 sm:h-[280px] rounded-xl overflow-hidden bg-brand-900 border border-brand-800 shadow-inner relative z-0"></div>
       <div class="mt-4 rounded-xl bg-brand-900 border border-brand-800 p-4">
         <div class="flex items-center justify-between mb-1">
           <p class="text-xs text-brand-800 uppercase tracking-[.18em]">Selected address</p>
@@ -1419,13 +1561,63 @@ async function renderAccount() {
 
 // ============================================
 // FAN FAVORITES — 3D coverflow carousel
-// ============================================
 const FAN_FAVORITES = [
-  { name: 'Tiramisu', tag: 'Signature · Classic', desc: 'Espresso-soaked ladyfingers, mascarpone cream, cocoa dust. House recipe.', price: 7.50, cat: 'Desserts', img: '/images/tiramusu.jpeg', icon: 'fa-solid fa-ice-cream' },
-  { name: 'Crème Brûlée', tag: 'Signature · Torched', desc: 'Madagascar vanilla custard with a caramelized sugar crust. Crackling perfection.', price: 7.75, cat: 'Desserts', img: '/images/creme brulee.jpeg', icon: 'fa-solid fa-fire' },
-  { name: 'Turkey Club', tag: 'Regulars · Loaded', desc: 'Roasted turkey, applewood bacon, heirloom tomato, aioli on ciabatta.', price: 9.75, cat: 'Sandwiches', img: '/images/turkey club sandwich.jpeg', icon: 'fa-solid fa-bacon' },
-  { name: 'Iced Lemonade', tag: 'Refreshing · Cold', desc: 'House-made lemon syrup with sparkling water and fresh mint.', price: 4.00, cat: 'Drinks', img: '/images/iced lemonade.jpeg', icon: 'fa-solid fa-glass-water' }
+  { 
+    name: 'Cold Brew', 
+    tag: 'Signature · 16hr Steep', 
+    desc: '16-hour slow cold extraction. Smooth, low-acid, naturally sweet with rich cocoa undertones.', 
+    price: 4.75, 
+    cat: 'Coffee', 
+    img: '/images/cold%20brew.jpeg', 
+    fallback: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80' 
+  },
+  { 
+    name: 'Tiramisu', 
+    tag: 'Signature · Italian Classic', 
+    desc: 'Espresso-soaked ladyfingers, velvety mascarpone cream, Dutch cocoa dust. Authentic family recipe.', 
+    price: 7.50, 
+    cat: 'Desserts', 
+    img: '/images/tiramusu.jpeg', 
+    fallback: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=600&q=80' 
+  },
+  { 
+    name: 'Avocado Toast', 
+    tag: 'Kitchen · Fresh Daily', 
+    desc: 'Smashed Hass avocados on toasted artisanal sourdough, chili flakes, microgreens, and a golden poached egg.', 
+    price: 8.50, 
+    cat: 'Mains', 
+    img: '/images/Avacado%20toast.jpeg', 
+    fallback: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=600&q=80' 
+  },
+  { 
+    name: 'Crème Brûlée', 
+    tag: 'Artisan · Torched Crust', 
+    desc: 'Madagascar vanilla bean custard with a crackling caramelized sugar crust. Pure culinary perfection.', 
+    price: 7.75, 
+    cat: 'Desserts', 
+    img: '/images/creme%20brulee.jpeg', 
+    fallback: 'https://images.unsplash.com/photo-1470324161839-ce2bb6fa3bc3?auto=format&fit=crop&w=600&q=80' 
+  },
+  { 
+    name: 'Cappuccino', 
+    tag: 'Barista Craft · Microfoam', 
+    desc: 'Double shot rich espresso balanced with velvety textured steamed milk and delicate hand-poured latte art.', 
+    price: 4.50, 
+    cat: 'Coffee', 
+    img: '/images/Cappuccino.jpeg', 
+    fallback: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=600&q=80' 
+  },
+  { 
+    name: 'Iced Lemonade', 
+    tag: 'Refreshing · Hand-Squeezed', 
+    desc: 'House-made organic lemon syrup infused with sparkling mineral water, crushed ice, and fresh garden mint.', 
+    price: 4.00, 
+    cat: 'Drinks', 
+    img: '/images/iced%20lemonade.jpeg', 
+    fallback: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80' 
+  }
 ];
+
 let ffIndex = 0;
 let ffAutoplayTimer = null;
 
@@ -1433,8 +1625,10 @@ function renderFanFavorites() {
   const track = document.getElementById('ff-track');
   if (!track) return;
   track.innerHTML = FAN_FAVORITES.map((it, i) => `
-    <div class="ff-card" data-idx="${i}" onclick="ffNext()">
-      <div class="ff-card-bg"><img src="${it.img}" alt="${it.name}" loading="lazy"></div>
+    <div class="ff-card" data-idx="${i}" onclick="ffCardClick(${i})">
+      <div class="ff-card-bg">
+        <img src="${it.img}" alt="${it.name}" onerror="this.onerror=null;this.src='${it.fallback}';" loading="lazy">
+      </div>
       <div class="ff-card-content">
         <h3 class="ff-card-title">${it.name}</h3>
         <p class="ff-card-tag">${it.tag}</p>
@@ -1445,11 +1639,24 @@ function renderFanFavorites() {
       </div>
     </div>
   `).join('');
-  document.getElementById('ff-dots').innerHTML = FAN_FAVORITES.map((_, i) =>
-    `<button class="ff-dot" onclick="ffGoTo(${i})" aria-label="Go to favorite ${i + 1}"></button>`
-  ).join('');
+
+  const dots = document.getElementById('ff-dots');
+  if (dots) {
+    dots.innerHTML = FAN_FAVORITES.map((_, i) =>
+      `<button class="ff-dot ${i === ffIndex ? 'active' : ''}" onclick="ffGoTo(${i})" aria-label="Go to favorite ${i + 1}"></button>`
+    ).join('');
+  }
+
   ffUpdate();
   ffResetAutoplay();
+}
+
+function ffCardClick(idx) {
+  if (idx === ffIndex) {
+    ffAddToOrder();
+  } else {
+    ffGoTo(idx);
+  }
 }
 
 function ffUpdate() {
@@ -1484,22 +1691,33 @@ function ffUpdate() {
   document.querySelectorAll('#ff-dots .ff-dot').forEach((d, i) => d.classList.toggle('active', i === ffIndex));
   const item = FAN_FAVORITES[ffIndex];
   const desc = document.getElementById('ff-desc');
-  if (desc) desc.textContent = item.desc;
+  if (desc && item) desc.textContent = item.desc;
   const label = document.getElementById('ff-add-label');
-  if (label) label.textContent = `Add to Order · ${formatMoney(item.price)}`;
+  if (label && item) label.textContent = `Add to Order · ${formatMoney(item.price)}`;
 }
 
 function ffGoTo(i) { ffIndex = i; ffUpdate(); ffResetAutoplay(); }
 function ffNext() { ffIndex = (ffIndex + 1) % FAN_FAVORITES.length; ffUpdate(); ffResetAutoplay(); }
 function ffPrev() { ffIndex = (ffIndex - 1 + FAN_FAVORITES.length) % FAN_FAVORITES.length; ffUpdate(); ffResetAutoplay(); }
 function ffPauseAutoplay() { if (ffAutoplayTimer) clearInterval(ffAutoplayTimer); }
-function ffResetAutoplay() { ffPauseAutoplay(); ffAutoplayTimer = setInterval(ffNext, 5000); }
+function ffResetAutoplay() { ffPauseAutoplay(); ffAutoplayTimer = setInterval(ffNext, 4500); }
 
 function ffAddToOrder() {
   const fav = FAN_FAVORITES[ffIndex];
-  const match = MENU.find(m => (m.name || '').toLowerCase().trim() === fav.name.toLowerCase().trim());
-  if (match) { addToCart(match.id); return; }
-  showToast('Menu is still loading — please try again in a moment.', 'info');
+  if (!fav) return;
+
+  const match = Array.isArray(MENU) ? MENU.find(m => (m.name || '').toLowerCase().trim() === fav.name.toLowerCase().trim()) : null;
+  const itemToAdd = match || {
+    id: 'fav_' + fav.name.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+    name: fav.name,
+    price: Number(fav.price) || 0,
+    desc: fav.desc,
+    cat: fav.cat,
+    img: resolveImageUrl(fav.img)
+  };
+
+  addItemToCart(itemToAdd, [], 1);
+  showToast(`Added ${fav.name} to your order!`, 'success');
 }
 
 window.addEventListener('resize', () => { if (document.getElementById('ff-track')) ffUpdate(); });
@@ -1509,29 +1727,77 @@ window.addEventListener('resize', () => { if (document.getElementById('ff-track'
 // ============================================
 function renderCategoryPills() {
   const container = document.getElementById('category-pills');
-  container.innerHTML = CATEGORIES.map(c =>
-    `<button class="cat-pill ${state.activeCategory===c?'active':''}" onclick="setCategory('${c}')" role="tab" aria-selected="${state.activeCategory===c}">${c}</button>`
-  ).join('');
+  if (!container) return;
+  if (container) {
+    container.innerHTML = CATEGORIES.map(c =>
+      `<button class="cat-pill ${state.activeCategory===c?'active':''}" onclick="setCategory('${escapeHtml(c)}')" role="tab" aria-selected="${state.activeCategory===c}">${escapeHtml(c)}</button>`
+    ).join('');
+  }
+  const select = document.getElementById('menu-category-select');
+  if (select) {
+    select.innerHTML = CATEGORIES.map(c =>
+      `<option value="${escapeHtml(c)}" ${state.activeCategory===c?'selected':''}>${c === 'All' ? 'All Categories' : escapeHtml(c)}</option>`
+    ).join('');
+    select.value = state.activeCategory || 'All';
+  }
 }
 
 function setCategory(cat) {
-  state.activeCategory = cat;
+  state.activeCategory = cat || 'All';
   renderCategoryPills();
   filterMenu();
 }
 
+function clearMenuSearch() {
+  const input = document.getElementById('menu-search');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  filterMenu();
+}
+
 function filterMenu() {
-  state.searchQuery = (document.getElementById('menu-search')?.value || '').toLowerCase();
   const grid = document.getElementById('menu-grid');
   const empty = document.getElementById('menu-empty');
+  if (!grid || !empty) return;
+  const searchInput = document.getElementById('menu-search');
+  state.searchQuery = (searchInput?.value || '').trim().toLowerCase();
+  
+  const clearBtn = document.getElementById('menu-search-clear');
+  if (clearBtn) {
+    if (state.searchQuery) clearBtn.classList.remove('hidden');
+    else clearBtn.classList.add('hidden');
+  }
+
   let items = MENU;
-  if (state.activeCategory !== 'All') items = items.filter(i => i.cat === state.activeCategory);
-  if (state.searchQuery) items = items.filter(i => i.name.toLowerCase().includes(state.searchQuery) || i.desc.toLowerCase().includes(state.searchQuery));
+
+  // 1. Filter by Category (if not "All")
+  if (state.activeCategory && state.activeCategory !== 'All') {
+    items = items.filter(i => (i.cat || '').toLowerCase() === state.activeCategory.toLowerCase());
+  }
+
+  // 2. Search query matches Item Name, Category Name, Description, or Ingredients
+  if (state.searchQuery) {
+    const q = state.searchQuery;
+    items = items.filter(i => {
+      const nameMatch = (i.name || '').toLowerCase().includes(q);
+      const catMatch = (i.cat || '').toLowerCase().includes(q);
+      const descMatch = (i.desc || '').toLowerCase().includes(q);
+      const addonMatch = Array.isArray(i.addons) && i.addons.some(a => (a.name || '').toLowerCase().includes(q));
+      return nameMatch || catMatch || descMatch || addonMatch;
+    });
+  }
+
   if (items.length === 0) {
     grid.innerHTML = '';
+    empty.textContent = state.searchQuery 
+      ? `No items found for "${searchInput?.value || ''}"${state.activeCategory !== 'All' ? ` in category ${state.activeCategory}` : ''}. Try another search.`
+      : 'No items available in this category.';
     empty.classList.remove('hidden');
     return;
   }
+
   empty.classList.add('hidden');
   grid.innerHTML = items.map((item, idx) => `
     <article class="menu-card animate-fade-up" style="animation-delay:${Math.min(idx*60,400)}ms">
@@ -2263,6 +2529,14 @@ function openDeliveryLocationPicker() {
   modal.classList.add('flex');
   populateMapDeliveryRegions();
   initialiseOpenStreetMapDeliveryPicker();
+  setTimeout(() => {
+    if (deliveryMap) {
+      deliveryMap.invalidateSize();
+      if (confirmedDeliveryLocation && confirmedDeliveryLocation.lat) {
+        deliveryMap.setView([confirmedDeliveryLocation.lat, confirmedDeliveryLocation.lng], 16);
+      }
+    }
+  }, 250);
 }
 
 async function populateMapDeliveryRegions() {
@@ -2313,20 +2587,31 @@ function initialiseOpenStreetMapDeliveryPicker() {
   }
   const initial = confirmedDeliveryLocation || { lat: 31.4504, lng: 73.1350 };
   if (!deliveryMap || !deliveryMap._leaflet_id) {
-    deliveryMap = L.map('delivery-location-map', { scrollWheelZoom: false }).setView([initial.lat, initial.lng], confirmedDeliveryLocation ? 16 : 13);
+    deliveryMap = L.map('delivery-location-map', {
+      scrollWheelZoom: true,
+      touchZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      dragging: true,
+      zoomControl: true
+    }).setView([initial.lat, initial.lng], confirmedDeliveryLocation ? 16 : 14);
+
     const streetTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       maxNativeZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
-    });
+    }).addTo(deliveryMap);
+
     const satelliteTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
       maxNativeZoom: 19,
       attribution: 'Tiles &copy; Esri'
-    }).addTo(deliveryMap);
-    L.control.layers({ Satellite: satelliteTiles, Streets: streetTiles }, undefined, { collapsed: true }).addTo(deliveryMap);
+    });
+
+    L.control.layers({ '🗺️ Clear Streets': streetTiles, '🛰️ Satellite': satelliteTiles }, undefined, { position: 'topright' }).addTo(deliveryMap);
     deliveryMap.on('click', event => setOpenStreetMapDeliveryPoint(event.latlng));
-    document.getElementById('delivery-map-search').addEventListener('keydown', event => {
+    
+    document.getElementById('delivery-map-search')?.addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();
         searchDeliveryLocation();
@@ -2334,11 +2619,11 @@ function initialiseOpenStreetMapDeliveryPicker() {
     });
   } else {
     deliveryMap.invalidateSize();
-    deliveryMap.setView([initial.lat, initial.lng], confirmedDeliveryLocation ? 16 : 13);
+    deliveryMap.setView([initial.lat, initial.lng], confirmedDeliveryLocation ? 16 : 14);
   }
   setOpenStreetMapDeliveryPoint(initial, confirmedDeliveryLocation?.address, false);
-  setDeliveryMapMessage('Search, use GPS, click the map, or drag the pin to your exact delivery point.');
-  startCurrentLocationTracking(true);
+  setDeliveryMapMessage('Use GPS, search, or zoom & click anywhere on the map to pin your location.');
+  startCurrentLocationTracking(false);
 }
 
 function updateCurrentLocationMarker(position, centerMap = false) {
@@ -2350,12 +2635,13 @@ function updateCurrentLocationMarker(position, centerMap = false) {
   const accuracy = Math.max(Number(position.coords.accuracy) || 0, 5);
   if (!currentLocationMarker) {
     const icon = L.divIcon({
-      className: 'current-location-marker',
-      html: '<div style="width:44px;height:44px;border-radius:14px;background:#fff;color:#1d4ed8;border:3px solid #1d4ed8;box-shadow:0 3px 12px rgba(0,0,0,.35);display:grid;place-items:center;font-size:20px"><i class="fa-solid fa-person-walking"></i></div>',
-      iconSize: [44, 44], iconAnchor: [22, 22]
+      className: 'current-location-gps-dot',
+      html: '<div style="position:relative;width:22px;height:22px;"><div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(212,168,83,0.35);animation:pulse 2s infinite;"></div><div style="width:22px;height:22px;border-radius:50%;background:#D4A853;border:3px solid #FFFFFF;box-shadow:0 2px 10px rgba(0,0,0,0.6);"></div></div>',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
     });
     currentLocationMarker = L.marker(latLng, { icon, interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(deliveryMap);
-    currentLocationAccuracyCircle = L.circle(latLng, { radius: accuracy, color: '#60a5fa', weight: 1, fillColor: '#3b82f6', fillOpacity: .16, interactive: false }).addTo(deliveryMap);
+    currentLocationAccuracyCircle = L.circle(latLng, { radius: accuracy, color: '#D4A853', weight: 1, fillColor: '#D4A853', fillOpacity: 0.12, interactive: false }).addTo(deliveryMap);
   } else {
     currentLocationMarker.setLatLng(latLng);
     currentLocationAccuracyCircle.setLatLng(latLng).setRadius(accuracy);
@@ -2382,6 +2668,15 @@ function stopCurrentLocationTracking() {
   currentLocationWatchId = null;
 }
 
+function createGoldDeliveryPinIcon() {
+  return L.divIcon({
+    className: 'delivery-gold-pin',
+    html: '<div style="display:flex;flex-direction:column;align-items:center;cursor:grab;"><div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:linear-gradient(135deg,#D4A853,#C67D5A);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.5);border:2px solid #FFF;"><i class="fa-solid fa-utensils" style="transform:rotate(45deg);color:#0F0E0C;font-size:13px;"></i></div><div style="width:10px;height:4px;border-radius:50%;background:rgba(0,0,0,0.35);margin-top:2px;filter:blur(1px);"></div></div>',
+    iconSize: [34, 42],
+    iconAnchor: [17, 40]
+  });
+}
+
 function setOpenStreetMapDeliveryPoint(position, knownAddress = '', pan = true) {
   if (!deliveryMap || !window.L) return;
   const lat = Number(position.lat);
@@ -2389,7 +2684,7 @@ function setOpenStreetMapDeliveryPoint(position, knownAddress = '', pan = true) 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
   const point = { lat, lng };
   if (!deliveryMarker || !deliveryMarker._leaflet_id) {
-    deliveryMarker = L.marker([lat, lng], { draggable: true }).addTo(deliveryMap);
+    deliveryMarker = L.marker([lat, lng], { draggable: true, icon: createGoldDeliveryPinIcon() }).addTo(deliveryMap);
     deliveryMarker.on('dragend', event => setOpenStreetMapDeliveryPoint(event.target.getLatLng()));
   } else {
     deliveryMarker.setLatLng([lat, lng]);
@@ -2416,63 +2711,66 @@ function setOpenStreetMapDeliveryPoint(position, knownAddress = '', pan = true) 
 // Add more entries here any time a customer reports a place that isn't
 // found — that's more reliable than hoping OSM adds it.
 const KNOWN_PLACES = [
-  // ---- Faisalabad: official delivery regions ----
-  // `precise: true` marks entries whose coordinates were verified against
-  // Wikipedia/OSM references specifically so they can be trusted as the
-  // "ground truth" name for a nearby dropped pin (see findNearestKnownPlace
-  // below) — Nominatim's own neighbourhood tagging for these areas is
-  // often wrong or outdated, which is the whole reason this list exists.
-  { name: 'D Ground, Faisalabad', lat: 31.4065, lng: 73.1104, aliases: ['d ground', 'dground'], precise: true },
-  { name: 'Susan Road, Madina Town, Faisalabad', lat: 31.4208, lng: 73.1222, aliases: ['susan road', 'susan rd'], precise: true },
-  { name: 'Jinnah Colony, Faisalabad', lat: 31.4204, lng: 73.0665, aliases: ['jinnah colony'], precise: true },
-  { name: 'Madina Town, Faisalabad', lat: 31.4208, lng: 73.1222, aliases: ['madina town'], precise: true },
-  { name: "Peoples Colony No. 1, Faisalabad", lat: 31.4085, lng: 73.1074, aliases: ['peoples colony', "people's colony", 'peoples colony no 1', 'peoples colony no.1'], precise: true },
-  { name: "Peoples Colony No. 2, Faisalabad", lat: 31.3983, lng: 73.0972, aliases: ['peoples colony no 2', 'peoples colony no.2'], precise: true },
-  { name: 'Samanabad, Faisalabad', lat: 31.3958, lng: 73.0688, aliases: ['samanabad'], precise: true },
-  { name: 'Gulberg, Faisalabad', lat: 31.4210, lng: 73.0671, aliases: ['gulberg'], precise: true },
-  // ---- Faisalabad: other well-known landmarks/areas ----
-  { name: 'Clock Tower (Ghanta Ghar), Faisalabad', lat: 31.4187, lng: 73.0791, aliases: ['clock tower', 'ghanta ghar'] },
-  { name: 'Batala Colony, Faisalabad', lat: 31.4020, lng: 73.1030, aliases: ['batala colony'], precise: true },
-  { name: 'Ghulam Muhammad Abad, Faisalabad', lat: 31.4460, lng: 73.0580, aliases: ['ghulam muhammad abad', 'gm abad', 'g.m. abad'], precise: true },
-  { name: 'Millat Town, Faisalabad', lat: 31.4573, lng: 73.0947, aliases: ['millat town'], precise: true },
-  { name: 'Nishatabad, Faisalabad', lat: 31.4030, lng: 73.0270, aliases: ['nishatabad'], precise: true },
-  { name: 'Muhammad Nagar, Faisalabad', lat: 31.397134, lng: 73.117943, aliases: ['muhammad nagar', 'muhammad nager', 'mohammad nagar'], precise: true },
-  { name: 'Shadman Colony, Faisalabad', lat: 31.3985, lng: 73.1155, aliases: ['shadman colony'], precise: true },
-  { name: 'Faisalabad (city centre)', lat: 31.4187, lng: 73.0791, aliases: ['faisalabad', 'fsd'] },
+  // ---- Faisalabad: official delivery regions & verified colonies ----
+  { 
+    name: 'Muhammad Nagar, Faisalabad', 
+    lat: 31.397134, 
+    lng: 73.117943, 
+    aliases: [
+      'muhammad nagar', 'muhhmad nagar', 'muhmad nagar', 'muhamad nagar',
+      'mohammad nagar', 'mohamad nagar', 'mohammed nagar', 'muhammad nager',
+      'muhhmad', 'muhammad', 'mohammad', 'muhmad', 'muhamad'
+    ], 
+    precise: true 
+  },
+  { name: 'D Ground, Faisalabad', lat: 31.4065, lng: 73.1104, aliases: ['d ground', 'dground', 'd-ground'], precise: true },
+  { name: 'Susan Road, Madina Town, Faisalabad', lat: 31.4208, lng: 73.1222, aliases: ['susan road', 'susan rd', 'susan'], precise: true },
+  { name: 'Jinnah Colony, Faisalabad', lat: 31.4204, lng: 73.0665, aliases: ['jinnah colony', 'jinnah'], precise: true },
+  { name: 'Madina Town, Faisalabad', lat: 31.4208, lng: 73.1222, aliases: ['madina town', 'madina'], precise: true },
+  { name: "Peoples Colony No. 1, Faisalabad", lat: 31.4085, lng: 73.1074, aliases: ['peoples colony', "people's colony", 'peoples colony no 1', 'peoples colony no.1', 'peoples colony 1'], precise: true },
+  { name: "Peoples Colony No. 2, Faisalabad", lat: 31.3983, lng: 73.0972, aliases: ['peoples colony no 2', 'peoples colony no.2', 'peoples colony 2'], precise: true },
+  { name: 'Samanabad, Faisalabad', lat: 31.3958, lng: 73.0688, aliases: ['samanabad', 'samana abad'], precise: true },
+  { name: 'Gulberg, Faisalabad', lat: 31.4210, lng: 73.0671, aliases: ['gulberg', 'gulberg colony'], precise: true },
+  { name: 'Clock Tower (Ghanta Ghar), Faisalabad', lat: 31.4187, lng: 73.0791, aliases: ['clock tower', 'ghanta ghar', 'ghanta ghur'] },
+  { name: 'Batala Colony, Faisalabad', lat: 31.4020, lng: 73.1030, aliases: ['batala colony', 'batala'], precise: true },
+  { name: 'Ghulam Muhammad Abad, Faisalabad', lat: 31.4460, lng: 73.0580, aliases: ['ghulam muhammad abad', 'gm abad', 'g.m. abad', 'ghulam muhamad abad'], precise: true },
+  { name: 'Millat Town, Faisalabad', lat: 31.4573, lng: 73.0947, aliases: ['millat town', 'millat'], precise: true },
+  { name: 'Nishatabad, Faisalabad', lat: 31.4030, lng: 73.0270, aliases: ['nishatabad', 'nishat abad'], precise: true },
+  { name: 'Shadman Colony, Faisalabad', lat: 31.3985, lng: 73.1155, aliases: ['shadman colony', 'shadman'], precise: true },
+  { name: 'Sitara Colony, Faisalabad', lat: 31.4120, lng: 73.0850, aliases: ['sitara colony', 'sitara'], precise: true },
+  { name: 'D Type Colony, Faisalabad', lat: 31.4150, lng: 73.1100, aliases: ['d type colony', 'd type', 'dtype'], precise: true },
+  { name: 'Faisalabad (city centre)', lat: 31.4187, lng: 73.0791, aliases: ['faisalabad', 'fsd', 'faislabad'] },
   { name: 'DIGITALSOFTS, Peoples Colony No. 1, Faisalabad', lat: 31.4137175, lng: 73.0987421, aliases: ['digitalsofts', 'digital softs', 'digitsofts', 'digital soft'], precise: true },
-  // ---- Major Pakistani cities (verified) ----
-  { name: 'Karachi', lat: 24.8608, lng: 67.0104, aliases: ['karachi'] },
-  { name: 'Lahore', lat: 31.5580, lng: 74.3507, aliases: ['lahore'] },
-  { name: 'Islamabad', lat: 33.7215, lng: 73.0433, aliases: ['islamabad'] },
-  { name: 'Rawalpindi', lat: 33.5973, lng: 73.0479, aliases: ['rawalpindi', 'pindi'] },
-  { name: 'Multan', lat: 30.1968, lng: 71.4782, aliases: ['multan'] },
-  { name: 'Peshawar', lat: 34.0080, lng: 71.5785, aliases: ['peshawar'] },
+  // ---- Major Pakistani cities ----
+  { name: 'Karachi', lat: 24.8608, lng: 67.0104, aliases: ['karachi', 'khi'] },
+  { name: 'Lahore', lat: 31.5580, lng: 74.3507, aliases: ['lahore', 'lhr'] },
+  { name: 'Islamabad', lat: 33.7215, lng: 73.0433, aliases: ['islamabad', 'isb'] },
+  { name: 'Rawalpindi', lat: 33.5973, lng: 73.0479, aliases: ['rawalpindi', 'pindi', 'rwp'] },
+  { name: 'Multan', lat: 30.1968, lng: 71.4782, aliases: ['multan', 'mux'] },
+  { name: 'Peshawar', lat: 34.0080, lng: 71.5785, aliases: ['peshawar', 'pew'] },
   { name: 'Quetta', lat: 30.1841, lng: 67.0014, aliases: ['quetta'] },
   { name: 'Gujranwala', lat: 32.1557, lng: 74.1871, aliases: ['gujranwala'] },
   { name: 'Sialkot', lat: 32.4927, lng: 74.5313, aliases: ['sialkot'] },
   { name: 'Sargodha', lat: 32.0859, lng: 72.6742, aliases: ['sargodha'] },
-  { name: 'Bahawalpur', lat: 29.3978, lng: 71.6752, aliases: ['bahawalpur'] },
-  { name: 'Sukkur', lat: 27.7032, lng: 68.8589, aliases: ['sukkur'] },
-  { name: 'Hyderabad', lat: 25.3969, lng: 68.3772, aliases: ['hyderabad'] },
-  { name: 'Gujrat', lat: 32.5742, lng: 74.0754, aliases: ['gujrat'] },
-  { name: 'Sahiwal', lat: 30.6660, lng: 73.1019, aliases: ['sahiwal'] },
-  { name: 'Okara', lat: 30.8103, lng: 73.4516, aliases: ['okara'] },
-  { name: 'Dera Ghazi Khan', lat: 30.0561, lng: 70.6403, aliases: ['dera ghazi khan', 'dg khan'] },
-  { name: 'Dera Ismail Khan', lat: 31.8313, lng: 70.9017, aliases: ['dera ismail khan', 'd.i. khan', 'di khan'] },
-  { name: 'Abbottabad', lat: 34.1463, lng: 73.2117, aliases: ['abbottabad'] },
-  { name: 'Mardan', lat: 34.1986, lng: 72.0404, aliases: ['mardan'] },
-  { name: 'Murree', lat: 33.9070, lng: 73.3943, aliases: ['murree'] },
-  { name: 'Gilgit', lat: 35.9221, lng: 74.3087, aliases: ['gilgit'] },
-  { name: 'Skardu', lat: 35.2971, lng: 75.6333, aliases: ['skardu'] },
+  { name: 'Bahawalpur', lat: 29.3978, lng: 71.6752, aliases: ['bahawalpur'] }
 ];
 
+function normalizeQuery(str) {
+  return String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function searchKnownPlaces(query) {
-  const q = query.trim().toLowerCase();
-  if (!q) return [];
-  return KNOWN_PLACES.filter(place =>
-    place.name.toLowerCase().includes(q) ||
-    place.aliases.some(alias => alias.includes(q) || q.includes(alias))
-  );
+  const rawQ = query.trim().toLowerCase();
+  const normQ = normalizeQuery(query);
+  if (!normQ) return [];
+  return KNOWN_PLACES.filter(place => {
+    const placeNorm = normalizeQuery(place.name);
+    if (placeNorm.includes(normQ) || normQ.includes(placeNorm)) return true;
+    return place.aliases.some(alias => {
+      const aliasNorm = normalizeQuery(alias);
+      return aliasNorm.includes(normQ) || normQ.includes(aliasNorm) || alias.includes(rawQ) || rawQ.includes(alias);
+    });
+  });
 }
 
 // Straight-line distance in km — duplicated locally (straightLineKm below
@@ -2616,52 +2914,58 @@ function escapeHtml(str) {
 }
 
 async function reverseGeocodeOpenStreetMapDeliveryPoint(point) {
-  const requestId = ++deliveryGeocodeRequestId;
-  document.getElementById('delivery-map-address').textContent = 'Finding address…';
-  // Check our verified colony list first — Nominatim's neighbourhood
-  // tagging for Faisalabad is often wrong (see KNOWN_PLACES comment), so a
-  // pin dropped near a colony we already know about should use that name
-  // rather than risk a mislabeled OSM tag.
-  const nearestKnown = findNearestKnownPlace(point);
-  if (nearestKnown) {
-    if (requestId !== deliveryGeocodeRequestId || confirmedDeliveryLocation?.lat !== point.lat || confirmedDeliveryLocation?.lng !== point.lng) return;
-    setOpenStreetMapDeliveryAddress(nearestKnown.name);
-    setDeliveryMapMessage(`Matched to a known area: ${nearestKnown.name}. Tap "Edit" if this isn't right.`);
-    return;
-  }
+  deliveryGeocodeRequestId++;
+  const requestId = deliveryGeocodeRequestId;
+  setDeliveryMapMessage('Pinning exact coordinates…');
+
+  const nearestKnown = findNearestKnownPlace(point, 0.85);
+
   try {
-    // zoom=18 asks Nominatim for the most specific (building/street) match
-    // instead of letting it fall back to a broader area boundary, and
-    // accept-language keeps locality names consistent between searches.
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=en&lat=${encodeURIComponent(point.lat)}&lon=${encodeURIComponent(point.lng)}`);
     const result = await response.json();
-    if (!response.ok || !result?.display_name) throw new Error('Address lookup was unavailable.');
     if (requestId !== deliveryGeocodeRequestId || confirmedDeliveryLocation?.lat !== point.lat || confirmedDeliveryLocation?.lng !== point.lng) return;
-    setOpenStreetMapDeliveryAddress(formatDeliveryAddress(result));
-    // OpenStreetMap's local-area data isn't always accurate or up to date
-    // for every neighbourhood, so let the customer confirm/correct the
-    // detected name instead of silently trusting it.
-    setDeliveryMapMessage('Check the area name below — tap "Edit" to correct it if it\'s not quite right.');
+    
+    let formatted = '';
+    if (result && result.display_name) {
+      formatted = formatDeliveryAddress(result);
+    }
+    
+    if (nearestKnown && (!formatted || !formatted.toLowerCase().includes('muhammad nagar'))) {
+      formatted = formatted ? `${formatted}, ${nearestKnown.name}` : nearestKnown.name;
+    } else if (!formatted && nearestKnown) {
+      formatted = nearestKnown.name;
+    }
+    
+    if (formatted) {
+      setOpenStreetMapDeliveryAddress(formatted);
+      setDeliveryMapMessage('📍 Location pinned! Drag the pin or click on the map to fine-tune your exact doorstep or gate.');
+      return;
+    }
+    throw new Error('Address lookup unavailable');
   } catch (err) {
     if (requestId !== deliveryGeocodeRequestId) return;
-    document.getElementById('delivery-map-address').textContent = `Coordinates: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
-    setDeliveryMapMessage('Address lookup was unavailable. Type the area name yourself using "Edit" below — your exact coordinates will still be saved.', true);
+    if (nearestKnown) {
+      setOpenStreetMapDeliveryAddress(nearestKnown.name);
+      setDeliveryMapMessage(`Matched to ${nearestKnown.name}. Tap "Edit" if you want to type your exact house number.`);
+    } else {
+      document.getElementById('delivery-map-address').textContent = `Coordinates: ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
+      setDeliveryMapMessage('Tap "Edit" to type your house/street name — your exact GPS coordinates are saved.', true);
+    }
   }
 }
 
 function formatDeliveryAddress(result) {
   const address = result.address || {};
-  const street = [address.house_number, address.road].filter(Boolean).join(' ');
-  // Ordered from most to least specific. OSM tags small Pakistani
-  // localities inconsistently (neighbourhood, suburb, hamlet, residential,
-  // village all show up depending on how the area was mapped), so we check
-  // every likely tag rather than just the first couple.
-  const locality = address.neighbourhood || address.suburb || address.quarter
-    || address.residential || address.hamlet || address.village
-    || address.city_district || address.borough;
-  const city = address.city || address.town || address.municipality || address.county;
-  const concise = [...new Set([street, locality, city].filter(Boolean))].join(', ');
-  return concise || (result.display_name || '').split(',').slice(0, 3).join(',').trim();
+  const streetParts = [address.house_number, address.building, address.road].filter(Boolean);
+  const street = streetParts.length ? streetParts.join(' ') : '';
+  
+  const locality = address.suburb || address.neighbourhood || address.residential || address.hamlet || address.village || address.city_district || address.quarter;
+  const city = address.city || address.town || address.municipality || address.county || address.state;
+  
+  const parts = [street, locality, city].filter(Boolean);
+  if (parts.length >= 2) return [...new Set(parts)].join(', ');
+  
+  return (result.display_name || '').split(',').slice(0, 4).map(s => s.trim()).join(', ');
 }
 
 function setOpenStreetMapDeliveryAddress(address) {
@@ -2708,21 +3012,63 @@ function onDeliveryAddressManualEdit(value) {
   document.getElementById('delivery-map-address').textContent = value || 'Choose a point on the map.';
 }
 
-function useCurrentDeliveryLocation() {
-  if (!navigator.geolocation) {
-    setDeliveryMapMessage('This browser does not support GPS location.', true);
-    return;
+function selectQuickLocation(placeName) {
+  const matches = searchKnownPlaces(placeName);
+  if (matches.length) {
+    const place = matches[0];
+    if (deliveryMap) {
+      deliveryMap.invalidateSize();
+      deliveryMap.setView([place.lat, place.lng], 17, { animate: true });
+    }
+    setOpenStreetMapDeliveryPoint({ lat: place.lat, lng: place.lng }, place.name);
+    setDeliveryMapMessage(`📍 Pinned to ${place.name}! You can drag the pin to your exact house or gate.`);
+    const searchInput = document.getElementById('delivery-map-search');
+    if (searchInput) searchInput.value = place.name;
   }
-  setDeliveryMapMessage('Getting your current location…');
-  startCurrentLocationTracking();
-  navigator.geolocation.getCurrentPosition(
-    position => {
-      updateCurrentLocationMarker(position, true);
-      setOpenStreetMapDeliveryPoint({ lat: position.coords.latitude, lng: position.coords.longitude });
-    },
-    () => setDeliveryMapMessage('Location access was denied. Search or place the pin manually instead.', true),
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-  );
+}
+
+function useCurrentDeliveryLocation() {
+  setDeliveryMapMessage('Detecting your current GPS location…');
+  startCurrentLocationTracking(true);
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setDeliveryMapMessage('✅ GPS location detected! Centered on your exact spot.');
+        if (deliveryMap) {
+          deliveryMap.invalidateSize();
+          deliveryMap.setView([lat, lng], 18, { animate: true });
+        }
+        updateCurrentLocationMarker(position, true);
+        setOpenStreetMapDeliveryPoint({ lat, lng });
+      },
+      async err => {
+        console.warn('Browser GPS error, attempting IP fallback:', err);
+        setDeliveryMapMessage('Attempting network location fallback…');
+        try {
+          const ipRes = await fetch('https://ipapi.co/json/');
+          const ipData = await ipRes.json();
+          if (ipData && ipData.latitude && ipData.longitude) {
+            const lat = Number(ipData.latitude);
+            const lng = Number(ipData.longitude);
+            if (deliveryMap) {
+              deliveryMap.invalidateSize();
+              deliveryMap.setView([lat, lng], 16, { animate: true });
+            }
+            setOpenStreetMapDeliveryPoint({ lat, lng }, `${ipData.city || 'Current Area'}, ${ipData.country_name || 'Pakistan'}`);
+            setDeliveryMapMessage('Located via network. You can click anywhere on the map to fine-tune your exact house.');
+            return;
+          }
+        } catch (_) {}
+        setDeliveryMapMessage('GPS access was denied. You can zoom in and click your exact house directly on the map.', true);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  } else {
+    setDeliveryMapMessage('GPS is not supported by this browser. Zoom in and click on the map to pin your location.', true);
+  }
 }
 
 async function loadRegionsIntoSelect() {
@@ -3124,6 +3470,12 @@ async function renderTracking(orderNumber) {
       <p id="delivery-route-estimate" class="text-center text-sm text-brand-100 mt-4">Calculating route to your location…</p>
       <p id="delivery-route-source" class="text-center text-xs text-brand-800 mt-1">Waiting for the rider to enable live GPS; branch-to-customer estimate is shown meanwhile.</p>
     </div>` : ''}
+    <!-- Reorder Action -->
+    <div class="mb-6 text-center">
+      <button onclick="reorderOrderFromTracking()" class="bg-brand-400 text-brand-950 font-bold px-6 py-3 rounded-xl hover:bg-brand-500 transition-colors inline-flex items-center gap-2 text-sm shadow-lg">
+        <i class="fa-solid fa-rotate-right"></i> Reorder This Meal Again
+      </button>
+    </div>
     <!-- Order details -->
     <div class="bg-brand-900 border border-brand-800 rounded-xl p-5 mb-6">
       <h3 class="font-semibold text-sm mb-3 text-brand-300">Items</h3>
@@ -3311,6 +3663,69 @@ document.addEventListener('click', (e) => {
   }
 });
 
+
+function parseReservationDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  let hours = 0;
+  let minutes = 0;
+  const match12 = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    hours = Number(match12[1]);
+    minutes = Number(match12[2]);
+    const period = match12[3].toUpperCase();
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+  } else {
+    const match24 = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      hours = Number(match24[1]);
+      minutes = Number(match24[2]);
+    } else {
+      return null;
+    }
+  }
+  const [year, month, day] = String(dateStr).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
+function updateAvailableReservationTimeSlots() {
+  const dateInput = document.getElementById('resv-date');
+  if (!dateInput) return;
+  const chosenDate = dateInput.value || new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const isToday = chosenDate === todayStr;
+
+  const timeButtons = document.querySelectorAll('#resv-time-row .resv-pill-time');
+  let firstAvailableSlot = null;
+  let activeSlotStillValid = false;
+
+  timeButtons.forEach(btn => {
+    const slotTimeStr = btn.dataset.val;
+    const slotDateTime = parseReservationDateTime(chosenDate, slotTimeStr);
+    const hasPassed = isToday && slotDateTime && slotDateTime.getTime() <= now.getTime();
+
+    if (hasPassed) {
+      btn.disabled = true;
+      btn.classList.add('opacity-30', 'cursor-not-allowed', 'line-through');
+      btn.classList.remove('active');
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('opacity-30', 'cursor-not-allowed', 'line-through');
+      if (!firstAvailableSlot) firstAvailableSlot = slotTimeStr;
+      if (resvSelectedTime === slotTimeStr) activeSlotStillValid = true;
+    }
+  });
+
+  if (!activeSlotStillValid && firstAvailableSlot) {
+    resvSelectedTime = firstAvailableSlot;
+    timeButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.val === firstAvailableSlot);
+    });
+  }
+}
+
 async function handleReservationSubmit(e) {
   e.preventDefault();
   const name = document.getElementById('resv-name').value;
@@ -3369,11 +3784,19 @@ function resetReservationForm() {
 
 function initReservationForm() {
   const dateInput = document.getElementById('resv-date');
-  if (dateInput) dateInput.min = new Date().toISOString().split('T')[0];
+  if (dateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+    if (!dateInput.value) dateInput.value = today;
+    dateInput.addEventListener('change', updateAvailableReservationTimeSlots);
+  }
   const phoneInput = document.getElementById('resv-phone');
-  if (phoneInput) phoneInput.addEventListener('input', () => {
-    phoneInput.value = formatPKPhoneInput(phoneInput.value);
-  });
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      phoneInput.value = formatPKPhoneInput(phoneInput.value);
+    });
+  }
+  updateAvailableReservationTimeSlots();
 }
 
 function initGuestPhoneField() {
@@ -3417,36 +3840,30 @@ async function init() {
   initGuestPhoneField();
   configureBranchPhoneFields();
   initQrTableDetection();
-  // Sync the badge and the always-visible inline cart panel with whatever
-  // was already saved in localStorage (e.g. a returning visitor who added
-  // items on a previous visit).
   updateCartBadge();
   renderCartItems();
-  // If the customer just signed in/registered from the checkout page,
-  // send them straight back to checkout — the cart (localStorage) never
-  // left, so their items are still there.
-  if (localStorage.getItem('eb_return_to_checkout') === '1') {
+
+  const urlView = new URLSearchParams(window.location.search).get('view');
+  if (urlView === 'checkout' || localStorage.getItem('eb_return_to_checkout') === '1') {
     localStorage.removeItem('eb_return_to_checkout');
     if (state.cart.length > 0) {
       navigate('checkout');
     }
+  } else if (urlView === 'reservation' || window.location.hash === '#reservation-section') {
+    setTimeout(() => scrollToReservation(), 300);
+    setTimeout(() => scrollToReservation(), 800);
   }
 }
 
 // ============================================
 // QR TABLE ORDERING
 // ============================================
-// A table's printed QR code links to `?table=T-01`. On load we pick that
-// up, remember it (so the whole visit — not just this page load — is tied
-// to the table), and clean the URL so it doesn't linger if they share the
-// link or bookmark the page.
 function initQrTableDetection() {
   const params = new URLSearchParams(window.location.search);
   const table = params.get('table');
   if (table) {
     state.qrTable = table;
     localStorage.setItem('eb_qr_table', table);
-    // Strip ?table=... from the visible URL without reloading the page.
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, '', cleanUrl);
     showToast(`Ordering for Table ${table}`, 'success');
@@ -3461,8 +3878,6 @@ function clearQrTable() {
   syncCheckoutOrderTypeWithQrTable();
 }
 
-// Keeps every place that shows the detected table (menu banner + checkout)
-// in sync whenever qrTable changes.
 function renderQrTableBanner() {
   document.querySelectorAll('.qr-table-banner').forEach(el => {
     el.classList.toggle('hidden', !state.qrTable);
@@ -3472,9 +3887,6 @@ function renderQrTableBanner() {
   syncCheckoutOrderTypeWithQrTable();
 }
 
-// When a table was scanned, lock the checkout to Dine In (with the table
-// pre-filled) since that's overwhelmingly the intent of scanning a table
-// QR — but still let the customer break out of it via "Not at this table?".
 function syncCheckoutOrderTypeWithQrTable() {
   const dineInRadio = document.querySelector('input[name="orderType"][value="dine-in"]');
   const otherRadios = document.querySelectorAll('input[name="orderType"]:not([value="dine-in"])');
@@ -3490,6 +3902,38 @@ function syncCheckoutOrderTypeWithQrTable() {
     otherRadios.forEach(r => { r.disabled = false; r.closest('label')?.classList.remove('opacity-40', 'cursor-not-allowed'); });
     if (tableNote) tableNote.classList.add('hidden');
   }
+}
+
+function reorderOrderFromTracking() {
+  const lastOrderNum = localStorage.getItem('eb_last_order');
+  if (!lastOrderNum) return;
+  fetch(branchUrl('/api/orders/track/' + encodeURIComponent(lastOrderNum)))
+    .then(r => r.json())
+    .then(order => {
+      if (!order || !Array.isArray(order.items) || order.items.length === 0) throw new Error('Order not found');
+      const newCart = order.items.map(it => {
+        const matched = Array.isArray(MENU) ? MENU.find(m => m.name.toLowerCase().trim() === (it.name || '').toLowerCase().trim()) : null;
+        return {
+          item: matched || {
+            id: it.menuItem || it._id || '',
+            name: it.name,
+            price: Number(it.price) || 0,
+            desc: it.description || '',
+            cat: it.category || 'Special',
+            img: resolveImageUrl(it.image || '')
+          },
+          qty: Math.max(1, Number(it.qty) || 1),
+          addons: Array.isArray(it.addons) ? it.addons : [],
+          addonSignature: Array.isArray(it.addons) ? it.addons.map(a => a.name).sort().join('|') : ''
+        };
+      });
+      state.cart = newCart;
+      updateCartBadge();
+      scheduleCartRender();
+      showToast('Added previous order items to your cart!', 'success');
+      goToCheckout();
+    })
+    .catch(err => showToast(err.message || 'Could not reorder this meal.', 'error'));
 }
 
 init();

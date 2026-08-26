@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Menu — Ember & Brew</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg: #0F0E0C;
+  --bg-deep: #0F0E0C;
+  --bg-card: #1A1917;
+  --bg-card-hover: #242220;
+  --bg-card-border: #2E2C28;
+  --bg-input: #151412;
+  --gold: #D4A853;
+  --gold-deep: #B58B35;
+  --gold-light: #F5F0E8;
+  --ember: #C67D5A;
+  --text-light: #F5F0E8;
+  --text-muted: #8A8478;
+  --border: #2E2C28;
+  --border-gold: rgba(212, 168, 83, 0.4);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: radial-gradient(ellipse 90% 40% at 50% 0%, rgba(198, 125, 90, 0.08) 0%, rgba(15, 14, 12, 0) 70%), #0F0E0C;
+  color: var(--text-light);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .serif {
+  font-family: 'Playfair Display', serif;
+}
+
+/* ---------------- Top Navigation ---------------- */
+.nav-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(9, 14, 12, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-light);
+}
+.ember-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--gold), #9A5638);
+  box-shadow: 0 0 12px rgba(212,168,83,0.8);
+}
+.nav-brand .brand-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+.nav-brand .brand-name em {
+  color: var(--gold);
+  font-style: normal;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+  transition: color .18s;
+}
+.nav-link:hover, .nav-link.active {
+  color: #FFFFFF;
+}
+.nav-link.active {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Branch Switcher */
+.branch-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.branch-select {
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+.branch-select option {
+  background: var(--bg-card);
+  color: var(--text-light);
+}
+
+.btn-reserve {
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: #0F0E0C;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 9px 18px;
+  border-radius: 30px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
+  transition: transform .15s;
+}
+.btn-reserve:hover {
+  transform: translateY(-1px);
+}
+
+/* ---------------- Hero Section ---------------- */
+.menu-hero {
+  text-align: center;
+  padding: 36px 20px 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.menu-hero h1 {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin-bottom: 8px;
+}
+.menu-hero p {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin-bottom: 24px;
+}
+
+/* ---------------- Category Pills & Search ---------------- */
+.category-bar-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+  padding: 0 20px;
+}
+.cat-pill {
+  background: #171614;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.cat-pill:hover {
+  border-color: var(--gold);
+  color: var(--text-light);
+}
+.cat-pill.active {
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: #0F0E0C;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
+}
+
+.search-box-wrap {
+  max-width: 480px;
+  margin: 0 auto 28px;
+  position: relative;
+}
+.search-box-input {
+  width: 100%;
+  background: #171614;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  padding: 12px 20px 12px 42px;
+  font-size: 14px;
+  color: var(--text-light);
+  outline: none;
+  transition: border-color .18s;
+}
+.search-box-input:focus {
+  border-color: var(--gold);
+}
+.search-box-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ---------------- Main Layout: Menu Left + Order Sidebar Right ---------------- */
+.menu-main-container {
+  max-width: 1360px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  flex: 1;
+}
+
+/* Left Grid */
+.menu-grid-column {
+  flex: 1;
+  min-width: 0;
+}
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+/* Dish Card */
+.dish-card {
+  background: var(--bg-card);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+  position: relative;
+}
+.dish-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(212, 168, 83, 0.4);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+.dish-image-wrap {
+  width: 100%;
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+  background: #12110F;
+}
+.dish-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .3s ease;
+}
+.dish-card:hover .dish-image {
+  transform: scale(1.04);
+}
+.dish-cat-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(9, 14, 12, 0.85);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--gold-light);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.dish-content {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.dish-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.dish-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.25;
+}
+.dish-price {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16.5px;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.dish-desc {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Dish Card Action Buttons */
+.btn-card-add {
+  width: 100%;
+  background: transparent;
+  border: 1.5px solid rgba(212, 168, 83, 0.45);
+  color: var(--gold-light);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all .18s ease;
+}
+.btn-card-add:hover {
+  background: var(--gold);
+  color: #0F0E0C;
+  border-color: var(--gold);
+  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
+}
+
+/* Card Quantity Pill (When item is already selected) */
+.dish-qty-control {
+  width: 100%;
+  background: #24221F;
+  border: 1.5px solid var(--gold);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+}
+.dish-qty-btn {
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-size: 16px;
+  font-weight: 800;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.dish-qty-btn:hover {
+  background: rgba(212, 168, 83, 0.2);
+}
+.dish-qty-val {
+  font-weight: 800;
+  font-size: 14px;
+  color: #FFFFFF;
+}
+
+/* ---------------- Right Sticky "Your Order" Side Card ---------------- */
+.order-sidebar-card {
+  width: 350px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 90px;
+  background: var(--bg-card);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.order-sidebar-head {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.order-sidebar-head h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0;
+}
+.order-item-count-badge {
+  color: var(--gold);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.order-sidebar-items {
+  padding: 16px 20px;
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-line-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.order-line-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #12110F;
+  flex-shrink: 0;
+}
+.order-line-info {
+  flex: 1;
+  min-width: 0;
+}
+.order-line-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.order-line-price {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  margin-top: 1px;
+}
+
+.order-line-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #24221F;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.order-line-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.order-line-btn:hover { color: #fff; }
+.order-line-qty {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fff;
+  min-width: 14px;
+  text-align: center;
+}
+.order-line-del {
+  background: transparent;
+  border: none;
+  color: #5D6862;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 4px;
+  transition: color .15s;
+}
+.order-line-del:hover { color: #C67D5A; }
+
+.order-sidebar-summary {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: #141311;
+}
+.order-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.order-summary-row.total-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+.order-summary-row.total-row .total-val {
+  color: var(--gold);
+  font-size: 18px;
+}
+
+.btn-sidebar-checkout {
+  margin-top: 14px;
+  width: 100%;
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: #0F0E0C;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
+  transition: transform .15s, box-shadow .15s;
+}
+.btn-sidebar-checkout:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(212,168,83,0.4);
+}
+
+.empty-order-card {
+  text-align: center;
+  padding: 30px 10px;
+  color: var(--text-muted);
+}
+.empty-order-card i {
+  font-size: 32px;
+  color: var(--gold);
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: #22201D; color: #fff;
+  border: 1px solid rgba(212,168,83,0.4); padding: 12px 20px; border-radius: 12px;
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 200; opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .2s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Floating Complaint pill */
+.floating-complaint-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  background: #171614;
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  padding: 10px 18px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 40;
+  transition: border-color .18s;
+}
+.floating-complaint-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Footer */
+.page-footer {
+  background: #0A0908;
+  border-top: 1px solid var(--border);
+  padding: 30px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: auto;
+}
+
+
+/* ---------------- Dish Detail Modal ---------------- */
+.dish-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility .25s ease;
+}
+.dish-modal-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+.dish-modal-card {
+  background: #1A1917;
+  border: 1px solid #35322C;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 520px;
+  padding: 32px 30px 28px;
+  position: relative;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  transform: scale(0.95);
+  transition: transform .25s cubic-bezier(.22,.61,.36,1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.dish-modal-overlay.open .dish-modal-card {
+  transform: scale(1);
+}
+.dish-modal-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: #282622;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all .15s;
+}
+.dish-modal-close:hover {
+  background: var(--gold);
+  color: #0F0E0C;
+}
+
+.modal-dish-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+  padding-right: 40px;
+  line-height: 1.25;
+}
+.modal-dish-desc {
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.55;
+  margin-bottom: 16px;
+}
+.modal-dish-tags {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.veg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(101, 117, 88, 0.2);
+  color: #92B07E;
+  border: 1px solid rgba(101, 117, 88, 0.4);
+}
+.veg-tag.nonveg {
+  background: rgba(154, 86, 56, 0.2);
+  color: #D98864;
+  border-color: rgba(154, 86, 56, 0.4);
+}
+.modal-base-price {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+.modal-base-price strong {
+  color: #FFFFFF;
+  font-size: 16px;
+}
+
+.modal-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.modal-section-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+.modal-section-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.modal-addons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.modal-addon-card {
+  background: #22201D;
+  border: 1.5px solid #35322C;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+}
+.modal-addon-card:hover {
+  border-color: var(--gold);
+}
+.modal-addon-card.checked {
+  background: rgba(212, 168, 83, 0.12);
+  border-color: var(--gold);
+}
+.modal-addon-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: transparent;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.modal-addon-card.checked .modal-addon-box {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #0F0E0C;
+}
+.modal-addon-info {
+  flex: 1;
+  min-width: 0;
+}
+.modal-addon-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.modal-addon-price {
+  font-size: 11.5px;
+  color: var(--gold);
+  font-weight: 600;
+  display: block;
+}
+
+.modal-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #2E2C28;
+}
+.modal-qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #22201D;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+.modal-qty-btn {
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-size: 16px;
+  font-weight: 800;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-qty-num {
+  font-size: 14px;
+  font-weight: 800;
+  color: #FFFFFF;
+  min-width: 16px;
+  text-align: center;
+}
+
+.modal-total-wrap {
+  text-align: right;
+}
+.modal-total-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.modal-total-amount {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.btn-modal-add-cart {
+  width: 100%;
+  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  color: #0F0E0C;
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(212,168,83,0.35);
+  transition: transform .15s, box-shadow .15s;
+}
+.btn-modal-add-cart:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(212,168,83,0.45);
+}
+
+@media (max-width: 520px) {
+  .modal-addons-grid { grid-template-columns: 1fr; }
+}
+
+/* Responsive Rules */
+@media (max-width: 1100px) {
+  .menu-grid { grid-template-columns: repeat(2, 1fr); }
+  .order-sidebar-card { width: 300px; }
+}
+@media (max-width: 860px) {
+  .menu-main-container { flex-direction: column; }
+  .order-sidebar-card { width: 100%; position: static; order: -1; margin-bottom: 24px; }
+  .menu-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .mobile-toggle-btn { display: block !important; }
+}
+@media (max-width: 580px) {
+  .menu-grid { grid-template-columns: 1fr; }
+  .nav-links { display: none; }
+  .menu-hero h1 { font-size: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header Navigation -->
+<header class="nav-header">
+  <a href="/" class="nav-brand">
+    <span class="ember-dot"></span>
+    <span class="brand-name">Ember <em>&amp;</em> Brew</span>
+  </a>
+
+  <nav class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/menu.html" class="nav-link active">Menu</a>
+    <a href="/?view=reservation#reservation-section" class="nav-link">Reservation</a>
+    <a href="/customer.html" class="nav-link">Customer Portal</a>
+  </nav>
+
+  <div class="nav-actions">
+    <!-- Branch Selector Dropdown -->
+    <div class="branch-switcher" title="Select Branch">
+      <i class="fa-solid fa-location-dot" style="color:var(--gold);"></i>
+      <select id="branchSelect" class="branch-select" onchange="onBranchChange(this.value)">
+        <option value="default" selected>🇵🇰 Pakistan (Rs)</option><option value="uk-london">🇬🇧 London (£)</option><option value="australia">🇦🇺 Sydney (A$)</option>
+      </select>
+    </div>
+
+    <a href="/?view=reservation#reservation-section" onclick="goToReservation();return false;" class="btn-reserve">
+      <i class="fa-regular fa-calendar-check"></i> Reserve
+    </a>
+
+    <button class="btn-cart" onclick="goToCheckout()" aria-label="View Cart">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span id="cartBadge" class="cart-badge hidden">0</span>
+    </button>
+
+    <button id="mobile-menu-btn" onclick="toggleMobileNav()" class="mobile-toggle-btn" aria-label="Toggle menu" style="display:none;background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
+</header>
+
+<!-- Mobile nav dropdown -->
+<div id="mobile-nav" style="display:none;position:fixed;top:70px;left:0;right:0;background:rgba(9,14,12,0.98);border-bottom:1px solid var(--border);padding:18px 24px;z-index:99;flex-direction:column;gap:12px;">
+  <a href="/" style="color:#fff;text-decoration:none;font-weight:600;padding:6px 0;">Home</a>
+  <a href="/menu.html" style="color:var(--gold);text-decoration:none;font-weight:700;padding:6px 0;">Menu</a>
+  <a href="/?view=reservation#reservation-section" style="color:#fff;text-decoration:none;font-weight:600;padding:6px 0;">Reservation</a>
+  <a href="/customer.html" style="color:#fff;text-decoration:none;font-weight:600;padding:6px 0;">Customer Portal</a>
+</div>
+
+<!-- Hero Section -->
+<section class="menu-hero">
+  <h1 class="serif">Our Menu</h1>
+  <p>Seasonal ingredients, artisan coffee, and culinary creations crafted with passion.</p>
+
+  <!-- Live Search -->
+  <div class="search-box-wrap">
+    <i class="fa-solid fa-magnifying-glass search-box-icon"></i>
+    <input type="text" id="menuSearchInput" class="search-box-input" placeholder="Search dishes, ingredients, or coffee..." oninput="onSearchInput(this.value)">
+  </div>
+
+  <!-- Dynamic Category Pills -->
+  <div class="category-bar-wrap" id="categoryPills">
+    <button class="cat-pill active" onclick="setCategory('All')">All</button>
+  </div>
+</section>
+
+<!-- Main Container: Dishes Grid (Left) + Your Order Sidebar Card (Right) -->
+<main class="menu-main-container">
+  <!-- Left Dishes Grid -->
+  <div class="menu-grid-column">
+    <div class="menu-grid" id="menuGrid">
+      <div class="empty-order-card" style="grid-column:1/-1;">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Loading fresh dishes for this branch…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Sticky "Your Order" Side Card -->
+  <aside class="order-sidebar-card" id="orderSidebarCard">
+    <div class="order-sidebar-head">
+      <h3>Your Order</h3>
+      <span class="order-item-count-badge" id="orderSidebarCountBadge">0 items</span>
+    </div>
+
+    <div class="order-sidebar-items" id="orderSidebarItems">
+      <div class="empty-order-card">
+        <i class="fa-solid fa-bag-shopping"></i>
+        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
+        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
+      </div>
+    </div>
+
+    <div class="order-sidebar-summary" id="orderSidebarSummary" style="display:none;">
+      <div class="order-summary-row">
+        <span>Subtotal</span>
+        <span id="orderSummarySubtotal">$0.00</span>
+      </div>
+      <div class="order-summary-row">
+        <span id="orderSummaryTaxLabel">Tax (8%)</span>
+        <span id="orderSummaryTax">$0.00</span>
+      </div>
+      <div class="order-summary-row total-row">
+        <span>Total</span>
+        <span class="total-val" id="orderSummaryTotal">$0.00</span>
+      </div>
+      <button onclick="goToCheckout()" class="btn-sidebar-checkout">
+        Checkout
+      </button>
+    </div>
+  </aside>
+</main>
+
+<!-- Floating Complaint / Support Pill -->
+<a href="/customer.html?view=complaints" class="floating-complaint-btn">
+  <i class="fa-regular fa-comment-dots text-brand-400" style="color:var(--gold);"></i> Complaint / Feedback
+</a>
+
+
+<!-- Dish Customization & Details Modal -->
+<div class="dish-modal-overlay" id="dishModalOverlay" onclick="handleModalOverlayClick(event)">
+  <div class="dish-modal-card" id="dishModalCard">
+    <button class="dish-modal-close" onclick="closeDishModal()" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+
+    <h2 class="modal-dish-title" id="modalDishTitle">White Pasta</h2>
+    <p class="modal-dish-desc" id="modalDishDesc">Double ristretto with silky microfoam. Smooth, intense, no fluff.</p>
+
+    <div class="modal-dish-tags">
+      <span class="veg-tag" id="modalDishVegTag"><i class="fa-solid fa-square"></i> <span id="modalDishVegText">Veg</span></span>
+    </div>
+
+    <p class="modal-base-price">Base price: <strong id="modalDishBasePrice">Rs 5.00</strong></p>
+
+    <div class="modal-section-head">
+      <span class="modal-section-title" id="modalAddonsTitle">Add-ons</span>
+      <span class="modal-section-sub">Optional · up to 3</span>
+    </div>
+
+    <div class="modal-addons-grid" id="modalAddonsGrid">
+      <!-- Injected addon cards -->
+    </div>
+
+    <div class="modal-bottom-row">
+      <div class="modal-qty-stepper">
+        <button class="modal-qty-btn" onclick="adjustModalQty(-1)">−</button>
+        <span class="modal-qty-num" id="modalQtyNum">1</span>
+        <button class="modal-qty-btn" onclick="adjustModalQty(1)">+</button>
+      </div>
+      <div class="modal-total-wrap">
+        <span class="modal-total-label">Total</span>
+        <div class="modal-total-amount" id="modalTotalAmount">Rs 5.00</div>
+      </div>
+    </div>
+
+    <button class="btn-modal-add-cart" id="modalAddCartBtn" onclick="confirmModalAddToCart()">
+      Add to Cart
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Footer -->
+<footer class="page-footer">
+  <p><strong style="color:var(--gold);">Ember &amp; Brew</strong> · Artisan Coffee, Gourmet Cuisine &amp; Roastery</p>
+  <p id="branchFooterInfo" style="margin-top:4px;font-size:12px;">Serving fresh flavors across Pakistan, UK, and Australia.</p>
+</footer>
+
+<script>
+// State
+const menuState = {
+  branches: [],
+  currentBranch: null,
+  menuItems: [],
+  categories: ['All'],
+  activeCategory: 'All',
+  searchQuery: '',
+  cart: JSON.parse(localStorage.getItem('eb_cart') || '[]')
+};
+
+// URL Query support (?branch=... or ?branchId=...)
+const urlParams = new URLSearchParams(window.location.search);
+const branchParam = urlParams.get('branch') || urlParams.get('branchId');
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadBranches();
+  renderOrderSidebar();
+});
+
+async function loadBranches() {
+  // Check if admin is logged in with assigned branch
+  let adminBranchId = null;
+  try {
+    const adminUser = JSON.parse(localStorage.getItem('eb_admin') || 'null');
+    if (adminUser && adminUser.branchId) adminBranchId = adminUser.branchId;
+  } catch (_) {}
+
+  try {
+    const res = await fetch('/api/branches/public');
+    const branches = await res.json();
+    menuState.branches = Array.isArray(branches) ? branches : [];
+
+    const select = document.getElementById('branchSelect');
+    if (!menuState.branches.length) {
+      await loadMenu();
+      return;
+    }
+
+    let savedBranchId = localStorage.getItem('eb_branch_id');
+    let savedBranchCode = localStorage.getItem('eb_branch_code');
+    let selectedBranch = null;
+
+    if (branchParam) {
+      selectedBranch = menuState.branches.find(b => b.code === branchParam || b._id === branchParam);
+    }
+    if (!selectedBranch && adminBranchId) {
+      selectedBranch = menuState.branches.find(b => b._id === adminBranchId);
+    }
+    if (!selectedBranch && savedBranchId) {
+      selectedBranch = menuState.branches.find(b => b._id === savedBranchId || b.code === savedBranchCode);
+    }
+    if (!selectedBranch) {
+      selectedBranch = menuState.branches[0];
+    }
+
+    menuState.currentBranch = selectedBranch;
+    localStorage.setItem('eb_branch_id', selectedBranch._id);
+    localStorage.setItem('eb_branch_code', selectedBranch.code);
+
+    if (select) {
+      select.innerHTML = menuState.branches.map(b => {
+        const flag = b.countryCode === 'PK' ? '🇵🇰' : b.countryCode === 'GB' || b.countryCode === 'UK' ? '🇬🇧' : b.countryCode === 'AU' ? '🇦🇺' : '📍';
+        return `<option value="${b._id}" ${b._id === selectedBranch._id ? 'selected' : ''}>${flag} ${b.city || b.name} (${b.currencySymbol || b.currency})</option>`;
+      }).join('');
+    }
+
+    updateBranchFooter();
+    await loadMenu();
+  } catch (err) {
+    console.error('Failed to load branches:', err);
+    await loadMenu();
+  }
+}
+
+async function onBranchChange(branchId) {
+  const branch = menuState.branches.find(b => b._id === branchId);
+  if (!branch) return;
+  menuState.currentBranch = branch;
+  localStorage.setItem('eb_branch_id', branch._id);
+  localStorage.setItem('eb_branch_code', branch.code);
+  updateBranchFooter();
+  showToast(`Switched to ${branch.name || branch.city}`, 'info');
+  await loadMenu();
+  renderOrderSidebar();
+}
+
+function updateBranchFooter() {
+  const infoEl = document.getElementById('branchFooterInfo');
+  if (infoEl && menuState.currentBranch) {
+    const b = menuState.currentBranch;
+    infoEl.textContent = `${b.name || 'Ember & Brew'} · ${b.address || b.city + ', ' + b.country} · Phone: ${b.phone || 'Available online'}`;
+  }
+}
+
+async function loadMenu() {
+  const grid = document.getElementById('menuGrid');
+  grid.innerHTML = `<div class="empty-order-card" style="grid-column:1/-1;"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading dishes for this branch…</p></div>`;
+
+  try {
+    const branchId = menuState.currentBranch?._id || '';
+    const url = branchId ? `/api/menu?branchId=${encodeURIComponent(branchId)}` : '/api/menu';
+    const res = await fetch(url);
+    const items = await res.json();
+    menuState.menuItems = Array.isArray(items) ? items : [];
+
+    // Extract dynamic categories
+    const catSet = new Set(['All']);
+    menuState.menuItems.forEach(i => {
+      const cat = i.category || i.cat;
+      if (cat) catSet.add(cat);
+    });
+    menuState.categories = Array.from(catSet);
+    renderCategoryPills();
+    renderMenuGrid();
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-order-card" style="grid-column:1/-1;"><p style="color:#C67D5A;">Failed to load menu. Please refresh the page.</p></div>`;
+  }
+}
+
+function renderCategoryPills() {
+  const pillsCont = document.getElementById('categoryPills');
+  pillsCont.innerHTML = menuState.categories.map(c => `
+    <button class="cat-pill ${menuState.activeCategory === c ? 'active' : ''}" onclick="setCategory('${escapeHtml(c)}')">${escapeHtml(c)}</button>
+  `).join('');
+}
+
+function setCategory(cat) {
+  menuState.activeCategory = cat;
+  renderCategoryPills();
+  renderMenuGrid();
+}
+
+function onSearchInput(query) {
+  menuState.searchQuery = query.trim().toLowerCase();
+  renderMenuGrid();
+}
+
+function formatBranchMoney(amount) {
+  const num = Number(amount) || 0;
+  const symbol = menuState.currentBranch?.currencySymbol || 'Rs';
+  return `${symbol} ${num.toFixed(2)}`;
+}
+
+function getCartQtyForDish(dishId) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const entry = menuState.cart.find(c => c.item.id === dishId || c.item._id === dishId);
+  return entry ? (entry.qty || 1) : 0;
+}
+
+function renderMenuGrid() {
+  const grid = document.getElementById('menuGrid');
+  let filtered = menuState.menuItems;
+
+  if (menuState.activeCategory && menuState.activeCategory !== 'All') {
+    filtered = filtered.filter(i => (i.category || i.cat || '').toLowerCase() === menuState.activeCategory.toLowerCase());
+  }
+
+  if (menuState.searchQuery) {
+    const q = menuState.searchQuery;
+    filtered = filtered.filter(i => 
+      (i.name || '').toLowerCase().includes(q) ||
+      (i.category || i.cat || '').toLowerCase().includes(q) ||
+      (i.description || i.desc || '').toLowerCase().includes(q)
+    );
+  }
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="empty-order-card" style="grid-column:1/-1;">
+        <i class="fa-solid fa-utensils" style="font-size:32px;color:var(--gold);margin-bottom:8px;"></i>
+        <h3 class="serif" style="font-size:20px;color:#fff;margin-bottom:4px;">No dishes found</h3>
+        <p>Try selecting another category or clear your search query.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(item => {
+    const id = item._id || item.id;
+    const name = escapeHtml(item.name);
+    const cat = escapeHtml(item.category || item.cat || 'Special');
+    const desc = escapeHtml(item.description || item.desc || 'Artisan handcrafted recipe using fresh seasonal ingredients.');
+    const priceFormatted = formatBranchMoney(item.price);
+    const imgUrl = item.image || item.img || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80';
+
+    const cartQty = getCartQtyForDish(id);
+
+    return `
+      <article class="dish-card" id="dish-card-${id}">
+        <div class="dish-image-wrap" onclick="openDishModal('${id}')" style="cursor:pointer;" title="Click to view details & customize">
+          <img src="${imgUrl}" alt="${name}" class="dish-image" loading="lazy">
+          <span class="dish-cat-tag">${cat}</span>
+        </div>
+        <div class="dish-content">
+          <div class="dish-header">
+            <h3 class="dish-title" onclick="openDishModal('${id}')" style="cursor:pointer;" title="Click to view details & customize">${name}</h3>
+            <span class="dish-price">${priceFormatted}</span>
+          </div>
+          <p class="dish-desc">${desc}</p>
+          <div class="dish-action-area" id="dish-action-${id}">
+            ${cartQty > 0 ? `
+              <div class="dish-qty-control">
+                <button class="dish-qty-btn" onclick="updateDishQty('${id}', -1)">−</button>
+                <span class="dish-qty-val">${cartQty}</span>
+                <button class="dish-qty-btn" onclick="updateDishQty('${id}', 1)">+</button>
+              </div>
+            ` : `
+              <button class="btn-card-add" onclick="addDishToCart('${id}')">
+                <i class="fa-solid fa-plus"></i> Add to Cart
+              </button>
+            `}
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+
+// Addon Presets
+const ADDON_PRESETS = {
+  pizza: [
+    { name: 'Extra Cheese', price: 0.60 },
+    { name: 'Stuffed Crust', price: 0.90 },
+    { name: 'Mushrooms', price: 0.45 },
+    { name: 'Jalapeños', price: 0.35 }
+  ],
+  coffee: [
+    { name: 'Extra Espresso Shot', price: 0.55 },
+    { name: 'Oat Milk', price: 0.40 },
+    { name: 'Vanilla Syrup', price: 0.35 },
+    { name: 'Whipped Cream', price: 0.30 }
+  ],
+  drinks: [
+    { name: 'Extra Ice', price: 0 },
+    { name: 'Large Size', price: 0.50 },
+    { name: 'Extra Syrup', price: 0.35 }
+  ],
+  desserts: [
+    { name: 'Extra Scoop', price: 0.65 },
+    { name: 'Chocolate Drizzle', price: 0.30 },
+    { name: 'Whipped Cream', price: 0.30 }
+  ],
+  pasta: [
+    { name: 'Extra Parmesan Cheese', price: 0.50 },
+    { name: 'Garlic Bread Slice', price: 0.75 },
+    { name: 'Grilled Chicken Addon', price: 1.20 },
+    { name: 'Truffle Oil Drizzle', price: 0.85 }
+  ],
+  default: [
+    { name: 'Extra Cheese', price: 0.45 },
+    { name: 'Extra Sauce', price: 0.30 },
+    { name: 'Side of Fries', price: 1.20 },
+    { name: 'Spicy Kick', price: 0.20 }
+  ]
+};
+
+const NONVEG_KEYWORDS = ['beef','chicken','bacon','pork','mutton','fish','shrimp','prawn','meat','pepperoni','ham','sausage','turkey','lamb','salmon','tuna'];
+
+function isItemVeg(item) {
+  if (typeof item.isVeg === 'boolean') return item.isVeg;
+  const text = (item.name + ' ' + (item.desc || item.description || '') + ' ' + (item.cat || item.category || '')).toLowerCase();
+  return !NONVEG_KEYWORDS.some(k => text.includes(k));
+}
+
+function getAddonsForItem(item) {
+  const cat = (item.category || item.cat || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  if (cat.includes('coffee') || name.includes('coffee') || name.includes('brew') || name.includes('latte') || name.includes('cappuccino') || name.includes('espresso')) {
+    return ADDON_PRESETS.coffee;
+  }
+  if (cat.includes('pasta') || name.includes('pasta') || name.includes('lasagna')) {
+    return ADDON_PRESETS.pasta;
+  }
+  if (cat.includes('pizza') || name.includes('pizza')) {
+    return ADDON_PRESETS.pizza;
+  }
+  if (cat.includes('dessert') || cat.includes('pastr') || name.includes('cake') || name.includes('tiramisu')) {
+    return ADDON_PRESETS.desserts;
+  }
+  if (cat.includes('drink') || cat.includes('beverage') || name.includes('smoothie') || name.includes('shake')) {
+    return ADDON_PRESETS.drinks;
+  }
+  return ADDON_PRESETS.default;
+}
+
+const activeDishModal = {
+  item: null,
+  qty: 1,
+  addons: [],
+  selectedAddons: new Set()
+};
+
+function openDishModal(dishId) {
+  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
+  if (!item) return;
+
+  activeDishModal.item = item;
+  activeDishModal.qty = 1;
+  activeDishModal.addons = getAddonsForItem(item);
+  activeDishModal.selectedAddons = new Set();
+
+  document.getElementById('modalDishTitle').textContent = item.name;
+  document.getElementById('modalDishDesc').textContent = item.description || item.desc || 'Artisan handcrafted recipe using fresh seasonal ingredients.';
+  document.getElementById('modalDishBasePrice').textContent = formatBranchMoney(item.price);
+
+  const isVeg = isItemVeg(item);
+  const vegTag = document.getElementById('modalDishVegTag');
+  vegTag.className = 'veg-tag ' + (isVeg ? '' : 'nonveg');
+  document.getElementById('modalDishVegText').textContent = isVeg ? 'Veg' : 'Non-Veg';
+
+  document.getElementById('modalAddonsTitle').textContent = (item.category || item.cat || 'Dish') + ' Add-ons';
+  document.getElementById('modalQtyNum').textContent = '1';
+
+  const grid = document.getElementById('modalAddonsGrid');
+  grid.innerHTML = activeDishModal.addons.map((a, idx) => `
+    <div class="modal-addon-card" id="modal-addon-${idx}" onclick="toggleModalAddon(${idx})">
+      <span class="modal-addon-box"><i class="fa-solid fa-check"></i></span>
+      <div class="modal-addon-info">
+        <span class="modal-addon-name">${escapeHtml(a.name)}</span>
+        <span class="modal-addon-price">${a.price > 0 ? '+' + formatBranchMoney(a.price) : 'Free'}</span>
+      </div>
+    </div>
+  `).join('');
+
+  updateModalTotal();
+
+  const overlay = document.getElementById('dishModalOverlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDishModal() {
+  const overlay = document.getElementById('dishModalOverlay');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target.id === 'dishModalOverlay') {
+    closeDishModal();
+  }
+}
+
+function toggleModalAddon(idx) {
+  if (activeDishModal.selectedAddons.has(idx)) {
+    activeDishModal.selectedAddons.delete(idx);
+  } else {
+    if (activeDishModal.selectedAddons.size >= 3) {
+      showToast('You can pick up to 3 add-ons.', 'info');
+      return;
+    }
+    activeDishModal.selectedAddons.add(idx);
+  }
+
+  activeDishModal.addons.forEach((_, i) => {
+    const el = document.getElementById('modal-addon-' + i);
+    if (el) el.classList.toggle('checked', activeDishModal.selectedAddons.has(i));
+  });
+
+  updateModalTotal();
+}
+
+function adjustModalQty(delta) {
+  activeDishModal.qty = Math.max(1, activeDishModal.qty + delta);
+  document.getElementById('modalQtyNum').textContent = activeDishModal.qty;
+  updateModalTotal();
+}
+
+function updateModalTotal() {
+  if (!activeDishModal.item) return;
+  const basePrice = Number(activeDishModal.item.price) || 0;
+  const addonsSum = [...activeDishModal.selectedAddons].reduce((sum, idx) => sum + (activeDishModal.addons[idx].price || 0), 0);
+  const total = (basePrice + addonsSum) * activeDishModal.qty;
+  document.getElementById('modalTotalAmount').textContent = formatBranchMoney(total);
+}
+
+function confirmModalAddToCart() {
+  if (!activeDishModal.item) return;
+  const item = activeDishModal.item;
+  const chosenAddons = [...activeDishModal.selectedAddons].map(idx => activeDishModal.addons[idx]);
+  const signature = chosenAddons.map(a => a.name).sort().join('|');
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const cartItem = {
+    item: {
+      id: item._id || item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      desc: item.description || item.desc || '',
+      cat: item.category || item.cat || 'Special',
+      img: item.image || item.img || ''
+    },
+    qty: activeDishModal.qty,
+    addons: chosenAddons,
+    addonSignature: signature
+  };
+
+  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && (c.addonSignature || '') === signature);
+  if (existing) {
+    existing.qty += activeDishModal.qty;
+  } else {
+    menuState.cart.push(cartItem);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  showToast(`Added ${item.name} to order!`, 'success');
+  closeDishModal();
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function addDishToCart(dishId) {
+  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
+  if (!item) return;
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const cartItem = {
+    item: {
+      id: item._id || item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      desc: item.description || item.desc || '',
+      cat: item.category || item.cat || 'Special',
+      img: item.image || item.img || ''
+    },
+    qty: 1,
+    addons: [],
+    addonSignature: ''
+  };
+
+  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && c.addonSignature === '');
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    menuState.cart.push(cartItem);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  showToast(`Added ${item.name} to order!`, 'success');
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function updateDishQty(dishId, delta) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const idx = menuState.cart.findIndex(c => c.item.id === dishId || c.item._id === dishId);
+  if (idx < 0) return;
+
+  menuState.cart[idx].qty += delta;
+  if (menuState.cart[idx].qty <= 0) {
+    menuState.cart.splice(idx, 1);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function removeCartLine(idx) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  if (menuState.cart[idx]) {
+    menuState.cart.splice(idx, 1);
+    localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+    renderMenuGrid();
+    renderOrderSidebar();
+  }
+}
+
+function renderOrderSidebar() {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const itemsContainer = document.getElementById('orderSidebarItems');
+  const summaryContainer = document.getElementById('orderSidebarSummary');
+  const countBadge = document.getElementById('orderSidebarCountBadge');
+
+  const totalCount = menuState.cart.reduce((sum, c) => sum + (c.qty || 1), 0);
+  countBadge.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
+
+  if (!menuState.cart.length) {
+    itemsContainer.innerHTML = `
+      <div class="empty-order-card">
+        <i class="fa-solid fa-bag-shopping"></i>
+        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
+        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
+      </div>
+    `;
+    summaryContainer.style.display = 'none';
+    return;
+  }
+
+  summaryContainer.style.display = 'block';
+
+  let subtotal = 0;
+  itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
+    const linePrice = Number(line.item.price) || 0;
+    const lineTotal = linePrice * line.qty;
+    subtotal += lineTotal;
+    const imgUrl = line.item.img || line.item.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=120&q=80';
+
+    return `
+      <div class="order-line-item">
+        <img src="${imgUrl}" alt="${escapeHtml(line.item.name)}" class="order-line-thumb">
+        <div class="order-line-info">
+          <span class="order-line-name">${escapeHtml(line.item.name)}</span>
+          <span class="order-line-price">${formatBranchMoney(linePrice)}</span>
+        </div>
+        <div class="order-line-controls">
+          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', -1)">−</button>
+          <span class="order-line-qty">${line.qty}</span>
+          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', 1)">+</button>
+        </div>
+        <button class="order-line-del" onclick="removeCartLine(${idx})" title="Remove item">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  const taxRate = menuState.currentBranch?.taxRate !== undefined ? Number(menuState.currentBranch.taxRate) : 0.08;
+  const tax = subtotal * (taxRate > 1 ? taxRate / 100 : taxRate);
+  const total = subtotal + tax;
+
+  document.getElementById('orderSummarySubtotal').textContent = formatBranchMoney(subtotal);
+  document.getElementById('orderSummaryTaxLabel').textContent = `Tax (${(taxRate > 1 ? taxRate : taxRate * 100).toFixed(0)}%)`;
+  document.getElementById('orderSummaryTax').textContent = formatBranchMoney(tax);
+  document.getElementById('orderSummaryTotal').textContent = formatBranchMoney(total);
+}
+
+function goToCheckout() {
+  const branchCode = menuState.currentBranch?.code || '';
+  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=checkout` : '?view=checkout';
+  window.location.href = '/' + branchParam;
+}
+
+function goToReservation() {
+  const branchCode = menuState.currentBranch?.code || '';
+  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=reservation#reservation-section` : '?view=reservation#reservation-section';
+  window.location.href = '/' + branchParam;
+}
+
+function toggleMobileNav() {
+  const m = document.getElementById('mobile-nav');
+  if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+}
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(() => { toast.className = 'toast'; }, 2800);
+}
+
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+</script>
+</body>
+</html>

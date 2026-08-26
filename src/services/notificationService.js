@@ -483,37 +483,98 @@ async function notifyReservation(reservation, status = reservation.status) {
     const date = reservation.date || '';
     const time = reservation.time || '';
     const guests = reservation.guests || 2;
-    const table = reservation.tableNumber ? ` (Table ${reservation.tableNumber})` : '';
+    const tableNum = reservation.tableNumber ? String(reservation.tableNumber) : '';
 
     let title = '';
     let subject = '';
     let body = '';
+    let badgeText = '';
+    let badgeColor = '#D4A853';
 
     if (status === 'confirmed') {
-      title = 'Table Reservation Confirmed';
-      subject = `Reservation Confirmed for ${date} at ${time} — Ember & Brew`;
-      body = `🎉 Hello ${guestName}, your reservation for ${guests} guest${guests > 1 ? 's' : ''} on ${date} at ${time}${table} has been confirmed! We look forward to hosting you at Ember & Brew.`;
+      title = 'Table Reservation Confirmed! 🎉';
+      subject = `🎉 Table Confirmed for ${date} at ${time} — Ember & Brew`;
+      body = `Great news, ${guestName}! Your reservation for ${guests} guest${guests > 1 ? 's' : ''} on ${date} at ${time} has been confirmed${tableNum ? ` at Table ${tableNum}` : ''}. We look forward to hosting you at Ember & Brew!`;
+      badgeText = tableNum ? `TABLE RESERVED: TABLE ${tableNum}` : 'RESERVATION CONFIRMED';
+      badgeColor = '#657558';
     } else if (status === 'cancelled') {
       title = 'Reservation Cancelled';
-      subject = `Reservation Cancelled — Ember & Brew`;
-      body = `Hello ${guestName}, your reservation on ${date} at ${time} has been cancelled. Please reach out if you would like to reschedule.`;
+      subject = `Table Reservation Cancelled — Ember & Brew`;
+      body = `Hello ${guestName}, your reservation on ${date} at ${time} has been cancelled. If you wish to reschedule, please visit our website.`;
+      badgeText = 'RESERVATION CANCELLED';
+      badgeColor = '#9A5638';
     } else {
-      title = 'Reservation Update';
-      subject = `Reservation Status Update — Ember & Brew`;
-      body = `Hello ${guestName}, your reservation on ${date} at ${time} is now: ${capitalize(status)}.`;
+      title = 'Reservation Request Received';
+      subject = `Table Request Received for ${date} at ${time} — Ember & Brew`;
+      body = `Hello ${guestName}, we have received your reservation request for ${guests} guest${guests > 1 ? 's' : ''} on ${date} at ${time}. Our host team is reviewing table availability and will confirm shortly!`;
+      badgeText = 'REQUEST RECEIVED · PENDING CONFIRMATION';
+      badgeColor = '#C4923A';
     }
 
     const message = { title, subject, body, status };
     const emailHtml = `
-      <div style="font-family: sans-serif; background: #0F0E0C; color: #F5F0E8; padding: 24px; max-width: 550px; margin: 0 auto; border: 1px solid #2E2C28; border-radius: 12px;">
-        <h2 style="color: #D4A853; margin-top: 0;">Ember <em>&amp;</em> Brew</h2>
-        <h3 style="color: #FFFFFF;">${title}</h3>
-        <p style="font-size: 15px; line-height: 1.6;">${body}</p>
-        <div style="background: #1A1917; border: 1px solid #2E2C28; border-radius: 8px; padding: 14px; margin-top: 16px;">
-          <p style="margin: 0; color: #D4A853; font-weight: 600;">Date: ${date} · Time: ${time}</p>
-          <p style="margin: 6px 0 0 0; color: #8A8478; font-size: 13px;">Party size: ${guests} people ${table}</p>
-        </div>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="margin: 0; padding: 0; background-color: #0B0A08; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #F5F0E8;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0B0A08; padding: 30px 10px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #141310; border: 1px solid #2E2C28; border-radius: 18px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+                <tr>
+                  <td style="padding: 28px 32px; border-bottom: 1px solid #2E2C28; background: linear-gradient(180deg, #1C1A16 0%, #141310 100%);">
+                    <h1 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 24px; font-weight: 700; color: #F5F0E8;">
+                      Ember <em style="color: #D4A853; font-style: normal;">&amp;</em> Brew
+                    </h1>
+                    <p style="margin: 4px 0 0 0; color: #A8A296; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;">Table Reservation</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 32px;">
+                    <div style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; background: ${badgeColor}22; color: ${badgeColor}; border: 1px solid ${badgeColor}55; margin-bottom: 16px;">
+                      ${badgeText}
+                    </div>
+                    <h2 style="margin: 0 0 12px 0; font-family: 'Playfair Display', Georgia, serif; font-size: 22px; color: #FFFFFF;">${title}</h2>
+                    <p style="margin: 0 0 24px 0; color: #D4CEBF; font-size: 15px; line-height: 1.6;">${body}</p>
+
+                    <div style="background-color: #1C1A16; border: 1px solid #2E2C28; border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding-bottom: 10px; color: #8A8478; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Guest</td>
+                          <td align="right" style="padding-bottom: 10px; color: #F5F0E8; font-weight: 600; font-size: 14px;">${escapeHtml(guestName)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding-bottom: 10px; color: #8A8478; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Date &amp; Time</td>
+                          <td align="right" style="padding-bottom: 10px; color: #D4A853; font-weight: 700; font-size: 14px;">${escapeHtml(date)} at ${escapeHtml(time)}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding-bottom: 10px; color: #8A8478; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Party Size</td>
+                          <td align="right" style="padding-bottom: 10px; color: #F5F0E8; font-weight: 600; font-size: 14px;">${guests} Guests</td>
+                        </tr>
+                        ${tableNum ? `
+                        <tr>
+                          <td style="padding-top: 10px; border-top: 1px solid #2E2C28; color: #8A8478; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Assigned Table</td>
+                          <td align="right" style="padding-top: 10px; border-top: 1px solid #2E2C28; color: #657558; font-weight: 800; font-size: 16px;">Table ${escapeHtml(tableNum)}</td>
+                        </tr>` : ''}
+                      </table>
+                    </div>
+
+                    <p style="margin: 0; font-size: 13px; color: #8A8478; line-height: 1.5;">
+                      Need to make changes? You can view your status anytime in your <a href="https://admin-restaurant-six.vercel.app/customer.html" style="color: #D4A853; text-decoration: underline;">Customer Portal</a>.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px 32px; border-top: 1px solid #2E2C28; background-color: #100F0D; text-align: center;">
+                    <p style="margin: 0; color: #6E685E; font-size: 12px;">Ember &amp; Brew · Artisan Coffee &amp; Kitchen</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
 
     const smsText = `[Ember & Brew] ${title}: ${body}`;
@@ -527,7 +588,13 @@ async function notifyReservation(reservation, status = reservation.status) {
       tasks.push(sendEmail(reservation.email, subject, emailHtml, body));
     }
 
-    return await Promise.allSettled(tasks);
+    const results = await Promise.allSettled(tasks);
+    for (const res of results) {
+      if (res.status === 'rejected') {
+        console.error('Reservation notification channel error:', res.reason?.message || res.reason);
+      }
+    }
+    return results;
   } catch (err) {
     console.error('Failed to send reservation notification:', err.message);
     return { error: err.message };

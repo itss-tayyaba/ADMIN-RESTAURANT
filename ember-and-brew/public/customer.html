@@ -1,48 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Customer Portal — Ember & Brew</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config={theme:{extend:{colors:{brand:{50:'#FDF8EF',100:'#F5F0E8',200:'#E8DFD0',300:'#D4C4A8',400:'#D4A853',500:'#C4923A',600:'#A87832',700:'#8A5F2A',800:'#3D3830',900:'#1A1917',950:'#0F0E0C'},terra:{300:'#D9A58A',400:'#C67D5A',500:'#B56A45',600:'#9A5638'},sage:{300:'#A3B496',400:'#7A8B6F',500:'#657558'}},fontFamily:{display:['"Playfair Display"','serif'],body:['"DM Sans"','sans-serif']}}}}
-</script>
 <link rel="stylesheet" href="/customer.css">
 </head>
-<body class="font-body bg-brand-100 text-brand-900 min-h-screen">
-<nav id="site-nav" class="portal-nav sticky top-0 z-50">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-    <a href="/" class="nav-brand" aria-label="Ember & Brew home">
-      <span class="dot"></span>
-      <span>
-        <span class="name block">Ember <em>&amp;</em> Brew</span>
-        <span class="sub block">Customer Portal</span>
-      </span>
-    </a>
-    <div class="flex flex-wrap items-center gap-4 text-sm">
-      <button id="mobile-menu-btn" class="menu-toggle md:hidden p-2 text-brand-700" type="button" aria-label="Toggle navigation">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-      <button id="nav-reservation-button" class="form-button" type="button">Book a Table</button>
-      <span id="nav-welcome" class="text-brand-700">Welcome back</span>
-      <button id="nav-logout-button" class="form-button hidden">Sign Out</button>
-    </div>
-  </div>
-</nav>
-<div id="mobile-nav" class="customer-mobile-nav hidden">
-  <button class="mobile-nav-item" data-view="orders" type="button">My Dashboard</button>
-  <button class="mobile-nav-item" data-view="menu" type="button">View Menu</button>
-  <button class="mobile-nav-item" data-view="tracking" type="button">Track Order</button>
-  <button class="mobile-nav-item" data-view="reservations" type="button">Reservation</button>
-  <button class="mobile-nav-item" data-view="complaints" type="button">Complaints</button>
+<body>
+
+<div id="portal-root">
+  <!-- Dynamic dashboard rendered by customer.js -->
 </div>
-<main id="portal-shell" class="max-w-7xl mx-auto px-6 py-10">
-  <div id="portal-main"></div>
-</main>
-<div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
+
+<div class="toast" id="toast"></div>
+<div id="toast-container"></div>
+
 <script src="/order-notifications.js"></script>
 <script src="/customer.js"></script>
 <script>

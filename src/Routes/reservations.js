@@ -17,8 +17,24 @@ function todayStr() { return new Date().toISOString().slice(0, 10); }
 const RESERVATION_WINDOW_MINUTES = 120; // a booking is assumed to hold the table for ~2 hours
 
 function minutesFromTimeStr(timeStr) {
-  const [h, m] = String(timeStr || '00:00').split(':').map(Number);
-  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+  if (!timeStr) return 0;
+  const str = String(timeStr).trim();
+  const match12 = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let h = Number(match12[1]);
+    const m = Number(match12[2]);
+    const period = match12[3].toUpperCase();
+    if (period === 'PM' && h < 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  const match24 = str.match(/^(\d{1,2}):(\d{2})/);
+  if (match24) {
+    const h = Number(match24[1]);
+    const m = Number(match24[2]);
+    return h * 60 + m;
+  }
+  return 0;
 }
 
 // Blocks confirming a reservation onto a table that's already holding
@@ -32,10 +48,10 @@ async function hasConfirmedConflict(tableNumber, date, time, excludeReservationI
     _id: { $ne: excludeReservationId },
     tableNumber,
     date,
-    status: 'confirmed'
+    status: { $in: ['confirmed', 'seated'] }
   };
   await addBranchScope(query, branchId);
-  const sameDay = await Reservation.find(query).select('time');
+  const sameDay = await Reservation.find(query).select('time tableNumber');
 
   const start = minutesFromTimeStr(time);
   return sameDay.some(r => Math.abs(minutesFromTimeStr(r.time) - start) < RESERVATION_WINDOW_MINUTES);
@@ -54,6 +70,31 @@ function adminAuth(req, res, next) {
   }
 }
 
+function parseReservationDateTime(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return null;
+  let hours = 0;
+  let minutes = 0;
+  const match12 = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    hours = Number(match12[1]);
+    minutes = Number(match12[2]);
+    const period = match12[3].toUpperCase();
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+  } else {
+    const match24 = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      hours = Number(match24[1]);
+      minutes = Number(match24[2]);
+    } else {
+      return null;
+    }
+  }
+  const [year, month, day] = String(dateStr).split('-').map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
 // Public reservation request from the website or portal.
 router.post('/', async (req, res) => {
   try {
@@ -63,8 +104,11 @@ router.post('/', async (req, res) => {
     if (!guestName?.trim() || !email?.trim() || !/^(0\d{9,11}|\+?[1-9]\d{6,14})$/.test(cleanPhone) || !date || !time || !Number.isInteger(partySize) || partySize < 1 || partySize > 20) {
       return res.status(400).json({ error: 'Please provide valid reservation details.' });
     }
-    if (new Date(`${date}T00:00:00`).getTime() < new Date().setHours(0, 0, 0, 0)) {
-      return res.status(400).json({ error: 'Please choose a future reservation date.' });
+
+    const bookingDateTime = parseReservationDateTime(date, time);
+    // Allow up to 2 minutes grace for clock drift, but reject past booking times
+    if (!bookingDateTime || bookingDateTime.getTime() < Date.now() - 2 * 60 * 1000) {
+      return res.status(400).json({ error: 'Please choose a future reservation date and time. The selected time has already passed.' });
     }
 
     let customerId = null;
@@ -92,7 +136,11 @@ router.post('/', async (req, res) => {
       notes: notes || '',
       customerId
     });
-    notifyReservation(reservation, 'pending').catch(e => console.warn('[Reservation Notify Error]', e.message));
+    try {
+      await notifyReservation(reservation, 'pending');
+    } catch (e) {
+      console.warn('[Reservation Notify Error]', e.message);
+    }
     res.status(201).json(reservation);
   } catch (err) {
     res.status(500).json({ error: 'Unable to save the reservation. Please try again.' });
@@ -144,7 +192,18 @@ router.get('/', adminAuth, async (req, res) => {
   try {
     const query = req.query.status ? { status: req.query.status } : {};
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
-    const reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
+    let reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
+
+    // Prioritize pending reservations at the top, followed by confirmed, completed, cancelled
+    const statusPriority = { pending: 0, confirmed: 1, completed: 2, cancelled: 3 };
+    reservations.sort((a, b) => {
+      const pA = statusPriority[a.status] !== undefined ? statusPriority[a.status] : 99;
+      const pB = statusPriority[b.status] !== undefined ? statusPriority[b.status] : 99;
+      if (pA !== pB) return pA - pB;
+      if (a.date !== b.date) return (a.date || '').localeCompare(b.date || '');
+      return (a.time || '').localeCompare(b.time || '');
+    });
+
     res.json(reservations);
   } catch {
     res.status(500).json({ error: 'Failed to fetch reservations.' });
@@ -180,7 +239,11 @@ router.put('/:id', adminAuth, async (req, res) => {
     const reservation = await Reservation.findOneAndUpdate(query, { status, tableNumber: table }, { new: true, runValidators: true });
     if (!reservation) return res.status(404).json({ error: 'Reservation not found.' });
 
-    notifyReservation(reservation, status).catch(e => console.warn('[Reservation Notify Error]', e.message));
+    try {
+      await notifyReservation(reservation, status);
+    } catch (e) {
+      console.warn('[Reservation Notify Error]', e.message);
+    }
 
     res.json(reservation);
   } catch {
