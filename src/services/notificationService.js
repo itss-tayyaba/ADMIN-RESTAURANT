@@ -257,8 +257,32 @@ function escapeHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function fixEmailTypo(emailStr) {
+  if (!emailStr) return '';
+  let e = String(emailStr).trim().toLowerCase();
+  const domainCorrections = {
+    '@gmil.com': '@gmail.com',
+    '@gmai.com': '@gmail.com',
+    '@gmal.com': '@gmail.com',
+    '@gmaill.com': '@gmail.com',
+    '@gamil.com': '@gmail.com',
+    '@gmial.com': '@gmail.com',
+    '@gmaik.com': '@gmail.com',
+    '@hotmial.com': '@hotmail.com',
+    '@yaho.com': '@yahoo.com',
+    '@outlok.com': '@outlook.com'
+  };
+  for (const [typo, fixed] of Object.entries(domainCorrections)) {
+    if (e.endsWith(typo)) {
+      e = e.slice(0, -typo.length) + fixed;
+      break;
+    }
+  }
+  return e;
+}
+
 async function sendEmail(toEmail, subject, htmlContent, textContent) {
-  const targetEmail = String(toEmail || '').trim().toLowerCase();
+  const targetEmail = fixEmailTypo(toEmail);
   if (!targetEmail) return { sent: false, skipped: true };
   const transporter = getEmailTransporter();
   const senderUser = process.env.SMTP_USER || process.env.EMAIL_USER || 'hamzatabi654@gmail.com';

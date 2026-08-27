@@ -98,7 +98,32 @@ function parseReservationDateTime(dateStr, timeStr) {
 // Public reservation request from the website or portal.
 router.post('/', async (req, res) => {
   try {
-    const { guestName, email, phone, date, time, guests, notes } = req.body;
+    function fixEmailTypo(emailStr) {
+  if (!emailStr) return '';
+  let e = String(emailStr).trim().toLowerCase();
+  const domainCorrections = {
+    '@gmil.com': '@gmail.com',
+    '@gmai.com': '@gmail.com',
+    '@gmal.com': '@gmail.com',
+    '@gmaill.com': '@gmail.com',
+    '@gamil.com': '@gmail.com',
+    '@gmial.com': '@gmail.com',
+    '@gmaik.com': '@gmail.com',
+    '@hotmial.com': '@hotmail.com',
+    '@yaho.com': '@yahoo.com',
+    '@outlok.com': '@outlook.com'
+  };
+  for (const [typo, fixed] of Object.entries(domainCorrections)) {
+    if (e.endsWith(typo)) {
+      e = e.slice(0, -typo.length) + fixed;
+      break;
+    }
+  }
+  return e;
+}
+
+    let { guestName, email, phone, date, time, guests, notes } = req.body;
+    email = fixEmailTypo(email);
     const partySize = Number(guests);
     const cleanPhone = String(phone || '').trim().replace(/[\s()-]/g, '');
     if (!guestName?.trim() || !email?.trim() || !/^(0\d{9,11}|\+?[1-9]\d{6,14})$/.test(cleanPhone) || !date || !time || !Number.isInteger(partySize) || partySize < 1 || partySize > 20) {

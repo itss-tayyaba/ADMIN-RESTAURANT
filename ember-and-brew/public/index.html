@@ -3786,7 +3786,30 @@ function updateAvailableReservationTimeSlots() {
 async function handleReservationSubmit(e) {
   e.preventDefault();
   const name = document.getElementById('resv-name').value;
-  const email = document.getElementById('resv-email').value;
+  function fixEmailTypo(emailStr) {
+  if (!emailStr) return '';
+  let e = String(emailStr).trim().toLowerCase();
+  const domainCorrections = {
+    '@gmil.com': '@gmail.com',
+    '@gmai.com': '@gmail.com',
+    '@gmal.com': '@gmail.com',
+    '@gmaill.com': '@gmail.com',
+    '@gamil.com': '@gmail.com',
+    '@gmial.com': '@gmail.com',
+    '@gmaik.com': '@gmail.com',
+    '@hotmial.com': '@hotmail.com',
+    '@yaho.com': '@yahoo.com',
+    '@outlok.com': '@outlook.com'
+  };
+  for (const [typo, fixed] of Object.entries(domainCorrections)) {
+    if (e.endsWith(typo)) {
+      e = e.slice(0, -typo.length) + fixed;
+      break;
+    }
+  }
+  return e;
+}
+  let email = fixEmailTypo(document.getElementById('resv-email').value);
   const phone = document.getElementById('resv-phone').value.trim();
   const date = document.getElementById('resv-date').value;
   if (!name || !email || !phone || !date) return;

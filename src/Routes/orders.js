@@ -140,7 +140,32 @@ router.get('/map-config', (req, res) => {
 // required instead and no account is created or required).
 router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
-    const { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, guestEmail, tableNumber, pushToken } = req.body;
+    function fixEmailTypo(emailStr) {
+  if (!emailStr) return '';
+  let e = String(emailStr).trim().toLowerCase();
+  const domainCorrections = {
+    '@gmil.com': '@gmail.com',
+    '@gmai.com': '@gmail.com',
+    '@gmal.com': '@gmail.com',
+    '@gmaill.com': '@gmail.com',
+    '@gamil.com': '@gmail.com',
+    '@gmial.com': '@gmail.com',
+    '@gmaik.com': '@gmail.com',
+    '@hotmial.com': '@hotmail.com',
+    '@yaho.com': '@yahoo.com',
+    '@outlok.com': '@outlook.com'
+  };
+  for (const [typo, fixed] of Object.entries(domainCorrections)) {
+    if (e.endsWith(typo)) {
+      e = e.slice(0, -typo.length) + fixed;
+      break;
+    }
+  }
+  return e;
+}
+
+    let { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, guestEmail, tableNumber, pushToken } = req.body;
+    if (guestEmail) guestEmail = fixEmailTypo(guestEmail);
     const branchId = await resolvePublicBranchId(req.query);
     const branch = branchId ? await Branch.findOne({ _id: branchId, isActive: true }) : null;
     if (!branch) return res.status(400).json({ error: 'Please select an active branch before ordering.' });
