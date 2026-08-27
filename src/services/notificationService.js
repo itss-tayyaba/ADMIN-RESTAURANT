@@ -124,27 +124,21 @@ async function sendPush(order, message) {
 let emailTransporter = null;
 
 function getEmailTransporter() {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE, EMAIL_SERVICE } = process.env;
-  if (!SMTP_USER || !SMTP_PASS) return null;
-  if (emailTransporter) return emailTransporter;
+  const user = process.env.SMTP_USER || process.env.EMAIL_USER || process.env.GMAIL_USER || 'hamzatabi654@gmail.com';
+  const pass = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS || 'muyqfdbmacqufyen').replace(/\s+/g, '');
 
-  if (EMAIL_SERVICE || (SMTP_HOST && SMTP_HOST.includes('gmail.com'))) {
-    emailTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: SMTP_USER, pass: String(SMTP_PASS).replace(/\s+/g, '') }
-    });
-    return emailTransporter;
-  }
-  if (SMTP_HOST) {
-    emailTransporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT) || 587,
-      secure: SMTP_SECURE === 'true' || Number(SMTP_PORT) === 465,
-      auth: { user: SMTP_USER, pass: String(SMTP_PASS).replace(/\s+/g, '') }
-    });
-    return emailTransporter;
-  }
-  return null;
+  if (!user || !pass) return null;
+
+  return nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
+  });
 }
 
 function buildOrderEmailHtml(order, message) {
