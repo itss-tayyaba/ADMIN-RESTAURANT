@@ -2918,7 +2918,7 @@ async function reverseGeocodeOpenStreetMapDeliveryPoint(point) {
   const requestId = deliveryGeocodeRequestId;
   setDeliveryMapMessage('Pinning exact coordinates…');
 
-  const nearestKnown = findNearestKnownPlace(point, 0.85);
+  const nearestKnown = findNearestKnownPlace(point, 1.2);
 
   try {
     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=en&lat=${encodeURIComponent(point.lat)}&lon=${encodeURIComponent(point.lng)}`);
@@ -2930,11 +2930,19 @@ async function reverseGeocodeOpenStreetMapDeliveryPoint(point) {
       formatted = formatDeliveryAddress(result);
     }
     
-    if (nearestKnown && (!formatted || !formatted.toLowerCase().includes('muhammad nagar'))) {
-      formatted = formatted ? `${formatted}, ${nearestKnown.name}` : nearestKnown.name;
-    } else if (!formatted && nearestKnown) {
-      formatted = nearestKnown.name;
+    // If the point is within our curated verified boundaries (e.g. Muhammad Nagar), use the clean verified area name
+    if (nearestKnown) {
+      if (!formatted || /sehgal city|unnamed/i.test(formatted) || formatted.includes('Faisalabad City Tehsil')) {
+        formatted = nearestKnown.name;
+      }
     }
+    
+    if (formatted) {
+      setOpenStreetMapDeliveryAddress(formatted);
+      setDeliveryMapMessage('📍 Location pinned! Drag the pin or click on the map to fine-tune your exact doorstep or gate.');
+      return;
+    }
+    throw new Error('Address lookup unavailable');
     
     if (formatted) {
       setOpenStreetMapDeliveryAddress(formatted);
@@ -2959,13 +2967,22 @@ function formatDeliveryAddress(result) {
   const streetParts = [address.house_number, address.building, address.road].filter(Boolean);
   const street = streetParts.length ? streetParts.join(' ') : '';
   
-  const locality = address.suburb || address.neighbourhood || address.residential || address.hamlet || address.village || address.city_district || address.quarter;
-  const city = address.city || address.town || address.municipality || address.county || address.state;
+  let locality = address.suburb || address.neighbourhood || address.residential || address.hamlet || address.village || address.city_district || address.quarter;
+  let city = address.city || address.town || address.municipality || address.county || address.state;
+
+  // Fix known OSM tagging quirks (e.g. Sehgal City -> Muhammad Nagar)
+  if (locality && /sehgal city/i.test(locality)) {
+    locality = 'Muhammad Nagar';
+  }
   
   const parts = [street, locality, city].filter(Boolean);
   if (parts.length >= 2) return [...new Set(parts)].join(', ');
   
-  return (result.display_name || '').split(',').slice(0, 4).map(s => s.trim()).join(', ');
+  let raw = (result.display_name || '').split(',').slice(0, 4).map(s => s.trim()).join(', ');
+  if (/sehgal city/i.test(raw)) {
+    raw = raw.replace(/sehgal city/gi, 'Muhammad Nagar');
+  }
+  return raw;
 }
 
 function setOpenStreetMapDeliveryAddress(address) {
@@ -3027,48 +3044,94 @@ function selectQuickLocation(placeName) {
   }
 }
 
+// Tries a fresh high-accuracy fix; if the browser/OS won't grant it,
+// falls back to a coarse network-based location and finally to manual
+// pin placement, with a message that tells the customer *why* and how
+// to fix it rather than just "denied".
 function useCurrentDeliveryLocation() {
+  if (!navigator.geolocation) {
+    setDeliveryMapMessage('GPS is not supported by this browser. Zoom in and click on the map to pin your location.', true);
+    return;
+  }
+
   setDeliveryMapMessage('Detecting your current GPS location…');
   startCurrentLocationTracking(true);
 
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setDeliveryMapMessage('✅ GPS location detected! Centered on your exact spot.');
+  const onSuccess = position => {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const accuracy = position.coords.accuracy; // meters
+    if (deliveryMap) {
+      deliveryMap.invalidateSize();
+      // Zoom in further when the fix is tight; stay a bit wider if it's coarse.
+      const zoom = accuracy && accuracy > 100 ? 16 : 18;
+      deliveryMap.setView([lat, lng], zoom, { animate: true });
+    }
+    updateCurrentLocationMarker(position, true);
+    setOpenStreetMapDeliveryPoint({ lat, lng });
+    setDeliveryMapMessage(
+      accuracy
+        ? `✅ GPS location detected (±${Math.round(accuracy)}m). Drag the pin if it's not exactly on your house.`
+        : '✅ GPS location detected! Centered on your exact spot.'
+    );
+  };
+
+  const attempt = (opts, isRetry) => navigator.geolocation.getCurrentPosition(
+    onSuccess,
+    err => handleGpsError(err, isRetry),
+    opts
+  );
+
+  const handleGpsError = async (err, isRetry) => {
+    console.warn('Browser GPS error:', err);
+
+    // PERMISSION_DENIED (code 1): retrying won't help until the user changes
+    // the site's location permission — give exact steps instead of retrying.
+    if (err.code === 1) {
+      setDeliveryMapMessage(
+        '📍 Location access is blocked for this site. Tap the lock/info icon next to the address bar → Site settings → Location → Allow, then tap "Use current location" again. Meanwhile, you can zoom in and click your exact house on the map below.',
+        true
+      );
+      await tryIpFallback();
+      return;
+    }
+
+    // TIMEOUT (code 3): a lot of phones fail on the first high-accuracy
+    // request but succeed with a longer timeout / lower accuracy. Retry once.
+    if (err.code === 3 && !isRetry) {
+      setDeliveryMapMessage('Still searching for a GPS signal… trying again.');
+      attempt({ enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }, true);
+      return;
+    }
+
+    // POSITION_UNAVAILABLE (code 2) or a retry that still failed.
+    setDeliveryMapMessage('Attempting network-based location…');
+    await tryIpFallback();
+  };
+
+  const tryIpFallback = async () => {
+    try {
+      const ipRes = await fetch('https://ipapi.co/json/');
+      const ipData = await ipRes.json();
+      if (ipData && ipData.latitude && ipData.longitude) {
+        const lat = Number(ipData.latitude);
+        const lng = Number(ipData.longitude);
         if (deliveryMap) {
           deliveryMap.invalidateSize();
-          deliveryMap.setView([lat, lng], 18, { animate: true });
+          // Network location is only approximate (often city-level), so
+          // don't zoom in as far as a real GPS fix — that would falsely
+          // suggest precision the fallback doesn't have.
+          deliveryMap.setView([lat, lng], 15, { animate: true });
         }
-        updateCurrentLocationMarker(position, true);
-        setOpenStreetMapDeliveryPoint({ lat, lng });
-      },
-      async err => {
-        console.warn('Browser GPS error, attempting IP fallback:', err);
-        setDeliveryMapMessage('Attempting network location fallback…');
-        try {
-          const ipRes = await fetch('https://ipapi.co/json/');
-          const ipData = await ipRes.json();
-          if (ipData && ipData.latitude && ipData.longitude) {
-            const lat = Number(ipData.latitude);
-            const lng = Number(ipData.longitude);
-            if (deliveryMap) {
-              deliveryMap.invalidateSize();
-              deliveryMap.setView([lat, lng], 16, { animate: true });
-            }
-            setOpenStreetMapDeliveryPoint({ lat, lng }, `${ipData.city || 'Current Area'}, ${ipData.country_name || 'Pakistan'}`);
-            setDeliveryMapMessage('Located via network. You can click anywhere on the map to fine-tune your exact house.');
-            return;
-          }
-        } catch (_) {}
-        setDeliveryMapMessage('GPS access was denied. You can zoom in and click your exact house directly on the map.', true);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  } else {
-    setDeliveryMapMessage('GPS is not supported by this browser. Zoom in and click on the map to pin your location.', true);
-  }
+        setOpenStreetMapDeliveryPoint({ lat, lng }, `${ipData.city || 'Current Area'}, ${ipData.country_name || 'Pakistan'}`);
+        setDeliveryMapMessage('📶 This is an approximate network location, not your exact spot — zoom in and click/drag the pin onto your actual house.', true);
+        return;
+      }
+    } catch (_) { /* fall through to manual placement */ }
+    setDeliveryMapMessage('GPS access was denied. You can zoom in and click your exact house directly on the map.', true);
+  };
+
+  attempt({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }, false);
 }
 
 async function loadRegionsIntoSelect() {
@@ -3470,12 +3533,6 @@ async function renderTracking(orderNumber) {
       <p id="delivery-route-estimate" class="text-center text-sm text-brand-100 mt-4">Calculating route to your location…</p>
       <p id="delivery-route-source" class="text-center text-xs text-brand-800 mt-1">Waiting for the rider to enable live GPS; branch-to-customer estimate is shown meanwhile.</p>
     </div>` : ''}
-    <!-- Reorder Action -->
-    <div class="mb-6 text-center">
-      <button onclick="reorderOrderFromTracking()" class="bg-brand-400 text-brand-950 font-bold px-6 py-3 rounded-xl hover:bg-brand-500 transition-colors inline-flex items-center gap-2 text-sm shadow-lg">
-        <i class="fa-solid fa-rotate-right"></i> Reorder This Meal Again
-      </button>
-    </div>
     <!-- Order details -->
     <div class="bg-brand-900 border border-brand-800 rounded-xl p-5 mb-6">
       <h3 class="font-semibold text-sm mb-3 text-brand-300">Items</h3>

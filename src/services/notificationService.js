@@ -258,27 +258,30 @@ function escapeHtml(str) {
 }
 
 async function sendEmail(toEmail, subject, htmlContent, textContent) {
-  if (!toEmail) return { sent: false, skipped: true };
+  const targetEmail = String(toEmail || '').trim().toLowerCase();
+  if (!targetEmail) return { sent: false, skipped: true };
   const transporter = getEmailTransporter();
-  const fromAddress = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"Ember & Brew" <orders@emberandbrew.com>';
+  const senderUser = process.env.SMTP_USER || process.env.EMAIL_USER || 'hamzatabi654@gmail.com';
+  const fromAddress = process.env.SMTP_FROM || process.env.EMAIL_FROM || `"Ember & Brew" <${senderUser}>`;
 
   if (!transporter) {
-    console.log(`[Email Notification - Dev Mode] To: ${toEmail} | Subject: ${subject}\nBody: ${textContent}`);
+    console.log(`[Email Notification - Dev Mode] To: ${targetEmail} | Subject: ${subject}\nBody: ${textContent}`);
     return { sent: true, simulated: true };
   }
 
   try {
     const info = await transporter.sendMail({
       from: fromAddress,
-      to: toEmail,
+      to: targetEmail,
+      replyTo: senderUser,
       subject,
       text: textContent,
       html: htmlContent
     });
-    console.log(`[Email Sent] MessageId: ${info.messageId} to ${toEmail}`);
+    console.log(`[Email Sent] MessageId: ${info.messageId} to ${targetEmail}`);
     return { sent: true, messageId: info.messageId };
   } catch (err) {
-    console.warn(`[Email Error] Failed sending to ${toEmail}:`, err.message);
+    console.warn(`[Email Error] Failed sending to ${targetEmail}:`, err.message);
     return { sent: false, error: err.message };
   }
 }
