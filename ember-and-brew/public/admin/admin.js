@@ -1062,7 +1062,12 @@
         <td style="text-transform:capitalize;">${o.orderType || '—'}</td>
         <td class="cust">${renderRegionOrTableCell(o)}</td>
         <td class="cust">${o.items.map(i => `${i.qty}× ${escapeHtml(i.name)}`).join(', ')}</td>
-        <td>${money(o.total)}</td>
+        <td>
+          ${money(o.total)}<br>
+          <span style="display:inline-block;margin-top:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;background:${o.paymentStatus === 'paid' ? 'rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)' : 'rgba(212,168,83,0.15);color:#D4A853;border:1px solid rgba(212,168,83,0.3)'}">
+            ${escapeHtml(o.paymentMethod || 'cash')} · ${o.paymentStatus === 'paid' ? 'PAID' : 'COD'}
+          </span>
+        </td>
         <td><span class="badge ${o.status}">${o.status.replace('-', ' ')}</span></td>
         <td>${renderDeliveryCell(o)}</td>
         <td><div class="update-cell">${statusCell}${qrCell}</div></td>

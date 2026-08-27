@@ -41,10 +41,21 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'jazzcash', 'easypaisa'],
+    enum: ['cash', 'card', 'jazzcash', 'easypaisa', 'sadapay', 'nayapay', 'raast', 'bank-transfer', 'apple-pay', 'google-pay'],
     default: 'cash'
   },
   transactionId: { type: String, default: '' },
+  cardDetails: {
+    brand: { type: String, default: '' },
+    last4: { type: String, default: '' },
+    cardholderName: { type: String, default: '' }
+  },
+  paymentDetails: {
+    accountNumber: { type: String, default: '' },
+    senderName: { type: String, default: '' },
+    referenceId: { type: String, default: '' },
+    paidAt: { type: Date }
+  },
   deliveryLocation: {
     type: {
       type: String,

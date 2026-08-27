@@ -201,6 +201,25 @@ function buildOrderEmailHtml(order, message) {
             ${otpBadgeHtml}
             ${riderHtml}
 
+            <!-- Payment Status Badge -->
+            <div style="background: #151412; border: 1px solid #2E2C28; border-radius: 12px; padding: 14px; margin: 16px 0;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 12px; color: #8A8478; text-transform: uppercase; letter-spacing: 0.5px;">Payment Method</span>
+                <span style="font-size: 13px; font-weight: 700; color: #D4A853; text-transform: uppercase;">${escapeHtml(order.paymentMethod || 'cash')}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 12px; color: #8A8478; text-transform: uppercase; letter-spacing: 0.5px;">Payment Status</span>
+                <span style="font-size: 12px; font-weight: 700; color: ${order.paymentStatus === 'paid' ? '#4ade80' : '#f59e0b'};">
+                  ${order.paymentStatus === 'paid' ? '✓ PAID ONLINE (VERIFIED)' : 'PAY ON DELIVERY / AT COUNTER'}
+                </span>
+              </div>
+              ${order.transactionId ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #2E2C28;">
+                <span style="font-size: 11px; color: #8A8478; text-transform: uppercase;">Transaction ID / Ref</span>
+                <span style="font-size: 11px; font-family: monospace; color: #F5F0E8;">${escapeHtml(order.transactionId)}</span>
+              </div>` : ''}
+            </div>
+
             <!-- Items Breakdown -->
             <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #2E2C28;">
               <h3 style="margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #8A8478;">Order Summary</h3>

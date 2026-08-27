@@ -164,7 +164,7 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
   return e;
 }
 
-    let { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, guestEmail, tableNumber, pushToken } = req.body;
+    let { items, orderType, deliveryAddress, deliveryLocation, notes, region, guestName, guestPhone, guestEmail, tableNumber, pushToken, paymentMethod, paymentStatus, transactionId, cardDetails, paymentDetails } = req.body;
     if (guestEmail) guestEmail = fixEmailTypo(guestEmail);
     const branchId = await resolvePublicBranchId(req.query);
     const branch = branchId ? await Branch.findOne({ _id: branchId, isActive: true }) : null;
@@ -303,6 +303,11 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
       // Generated at checkout but not shown until the order is accepted.
       otp: orderType === 'delivery' ? crypto.randomInt(100000, 1000000).toString() : undefined,
       otpVerified: false,
+      paymentMethod: paymentMethod || 'cash',
+      paymentStatus: paymentStatus || (paymentMethod && paymentMethod !== 'cash' ? 'paid' : 'unpaid'),
+      transactionId: transactionId || '',
+      cardDetails: cardDetails || {},
+      paymentDetails: paymentDetails || {},
       status: 'pending_admin',
       statusLog: [{ status: 'pending_admin', time: new Date() }]
     });
