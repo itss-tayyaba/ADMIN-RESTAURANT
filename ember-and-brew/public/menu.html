@@ -202,6 +202,36 @@ h1, h2, h3, h4, .serif {
   box-shadow: 0 4px 14px rgba(212,168,83,0.3);
 }
 
+.clear-search-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .18s;
+}
+.clear-search-btn:hover {
+  background: var(--gold);
+  color: #0F0E0C;
+}
+.search-status-bar {
+  text-align: center;
+  font-size: 13px;
+  color: var(--gold);
+  margin-top: -16px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
 .search-box-wrap {
   max-width: 480px;
   margin: 0 auto 28px;
@@ -1205,6 +1235,17 @@ function setCategory(cat) {
 
 function onSearchInput(query) {
   menuState.searchQuery = query.trim().toLowerCase();
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (clearBtn) clearBtn.style.display = menuState.searchQuery ? 'flex' : 'none';
+  renderMenuGrid();
+}
+
+function clearSearch() {
+  const input = document.getElementById('menuSearchInput');
+  if (input) input.value = '';
+  menuState.searchQuery = '';
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
   renderMenuGrid();
 }
 
@@ -1222,6 +1263,7 @@ function getCartQtyForDish(dishId) {
 
 function renderMenuGrid() {
   const grid = document.getElementById('menuGrid');
+  const statusBadge = document.getElementById('searchStatusBadge');
   let filtered = menuState.menuItems;
 
   if (menuState.activeCategory && menuState.activeCategory !== 'All') {
@@ -1235,6 +1277,17 @@ function renderMenuGrid() {
       (i.category || i.cat || '').toLowerCase().includes(q) ||
       (i.description || i.desc || '').toLowerCase().includes(q)
     );
+  }
+
+  if (statusBadge) {
+    if (menuState.searchQuery || (menuState.activeCategory && menuState.activeCategory !== 'All')) {
+      const catLabel = menuState.activeCategory !== 'All' ? ` in "${menuState.activeCategory}"` : '';
+      const qLabel = menuState.searchQuery ? ` for "${menuState.searchQuery}"` : '';
+      statusBadge.textContent = `Showing ${filtered.length} dish${filtered.length === 1 ? '' : 'es'}${catLabel}${qLabel}`;
+      statusBadge.style.display = 'block';
+    } else {
+      statusBadge.style.display = 'none';
+    }
   }
 
   if (!filtered.length) {
@@ -1291,42 +1344,48 @@ function renderMenuGrid() {
 
 
 // Addon Presets
-const ADDON_PRESETS = {
-  pizza: [
-    { name: 'Extra Cheese', price: 0.60 },
-    { name: 'Stuffed Crust', price: 0.90 },
-    { name: 'Mushrooms', price: 0.45 },
-    { name: 'Jalapeños', price: 0.35 }
-  ],
-  coffee: [
-    { name: 'Extra Espresso Shot', price: 0.55 },
-    { name: 'Oat Milk', price: 0.40 },
-    { name: 'Vanilla Syrup', price: 0.35 },
-    { name: 'Whipped Cream', price: 0.30 }
-  ],
-  drinks: [
-    { name: 'Extra Ice', price: 0 },
-    { name: 'Large Size', price: 0.50 },
-    { name: 'Extra Syrup', price: 0.35 }
-  ],
-  desserts: [
-    { name: 'Extra Scoop', price: 0.65 },
-    { name: 'Chocolate Drizzle', price: 0.30 },
-    { name: 'Whipped Cream', price: 0.30 }
-  ],
-  pasta: [
-    { name: 'Extra Parmesan Cheese', price: 0.50 },
-    { name: 'Garlic Bread Slice', price: 0.75 },
-    { name: 'Grilled Chicken Addon', price: 1.20 },
-    { name: 'Truffle Oil Drizzle', price: 0.85 }
-  ],
-  default: [
-    { name: 'Extra Cheese', price: 0.45 },
-    { name: 'Extra Sauce', price: 0.30 },
-    { name: 'Side of Fries', price: 1.20 },
-    { name: 'Spicy Kick', price: 0.20 }
-  ]
-};
+function getAddonPresetForBranch(type) {
+  const isPKR = (menuState.currentBranch?.currencySymbol || 'Rs') === 'Rs';
+  
+  const presets = {
+    pizza: [
+      { name: 'Extra Cheese', price: isPKR ? 180 : 0.80 },
+      { name: 'Stuffed Crust', price: isPKR ? 280 : 1.20 },
+      { name: 'Mushrooms', price: isPKR ? 140 : 0.60 },
+      { name: 'Jalapeños', price: isPKR ? 100 : 0.50 }
+    ],
+    coffee: [
+      { name: 'Extra Espresso Shot', price: isPKR ? 150 : 0.70 },
+      { name: 'Oat Milk', price: isPKR ? 120 : 0.50 },
+      { name: 'Vanilla Syrup', price: isPKR ? 100 : 0.50 },
+      { name: 'Whipped Cream', price: isPKR ? 90 : 0.40 }
+    ],
+    drinks: [
+      { name: 'Extra Ice', price: 0 },
+      { name: 'Large Size', price: isPKR ? 150 : 0.70 },
+      { name: 'Extra Syrup', price: isPKR ? 100 : 0.50 }
+    ],
+    desserts: [
+      { name: 'Extra Scoop Ice Cream', price: isPKR ? 180 : 0.90 },
+      { name: 'Chocolate Drizzle', price: isPKR ? 100 : 0.50 },
+      { name: 'Whipped Cream', price: isPKR ? 90 : 0.40 }
+    ],
+    pasta: [
+      { name: 'Extra Parmesan Cheese', price: isPKR ? 160 : 0.70 },
+      { name: 'Garlic Bread Slice', price: isPKR ? 150 : 0.75 },
+      { name: 'Grilled Chicken Addon', price: isPKR ? 300 : 1.50 },
+      { name: 'Truffle Oil Drizzle', price: isPKR ? 250 : 1.20 }
+    ],
+    default: [
+      { name: 'Extra Cheese', price: isPKR ? 150 : 0.70 },
+      { name: 'Extra Sauce', price: isPKR ? 80 : 0.40 },
+      { name: 'Side of Fries', price: isPKR ? 300 : 1.50 },
+      { name: 'Spicy Kick', price: isPKR ? 60 : 0.30 }
+    ]
+  };
+
+  return presets[type] || presets.default;
+}
 
 const NONVEG_KEYWORDS = ['beef','chicken','bacon','pork','mutton','fish','shrimp','prawn','meat','pepperoni','ham','sausage','turkey','lamb','salmon','tuna'];
 
@@ -1340,21 +1399,21 @@ function getAddonsForItem(item) {
   const cat = (item.category || item.cat || '').toLowerCase();
   const name = (item.name || '').toLowerCase();
   if (cat.includes('coffee') || name.includes('coffee') || name.includes('brew') || name.includes('latte') || name.includes('cappuccino') || name.includes('espresso')) {
-    return ADDON_PRESETS.coffee;
+    return getAddonPresetForBranch("coffee");
   }
   if (cat.includes('pasta') || name.includes('pasta') || name.includes('lasagna')) {
-    return ADDON_PRESETS.pasta;
+    return getAddonPresetForBranch("pasta");
   }
   if (cat.includes('pizza') || name.includes('pizza')) {
-    return ADDON_PRESETS.pizza;
+    return getAddonPresetForBranch("pizza");
   }
   if (cat.includes('dessert') || cat.includes('pastr') || name.includes('cake') || name.includes('tiramisu')) {
-    return ADDON_PRESETS.desserts;
+    return getAddonPresetForBranch("desserts");
   }
   if (cat.includes('drink') || cat.includes('beverage') || name.includes('smoothie') || name.includes('shake')) {
-    return ADDON_PRESETS.drinks;
+    return getAddonPresetForBranch("drinks");
   }
-  return ADDON_PRESETS.default;
+  return getAddonPresetForBranch("default");
 }
 
 const activeDishModal = {
