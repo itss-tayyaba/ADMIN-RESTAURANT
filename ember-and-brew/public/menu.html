@@ -769,6 +769,55 @@ h1, h2, h3, h4, .serif {
   color: var(--text-muted);
   background: #0B0A09;
 }
+
+/* Interactive Card Stepper */
+.dish-qty-stepper-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(212, 168, 83, 0.12);
+  border: 1.5px solid var(--gold);
+  border-radius: 20px;
+  padding: 3px 6px;
+  box-shadow: 0 0 12px rgba(212, 168, 83, 0.25);
+  animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes popIn {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.dish-stepper-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #0F0E0C;
+  border: none;
+  font-weight: 800;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.dish-stepper-btn:hover {
+  background: #ffffff;
+  transform: scale(1.15);
+  box-shadow: 0 0 8px rgba(255,255,255,0.6);
+}
+.dish-stepper-btn:active {
+  transform: scale(0.95);
+}
+.dish-stepper-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  padding: 0 6px;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
 </style>
 </head>
 <body>
@@ -1125,11 +1174,11 @@ function renderOrderSidebar() {
 // 5. CART OPERATIONS
 // ============================================
 function quickAddToCart(dishId) {
-  const item = menuState.menuItems.find(i => (i.id || i._id) === dishId);
+  const item = menuState.menuItems.find(i => String(i.id || i._id) === String(dishId));
   if (!item) return;
 
   menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const existing = menuState.cart.find(c => (c.item.id || c.item._id) === dishId && (!c.addons || c.addons.length === 0));
+  const existing = menuState.cart.find(c => String(c.item.id || c.item._id) === String(dishId) && (!c.addons || c.addons.length === 0));
   if (existing) {
     existing.qty += 1;
   } else {
@@ -1150,6 +1199,24 @@ function quickAddToCart(dishId) {
 
   localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
   showToast('Added ' + item.name + ' to order!', 'success');
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function incrementDish(dishId) {
+  quickAddToCart(dishId);
+}
+
+function decrementDish(dishId) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const idx = menuState.cart.findIndex(c => String(c.item.id || c.item._id) === String(dishId));
+  if (idx < 0) return;
+  menuState.cart[idx].qty = (menuState.cart[idx].qty || 1) - 1;
+  if (menuState.cart[idx].qty <= 0) {
+    menuState.cart.splice(idx, 1);
+  }
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderMenuGrid();
   renderOrderSidebar();
 }
 
@@ -1161,6 +1228,7 @@ function updateCartQty(idx, delta) {
     menuState.cart.splice(idx, 1);
   }
   localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderMenuGrid();
   renderOrderSidebar();
 }
 
@@ -1169,6 +1237,7 @@ function removeCartItem(idx) {
   if (!menuState.cart[idx]) return;
   menuState.cart.splice(idx, 1);
   localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderMenuGrid();
   renderOrderSidebar();
 }
 
@@ -1280,6 +1349,7 @@ function confirmModalAddToCart() {
   localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
   closeDishModal();
   showToast('Added ' + item.name + ' to order!', 'success');
+  renderMenuGrid();
   renderOrderSidebar();
 }
 

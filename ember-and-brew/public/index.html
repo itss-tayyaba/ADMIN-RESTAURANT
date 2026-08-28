@@ -2111,7 +2111,7 @@ function renderMenuCardAction(item) {
   }
   return `<div class="card-qty-control" role="group" aria-label="${item.name} quantity">
     <button type="button" onclick="changeMenuItemQty('${item.id}', -1)" aria-label="Remove one ${item.name}"><i class="fa-solid fa-minus text-xs"></i></button>
-    <span aria-live="polite">${line.qty}</span>
+    <span aria-live="polite" class="font-bold text-xs">${line.qty} selected</span>
     <button type="button" onclick="changeMenuItemQty('${item.id}', 1)" aria-label="Add one more ${item.name}"><i class="fa-solid fa-plus text-xs"></i></button>
   </div>`;
 }
