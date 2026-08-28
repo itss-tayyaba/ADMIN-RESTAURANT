@@ -770,53 +770,52 @@ h1, h2, h3, h4, .serif {
   background: #0B0A09;
 }
 
-/* Interactive Card Stepper */
+
+/* Golden Capsule Stepper (- 1 +) */
 .dish-qty-stepper-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(212, 168, 83, 0.12);
-  border: 1.5px solid var(--gold);
-  border-radius: 20px;
-  padding: 3px 6px;
-  box-shadow: 0 0 12px rgba(212, 168, 83, 0.25);
-  animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-@keyframes popIn {
-  0% { transform: scale(0.85); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.dish-stepper-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  gap: 6px;
   background: var(--gold);
   color: #0F0E0C;
+  border-radius: 18px;
+  padding: 4px 8px;
+  box-shadow: 0 3px 12px rgba(212, 168, 83, 0.4);
+  transition: all 0.2s ease;
+}
+.dish-stepper-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0F0E0C;
+  color: var(--gold);
   border: none;
-  font-weight: 800;
-  font-size: 11px;
+  font-weight: 900;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  line-height: 1;
 }
 .dish-stepper-btn:hover {
   background: #ffffff;
+  color: #000000;
   transform: scale(1.15);
-  box-shadow: 0 0 8px rgba(255,255,255,0.6);
 }
 .dish-stepper-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.9);
 }
 .dish-stepper-count {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gold);
-  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F0E0C;
+  padding: 0 4px;
   white-space: nowrap;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
 }
+
 
 </style>
 </head>
@@ -1078,11 +1077,30 @@ function renderMenuGrid() {
     return;
   }
 
+  const currentCart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+
   grid.innerHTML = items.map(item => {
     const priceFormatted = formatBranchMoney(item.price);
     const imgUrl = item.img || item.image || '/images/Espresso.jpeg';
     const cat = item.cat || item.category || 'Special';
-    const id = item.id || item._id;
+    const id = String(item.id || item._id);
+
+    // Calculate total quantity of this dish in cart
+    const matched = currentCart.filter(c => String(c.item?.id || c.item?._id) === id);
+    const itemQty = matched.reduce((sum, c) => sum + (c.qty || 1), 0);
+
+    let actionBtnHtml = '';
+    if (itemQty > 0) {
+      actionBtnHtml = '<div class="dish-qty-stepper-wrap" onclick="event.stopPropagation()">' +
+        '<button class="dish-stepper-btn minus" onclick="decrementDish(\'' + id + '\')" title="Deduct item" aria-label="Decrease quantity">−</button>' +
+        '<span class="dish-stepper-count">' + itemQty + ' selected</span>' +
+        '<button class="dish-stepper-btn plus" onclick="incrementDish(\'' + id + '\')" title="Add item" aria-label="Increase quantity">+</button>' +
+      '</div>';
+    } else {
+      actionBtnHtml = '<button class="dish-add-btn" onclick="event.stopPropagation();quickAddToCart(\'' + id + '\')">' +
+        '<i class="fa-solid fa-plus"></i> Add' +
+      '</button>';
+    }
 
     return '<div class="dish-card" onclick="openDishModal(\'' + id + '\')">' +
       '<div class="dish-card-img-wrap">' +
@@ -1094,9 +1112,7 @@ function renderMenuGrid() {
         '<p class="dish-card-desc">' + escapeHtml(item.desc || item.description || '') + '</p>' +
         '<div class="dish-card-footer">' +
           '<span class="dish-card-price">' + priceFormatted + '</span>' +
-          '<button class="dish-add-btn" onclick="event.stopPropagation();quickAddToCart(\'' + id + '\')">' +
-            '<i class="fa-solid fa-plus"></i> Add' +
-          '</button>' +
+          actionBtnHtml +
         '</div>' +
       '</div>' +
     '</div>';
