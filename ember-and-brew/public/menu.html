@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Our Menu — Ember & Brew</title>
+<title>Our Menu — Ember &amp; Brew</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -49,14 +49,14 @@ h1, h2, h3, h4, .serif {
   z-index: 50;
   background: rgba(9, 14, 12, 0.95);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 28px;
+  border-bottom: 1px solid rgba(46, 44, 40, 0.8);
   height: 70px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  padding: 0 24px;
 }
+
 .nav-brand {
   display: flex;
   align-items: center;
@@ -64,17 +64,19 @@ h1, h2, h3, h4, .serif {
   text-decoration: none;
   color: var(--text-light);
 }
-.ember-dot {
-  width: 12px; height: 12px; border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, var(--gold), #9A5638);
-  box-shadow: 0 0 12px rgba(212,168,83,0.8);
+.nav-brand-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--gold), var(--ember));
+  box-shadow: 0 0 10px rgba(212, 168, 83, 0.8);
 }
-.nav-brand .brand-name {
-  font-family: 'Playfair Display', serif;
+.nav-brand-text {
   font-size: 22px;
   font-weight: 700;
+  letter-spacing: 0.5px;
 }
-.nav-brand .brand-name em {
+.nav-brand-text em {
   color: var(--gold);
   font-style: normal;
 }
@@ -87,16 +89,12 @@ h1, h2, h3, h4, .serif {
 .nav-link {
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 500;
-  transition: color .18s;
+  transition: color 0.2s ease;
 }
 .nav-link:hover, .nav-link.active {
-  color: #FFFFFF;
-}
-.nav-link.active {
   color: var(--gold);
-  font-weight: 700;
 }
 
 .nav-actions {
@@ -105,15 +103,14 @@ h1, h2, h3, h4, .serif {
   gap: 14px;
 }
 
-/* Branch Switcher */
 .branch-switcher {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-card);
+  background: #181715;
   border: 1px solid var(--border);
-  border-radius: 30px;
   padding: 6px 14px;
+  border-radius: 20px;
   font-size: 13px;
 }
 .branch-select {
@@ -122,168 +119,216 @@ h1, h2, h3, h4, .serif {
   color: var(--gold);
   font-family: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   outline: none;
   cursor: pointer;
 }
 .branch-select option {
-  background: var(--bg-card);
+  background: #1A1917;
   color: var(--text-light);
 }
 
 .btn-reserve {
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  background: var(--gold);
   color: #0F0E0C;
   font-weight: 700;
   font-size: 13px;
-  padding: 9px 18px;
-  border-radius: 30px;
+  padding: 8px 18px;
+  border-radius: 20px;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
-  transition: transform .15s;
+  transition: transform 0.15s ease, background 0.2s ease;
 }
 .btn-reserve:hover {
+  background: #e2b963;
   transform: translateY(-1px);
+}
+
+.btn-cart {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #181715;
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.btn-cart:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--gold);
+  color: #0F0E0C;
+  font-size: 11px;
+  font-weight: 800;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ---------------- Hero Section ---------------- */
 .menu-hero {
   text-align: center;
-  padding: 36px 20px 20px;
+  padding: 40px 20px 20px;
   max-width: 800px;
   margin: 0 auto;
 }
+.menu-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.menu-hero-pill::before, .menu-hero-pill::after {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--gold);
+}
 .menu-hero h1 {
-  font-size: 42px;
+  font-size: 38px;
   font-weight: 700;
-  color: var(--gold-light);
-  margin-bottom: 8px;
+  line-height: 1.15;
+  margin-bottom: 12px;
+  color: var(--text-light);
 }
 .menu-hero p {
   color: var(--text-muted);
   font-size: 15px;
-  margin-bottom: 24px;
+  line-height: 1.6;
 }
 
-/* ---------------- Category Pills & Search ---------------- */
+/* ---------------- Search Bar ---------------- */
+.menu-search-wrap {
+  max-width: 540px;
+  margin: 20px auto 14px;
+  position: relative;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #161513;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 4px 18px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.search-box:focus-within {
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(212, 168, 83, 0.25);
+}
+.search-box-icon {
+  color: var(--gold);
+  font-size: 15px;
+  margin-right: 12px;
+}
+.search-box-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 0;
+  outline: none;
+}
+.search-box-input::placeholder {
+  color: #6E685E;
+}
+.search-clear-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: none;
+}
+.search-clear-btn:hover {
+  color: var(--text-light);
+}
+
+/* ---------------- Category Filter Bar ---------------- */
 .category-bar-wrap {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 30px;
-  padding: 0 20px;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.category-bar-wrap::-webkit-scrollbar { display: none; }
 .cat-pill {
-  background: #171614;
+  background: #181715;
   border: 1px solid var(--border);
   color: var(--text-muted);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   padding: 8px 18px;
-  border-radius: 24px;
+  border-radius: 20px;
   cursor: pointer;
-  transition: all .18s ease;
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 .cat-pill:hover {
-  border-color: var(--gold);
+  border-color: rgba(212, 168, 83, 0.5);
   color: var(--text-light);
 }
 .cat-pill.active {
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
-  color: #0F0E0C;
-  border-color: transparent;
-  font-weight: 700;
-  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
-}
-
-.clear-search-btn {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: var(--text-muted);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all .18s;
-}
-.clear-search-btn:hover {
   background: var(--gold);
   color: #0F0E0C;
-}
-.search-status-bar {
-  text-align: center;
-  font-size: 13px;
-  color: var(--gold);
-  margin-top: -16px;
-  margin-bottom: 20px;
-  font-weight: 600;
-}
-.search-box-wrap {
-  max-width: 480px;
-  margin: 0 auto 28px;
-  position: relative;
-}
-.search-box-input {
-  width: 100%;
-  background: #171614;
-  border: 1px solid var(--border);
-  border-radius: 30px;
-  padding: 12px 20px 12px 42px;
-  font-size: 14px;
-  color: var(--text-light);
-  outline: none;
-  transition: border-color .18s;
-}
-.search-box-input:focus {
   border-color: var(--gold);
-}
-.search-box-icon {
-  position: absolute;
-  left: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 13px;
+  box-shadow: 0 0 12px rgba(212, 168, 83, 0.4);
 }
 
-/* ---------------- Main Layout: Menu Left + Order Sidebar Right ---------------- */
+/* ---------------- Main Layout: Grid + Sticky Sidebar ---------------- */
 .menu-main-container {
-  max-width: 1360px;
-  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 24px 80px;
-  display: flex;
+  padding: 0 24px 60px;
+  display: grid;
+  grid-template-columns: 1fr 340px;
   gap: 28px;
-  align-items: flex-start;
-  flex: 1;
+  align-items: start;
 }
 
-/* Left Grid */
-.menu-grid-column {
-  flex: 1;
-  min-width: 0;
+@media (max-width: 1024px) {
+  .menu-main-container {
+    grid-template-columns: 1fr;
+  }
 }
+
+/* ---------------- Dishes Grid ---------------- */
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
 }
 
-/* Dish Card */
 .dish-card {
   background: var(--bg-card);
   border: 1px solid var(--bg-card-border);
@@ -291,654 +336,448 @@ h1, h2, h3, h4, .serif {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform .2s, border-color .2s, box-shadow .2s;
-  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
 }
 .dish-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   border-color: rgba(212, 168, 83, 0.4);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.4);
 }
-.dish-image-wrap {
+
+.dish-card-img-wrap {
+  position: relative;
   width: 100%;
   height: 180px;
-  position: relative;
+  background: #151412;
   overflow: hidden;
-  background: #12110F;
 }
-.dish-image {
+.dish-card-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform .3s ease;
+  transition: transform 0.4s ease;
 }
-.dish-card:hover .dish-image {
-  transform: scale(1.04);
-}
-.dish-cat-tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(9, 14, 12, 0.85);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: var(--gold-light);
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 20px;
-  text-transform: uppercase;
+.dish-card:hover .dish-card-img {
+  transform: scale(1.06);
 }
 
-.dish-content {
-  padding: 16px 18px 18px;
+.dish-card-cat-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(15, 14, 12, 0.85);
+  backdrop-filter: blur(8px);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 168, 83, 0.3);
+}
+
+.dish-card-body {
+  padding: 16px;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
-.dish-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+.dish-card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-light);
   margin-bottom: 6px;
+  line-height: 1.3;
 }
-.dish-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 17.5px;
-  font-weight: 700;
-  color: #FFFFFF;
-  line-height: 1.25;
-}
-.dish-price {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 16.5px;
-  font-weight: 700;
-  color: var(--gold);
-  white-space: nowrap;
-}
-.dish-desc {
+.dish-card-desc {
   color: var(--text-muted);
   font-size: 12.5px;
   line-height: 1.5;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   flex: 1;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-/* Dish Card Action Buttons */
-.btn-card-add {
-  width: 100%;
-  background: transparent;
-  border: 1.5px solid rgba(212, 168, 83, 0.45);
-  color: var(--gold-light);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 9px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all .18s ease;
-}
-.btn-card-add:hover {
-  background: var(--gold);
-  color: #0F0E0C;
-  border-color: var(--gold);
-  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
-}
-
-/* Card Quantity Pill (When item is already selected) */
-.dish-qty-control {
-  width: 100%;
-  background: #24221F;
-  border: 1.5px solid var(--gold);
-  border-radius: var(--radius-sm);
+.dish-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
+  border-top: 1px solid rgba(46, 44, 40, 0.6);
+  padding-top: 12px;
 }
-.dish-qty-btn {
-  background: transparent;
-  border: none;
+.dish-card-price {
   color: var(--gold);
   font-size: 16px;
-  font-weight: 800;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  font-weight: 700;
+  font-family: inherit;
+}
+.dish-add-btn {
+  background: var(--gold);
+  color: #0F0E0C;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 16px;
   cursor: pointer;
-  display: flex;
+  transition: all 0.15s ease;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  transition: background .15s;
+  gap: 5px;
 }
-.dish-qty-btn:hover {
-  background: rgba(212, 168, 83, 0.2);
-}
-.dish-qty-val {
-  font-weight: 800;
-  font-size: 14px;
-  color: #FFFFFF;
+.dish-add-btn:hover {
+  background: #e2b963;
+  transform: scale(1.04);
 }
 
-/* ---------------- Right Sticky "Your Order" Side Card ---------------- */
+/* ---------------- Right Sticky Order Sidebar ---------------- */
 .order-sidebar-card {
-  width: 350px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 90px;
   background: var(--bg-card);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius);
-  box-shadow: 0 14px 40px rgba(0,0,0,0.5);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  padding: 20px;
+  position: sticky;
+  top: 90px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
 }
-
 .order-sidebar-head {
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
 }
 .order-sidebar-head h3 {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  color: #FFFFFF;
-  margin: 0;
+  color: var(--text-light);
 }
 .order-item-count-badge {
+  background: rgba(212, 168, 83, 0.15);
   color: var(--gold);
-  font-size: 12.5px;
+  border: 1px solid rgba(212, 168, 83, 0.3);
+  font-size: 11px;
   font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.empty-order-card {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+}
+.empty-order-card i {
+  font-size: 32px;
+  color: var(--gold);
+  margin-bottom: 10px;
+  opacity: 0.6;
 }
 
 .order-sidebar-items {
-  padding: 16px 20px;
-  max-height: 380px;
+  max-height: 280px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  margin-bottom: 16px;
+  padding-right: 4px;
 }
-
 .order-line-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(46, 44, 40, 0.6);
 }
 .order-line-thumb {
-  width: 48px;
-  height: 48px;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
   object-fit: cover;
-  background: #12110F;
-  flex-shrink: 0;
 }
 .order-line-info {
   flex: 1;
   min-width: 0;
 }
 .order-line-name {
-  font-weight: 700;
-  font-size: 13.5px;
-  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-light);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
 }
 .order-line-price {
-  color: var(--gold);
   font-size: 12px;
-  font-weight: 600;
-  display: block;
-  margin-top: 1px;
+  color: var(--gold);
 }
-
 .order-line-controls {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #24221F;
-  border-radius: 6px;
-  padding: 3px 6px;
 }
 .order-line-btn {
-  background: transparent;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #2E2C28;
+  color: var(--text-light);
   border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 12px;
-  width: 18px;
-  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-.order-line-btn:hover { color: #fff; }
-.order-line-qty {
-  font-size: 12.5px;
+  cursor: pointer;
   font-weight: 700;
-  color: #fff;
-  min-width: 14px;
+  font-size: 12px;
+}
+.order-line-btn:hover {
+  background: var(--gold);
+  color: #000;
+}
+.order-line-qty {
+  font-size: 12px;
+  font-weight: 700;
+  width: 16px;
   text-align: center;
 }
 .order-line-del {
-  background: transparent;
+  background: none;
   border: none;
-  color: #5D6862;
+  color: #8A8478;
   cursor: pointer;
   font-size: 12px;
-  margin-left: 4px;
-  transition: color .15s;
 }
-.order-line-del:hover { color: #C67D5A; }
+.order-line-del:hover {
+  color: #ef4444;
+}
 
-.order-sidebar-summary {
-  padding: 16px 20px;
-  border-top: 1px solid var(--border);
-  background: #141311;
-}
 .order-summary-row {
   display: flex;
   justify-content: space-between;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 6px;
 }
-.order-summary-row.total-row {
-  margin-top: 10px;
-  padding-top: 10px;
+.order-summary-row.total {
   border-top: 1px solid var(--border);
-  font-size: 16px;
+  padding-top: 10px;
+  margin-top: 10px;
+  font-size: 15px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: var(--text-light);
 }
-.order-summary-row.total-row .total-val {
+.order-summary-row.total span:last-child {
   color: var(--gold);
-  font-size: 18px;
 }
 
 .btn-sidebar-checkout {
-  margin-top: 14px;
   width: 100%;
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  background: var(--gold);
   color: #0F0E0C;
   border: none;
-  border-radius: var(--radius-sm);
-  padding: 12px;
   font-family: inherit;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
+  padding: 12px;
+  border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(212,168,83,0.3);
-  transition: transform .15s, box-shadow .15s;
+  margin-top: 14px;
+  transition: all 0.15s ease;
 }
 .btn-sidebar-checkout:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(212,168,83,0.4);
+  background: #e2b963;
 }
 
-.empty-order-card {
-  text-align: center;
-  padding: 30px 10px;
-  color: var(--text-muted);
-}
-.empty-order-card i {
-  font-size: 32px;
-  color: var(--gold);
-  margin-bottom: 8px;
-  display: block;
-}
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 24px; right: 24px; background: #22201D; color: #fff;
-  border: 1px solid rgba(212,168,83,0.4); padding: 12px 20px; border-radius: 12px;
-  font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  z-index: 200; opacity: 0; transform: translateY(10px); transition: opacity .2s, transform .2s;
-  pointer-events: none;
-}
-.toast.show { opacity: 1; transform: translateY(0); }
-
-/* Floating Complaint pill */
-.floating-complaint-btn {
-  position: fixed;
-  bottom: 24px;
-  left: 24px;
-  background: #171614;
-  border: 1px solid var(--border);
-  color: var(--text-light);
-  padding: 10px 18px;
-  border-radius: 30px;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  z-index: 40;
-  transition: border-color .18s;
-}
-.floating-complaint-btn:hover {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-
-/* Footer */
-.page-footer {
-  background: #0A0908;
-  border-top: 1px solid var(--border);
-  padding: 30px 24px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-  margin-top: auto;
-}
-
-
-/* ---------------- Dish Detail Modal ---------------- */
+/* ---------------- Dish Customization Modal ---------------- */
 .dish-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(6px);
-  z-index: 150;
-  display: flex;
+  z-index: 999;
+  display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity .25s ease, visibility .25s ease;
-}
-.dish-modal-overlay.open {
-  opacity: 1;
-  visibility: visible;
+  padding: 16px;
 }
 .dish-modal-card {
-  background: #1A1917;
-  border: 1px solid #35322C;
-  border-radius: 24px;
+  background: #181715;
+  border: 1px solid var(--border-gold);
+  border-radius: 20px;
   width: 100%;
-  max-width: 520px;
-  padding: 32px 30px 28px;
+  max-width: 480px;
+  padding: 24px;
   position: relative;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
-  transform: scale(0.95);
-  transition: transform .25s cubic-bezier(.22,.61,.36,1);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
   max-height: 90vh;
   overflow-y: auto;
 }
-.dish-modal-overlay.open .dish-modal-card {
-  transform: scale(1);
-}
 .dish-modal-close {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  background: #282622;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  width: 34px;
-  height: 34px;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  background: #2E2C28;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all .15s;
 }
 .dish-modal-close:hover {
   background: var(--gold);
-  color: #0F0E0C;
+  color: #000;
 }
-
 .modal-dish-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  color: #FFFFFF;
-  margin-bottom: 8px;
-  padding-right: 40px;
-  line-height: 1.25;
+  margin-bottom: 6px;
+  padding-right: 30px;
 }
 .modal-dish-desc {
+  font-size: 13px;
   color: var(--text-muted);
-  font-size: 14.5px;
-  line-height: 1.55;
-  margin-bottom: 16px;
-}
-.modal-dish-tags {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.veg-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  background: rgba(101, 117, 88, 0.2);
-  color: #92B07E;
-  border: 1px solid rgba(101, 117, 88, 0.4);
-}
-.veg-tag.nonveg {
-  background: rgba(154, 86, 56, 0.2);
-  color: #D98864;
-  border-color: rgba(154, 86, 56, 0.4);
-}
-.modal-base-price {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin-bottom: 24px;
-}
-.modal-base-price strong {
-  color: #FFFFFF;
-  font-size: 16px;
-}
-
-.modal-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  line-height: 1.5;
   margin-bottom: 14px;
 }
 .modal-section-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #FFFFFF;
-}
-.modal-section-sub {
   font-size: 12px;
-  color: var(--text-muted);
-}
-
-.modal-addons-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 26px;
-}
-.modal-addon-card {
-  background: #22201D;
-  border: 1.5px solid #35322C;
-  border-radius: 14px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  transition: all .15s ease;
-  user-select: none;
-}
-.modal-addon-card:hover {
-  border-color: var(--gold);
-}
-.modal-addon-card.checked {
-  background: rgba(212, 168, 83, 0.12);
-  border-color: var(--gold);
-}
-.modal-addon-box {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
-  border: 1.5px solid var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: transparent;
-  flex-shrink: 0;
-  transition: all .15s;
-}
-.modal-addon-card.checked .modal-addon-box {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: #0F0E0C;
-}
-.modal-addon-info {
-  flex: 1;
-  min-width: 0;
-}
-.modal-addon-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #FFFFFF;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.modal-addon-price {
-  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
   color: var(--gold);
-  font-weight: 600;
+  margin-bottom: 8px;
   display: block;
 }
-
+.modal-addons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.modal-addon-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #141311;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+.modal-addon-item.checked {
+  border-color: var(--gold);
+  background: rgba(212, 168, 83, 0.1);
+}
 .modal-bottom-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  border-top: 1px solid var(--border);
   padding-top: 14px;
-  border-top: 1px solid #2E2C28;
+  margin-top: 14px;
 }
 .modal-qty-stepper {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #22201D;
+  background: #141311;
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 4px 10px;
+  padding: 4px 8px;
 }
 .modal-qty-btn {
-  background: transparent;
+  background: none;
   border: none;
   color: var(--gold);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
+  cursor: pointer;
   width: 24px;
   height: 24px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .modal-qty-num {
-  font-size: 14px;
-  font-weight: 800;
-  color: #FFFFFF;
-  min-width: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 18px;
   text-align: center;
 }
-
-.modal-total-wrap {
-  text-align: right;
-}
-.modal-total-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
 .modal-total-amount {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
-  font-weight: 800;
-  color: #FFFFFF;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold);
 }
-
 .btn-modal-add-cart {
   width: 100%;
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+  background: var(--gold);
   color: #0F0E0C;
   border: none;
-  border-radius: 12px;
-  padding: 14px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
+  padding: 12px;
+  border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(212,168,83,0.35);
-  transition: transform .15s, box-shadow .15s;
+  margin-top: 16px;
 }
 .btn-modal-add-cart:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(212,168,83,0.45);
+  background: #e2b963;
 }
 
-@media (max-width: 520px) {
-  .modal-addons-grid { grid-template-columns: 1fr; }
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--gold);
+  color: #0F0E0C;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* Responsive Rules */
-@media (max-width: 1100px) {
-  .menu-grid { grid-template-columns: repeat(2, 1fr); }
-  .order-sidebar-card { width: 300px; }
-}
-@media (max-width: 860px) {
-  .menu-main-container { flex-direction: column; }
-  .order-sidebar-card { width: 100%; position: static; order: -1; margin-bottom: 24px; }
-  .menu-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 768px) {
-  .mobile-toggle-btn { display: block !important; }
-}
-@media (max-width: 580px) {
-  .menu-grid { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
-  .menu-hero h1 { font-size: 32px; }
+/* Footer */
+.page-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: #0B0A09;
 }
 </style>
 </head>
 <body>
 
-<!-- Header Navigation -->
+<!-- Top Navigation -->
 <header class="nav-header">
   <a href="/" class="nav-brand">
-    <span class="ember-dot"></span>
-    <span class="brand-name">Ember <em>&amp;</em> Brew</span>
+    <div class="nav-brand-dot"></div>
+    <span class="nav-brand-text">Ember <em>&amp;</em> Brew</span>
   </a>
 
   <nav class="nav-links">
@@ -950,50 +789,50 @@ h1, h2, h3, h4, .serif {
 
   <div class="nav-actions">
     <!-- Branch Selector Dropdown -->
-    <div class="branch-switcher" title="Select Branch">
+    <div class="branch-switcher" title="Select Currency &amp; Branch">
       <i class="fa-solid fa-location-dot" style="color:var(--gold);"></i>
       <select id="branchSelect" class="branch-select" onchange="onBranchChange(this.value)">
-        <option value="default" selected>🇵🇰 Pakistan (Rs)</option><option value="uk-london">🇬🇧 London (£)</option><option value="australia">🇦🇺 Sydney (A$)</option>
+        <option value="default" selected>🇵🇰 Pakistan (Rs)</option>
+        <option value="us-dollar">🇺🇸 Dollar ($ / USD)</option>
+        <option value="uk-london">🇬🇧 London (£)</option>
+        <option value="australia">🇦🇺 Sydney (A$)</option>
       </select>
     </div>
 
-    <a href="/?view=reservation#reservation-section" onclick="goToReservation();return false;" class="btn-reserve">
+    <a href="/?view=reservation#reservation-section" class="btn-reserve">
       <i class="fa-regular fa-calendar-check"></i> Reserve
     </a>
 
     <button class="btn-cart" onclick="goToCheckout()" aria-label="View Cart">
       <i class="fa-solid fa-bag-shopping"></i>
-      <span id="cartBadge" class="cart-badge hidden">0</span>
-    </button>
-
-    <button id="mobile-menu-btn" onclick="toggleMobileNav()" class="mobile-toggle-btn" aria-label="Toggle menu" style="display:none;background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;">
-      <i class="fa-solid fa-bars"></i>
+      <span id="cartBadge" class="cart-badge" style="display:none;">0</span>
     </button>
   </div>
 </header>
 
-<!-- Mobile nav dropdown -->
-<div id="mobile-nav" style="display:none;position:fixed;top:70px;left:0;right:0;background:rgba(9,14,12,0.98);border-bottom:1px solid var(--border);padding:18px 24px;z-index:99;flex-direction:column;gap:12px;">
-  <a href="/" style="color:#fff;text-decoration:none;font-weight:600;padding:6px 0;">Home</a>
-  <a href="/menu.html" style="color:var(--gold);text-decoration:none;font-weight:700;padding:6px 0;">Menu</a>
-  <a href="/?view=reservation#reservation-section" style="color:#fff;text-decoration:none;font-weight:600;padding:6px 0;">Reservation</a>
-  <a href="/customer.html" style="color:#fff;text-decoration:none;font-weight:600;padding:6px 0;">Customer Portal</a>
-</div>
-
 <!-- Hero Section -->
 <section class="menu-hero">
-  <h1 class="serif">Our Menu</h1>
-  <p>Seasonal ingredients, artisan coffee, and culinary creations crafted with passion.</p>
+  <div class="menu-hero-pill">Handcrafted Luxury</div>
+  <h1>Our Culinary &amp; Coffee Menu</h1>
+  <p>Fresh single-origin roasts, artisan pastries, and seasonal gourmet plates plated with care every morning.</p>
 
-  <!-- Live Search -->
-  <div class="search-box-wrap">
-    <i class="fa-solid fa-magnifying-glass search-box-icon"></i>
-    <input type="text" id="menuSearchInput" class="search-box-input" placeholder="Search dishes, ingredients, or coffee..." oninput="onSearchInput(this.value)">
+  <!-- Search Bar -->
+  <div class="menu-search-wrap">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass search-box-icon"></i>
+      <input type="text" id="menuSearchInput" class="search-box-input" placeholder="Search dishes, ingredients, coffee..." oninput="onSearchInput(this.value)">
+      <button id="clearSearchBtn" class="search-clear-btn" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
   </div>
 
-  <!-- Dynamic Category Pills -->
+  <!-- Dynamic Category Filter Pills -->
   <div class="category-bar-wrap" id="categoryPills">
-    <button class="cat-pill active" onclick="setCategory('All')">All</button>
+    <button class="cat-pill active" onclick="setCategory('All', this)">All</button>
+    <button class="cat-pill" onclick="setCategory('Coffee', this)">Coffee</button>
+    <button class="cat-pill" onclick="setCategory('Bakery', this)">Bakery</button>
+    <button class="cat-pill" onclick="setCategory('Brunch', this)">Brunch</button>
+    <button class="cat-pill" onclick="setCategory('Mains', this)">Mains</button>
+    <button class="cat-pill" onclick="setCategory('Desserts', this)">Desserts</button>
   </div>
 </section>
 
@@ -1001,12 +840,7 @@ h1, h2, h3, h4, .serif {
 <main class="menu-main-container">
   <!-- Left Dishes Grid -->
   <div class="menu-grid-column">
-    <div class="menu-grid" id="menuGrid">
-      <div class="empty-order-card" style="grid-column:1/-1;">
-        <i class="fa-solid fa-spinner fa-spin"></i>
-        <p>Loading fresh dishes for this branch…</p>
-      </div>
-    </div>
+    <div class="menu-grid" id="menuGrid"></div>
   </div>
 
   <!-- Right Sticky "Your Order" Side Card -->
@@ -1027,50 +861,31 @@ h1, h2, h3, h4, .serif {
     <div class="order-sidebar-summary" id="orderSidebarSummary" style="display:none;">
       <div class="order-summary-row">
         <span>Subtotal</span>
-        <span id="orderSummarySubtotal">$0.00</span>
+        <span id="orderSummarySubtotal">Rs 0.00</span>
       </div>
       <div class="order-summary-row">
         <span id="orderSummaryTaxLabel">Tax (8%)</span>
-        <span id="orderSummaryTax">$0.00</span>
+        <span id="orderSummaryTax">Rs 0.00</span>
       </div>
-      <div class="order-summary-row total-row">
+      <div class="order-summary-row total">
         <span>Total</span>
-        <span class="total-val" id="orderSummaryTotal">$0.00</span>
+        <span id="orderSummaryTotal">Rs 0.00</span>
       </div>
-      <button onclick="goToCheckout()" class="btn-sidebar-checkout">
-        Checkout
-      </button>
+      <button onclick="goToCheckout()" class="btn-sidebar-checkout">Proceed to Checkout →</button>
     </div>
   </aside>
 </main>
 
-<!-- Floating Complaint / Support Pill -->
-<a href="/customer.html?view=complaints" class="floating-complaint-btn">
-  <i class="fa-regular fa-comment-dots text-brand-400" style="color:var(--gold);"></i> Complaint / Feedback
-</a>
-
-
-<!-- Dish Customization & Details Modal -->
+<!-- Dish Customization Modal -->
 <div class="dish-modal-overlay" id="dishModalOverlay" onclick="handleModalOverlayClick(event)">
   <div class="dish-modal-card" id="dishModalCard">
     <button class="dish-modal-close" onclick="closeDishModal()" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
+    <h2 class="modal-dish-title" id="modalDishTitle">Dish Name</h2>
+    <p class="modal-dish-desc" id="modalDishDesc">Dish description goes here.</p>
 
-    <h2 class="modal-dish-title" id="modalDishTitle">White Pasta</h2>
-    <p class="modal-dish-desc" id="modalDishDesc">Double ristretto with silky microfoam. Smooth, intense, no fluff.</p>
-
-    <div class="modal-dish-tags">
-      <span class="veg-tag" id="modalDishVegTag"><i class="fa-solid fa-square"></i> <span id="modalDishVegText">Veg</span></span>
-    </div>
-
-    <p class="modal-base-price">Base price: <strong id="modalDishBasePrice">Rs 5.00</strong></p>
-
-    <div class="modal-section-head">
-      <span class="modal-section-title" id="modalAddonsTitle">Add-ons</span>
-      <span class="modal-section-sub">Optional · up to 3</span>
-    </div>
-
-    <div class="modal-addons-grid" id="modalAddonsGrid">
-      <!-- Injected addon cards -->
+    <div class="modal-addons-wrap">
+      <span class="modal-section-title">Customize with Add-ons (Optional)</span>
+      <div class="modal-addons-grid" id="modalAddonsGrid"></div>
     </div>
 
     <div class="modal-bottom-row">
@@ -1080,13 +895,13 @@ h1, h2, h3, h4, .serif {
         <button class="modal-qty-btn" onclick="adjustModalQty(1)">+</button>
       </div>
       <div class="modal-total-wrap">
-        <span class="modal-total-label">Total</span>
-        <div class="modal-total-amount" id="modalTotalAmount">Rs 5.00</div>
+        <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;display:block;">Item Total</span>
+        <div class="modal-total-amount" id="modalTotalAmount">Rs 0.00</div>
       </div>
     </div>
 
     <button class="btn-modal-add-cart" id="modalAddCartBtn" onclick="confirmModalAddToCart()">
-      Add to Cart
+      Add to Order
     </button>
   </div>
 </div>
@@ -1096,14 +911,12 @@ h1, h2, h3, h4, .serif {
 <!-- Footer -->
 <footer class="page-footer">
   <p><strong style="color:var(--gold);">Ember &amp; Brew</strong> · Artisan Coffee, Gourmet Cuisine &amp; Roastery</p>
-  <p id="branchFooterInfo" style="margin-top:4px;font-size:12px;">Serving fresh flavors across Pakistan, UK, and Australia.</p>
+  <p id="branchFooterInfo" style="margin-top:4px;font-size:12px;">Serving fresh flavors across Pakistan, UK, US, and Australia.</p>
 </footer>
 
 <script>
-// State
-
 // ============================================
-// INSTANT ZERO-DELAY MENU CATALOGUE (0ms Load)
+// 1. DEFAULT PRE-LOADED 29-DISH MENU CATALOGUE
 // ============================================
 const DEFAULT_MENU_ITEMS = [
   { id: 'item_1', name: 'Espresso', price: 550, cat: 'Coffee', desc: 'Rich, concentrated double shot with velvety crema and notes of dark chocolate.', img: '/images/Espresso.jpeg' },
@@ -1148,581 +961,15 @@ const DEFAULT_BRANCH = {
   taxRate: 0.08
 };
 
-// State initialized immediately
+// ============================================
+// 2. STATE INITIALIZATION
+// ============================================
 const menuState = {
   branches: [
     DEFAULT_BRANCH,
-    { _id: 'usd-branch', code: 'us-dollar', name: 'Ember & Brew — Global ($ / USD)', city: 'Global', currency: 'USD', currencySymbol: '
-
-// URL Query support (?branch=... or ?branchId=...)
-const urlParams = new URLSearchParams(window.location.search);
-const branchParam = urlParams.get('branch') || urlParams.get('branchId');
-
-window.addEventListener('DOMContentLoaded', async () => {
-  await loadBranches();
-  renderOrderSidebar();
-});
-
-async function loadBranches() {
-  // Check if admin is logged in with assigned branch
-  let adminBranchId = null;
-  try {
-    const adminUser = JSON.parse(localStorage.getItem('eb_admin') || 'null');
-    if (adminUser && adminUser.branchId) adminBranchId = adminUser.branchId;
-  } catch (_) {}
-
-  try {
-    const res = await fetch('/api/branches/public');
-    const branches = await res.json();
-    menuState.branches = Array.isArray(branches) ? branches : [];
-    if (!menuState.branches.some(b => b.code === 'us-dollar' || b.currency === 'USD')) {
-      menuState.branches.push({
-        _id: 'usd-branch',
-        name: 'Ember & Brew — Global ($ / USD)',
-        code: 'us-dollar',
-        country: 'United States',
-        countryCode: 'US',
-        city: 'Global',
-        currency: 'USD',
-        currencySymbol: '$',
-        taxRate: 0.08,
-        phone: '+1 (555) 018-2947',
-        address: '214 Maple & 5th, Historic District'
-      });
-    }
-
-    const select = document.getElementById('branchSelect');
-    if (!menuState.branches.length) {
-      await loadMenu();
-      return;
-    }
-
-    let savedBranchId = localStorage.getItem('eb_branch_id');
-    let savedBranchCode = localStorage.getItem('eb_branch_code');
-    let selectedBranch = null;
-
-    if (branchParam) {
-      selectedBranch = menuState.branches.find(b => b.code === branchParam || b._id === branchParam);
-    }
-    if (!selectedBranch && adminBranchId) {
-      selectedBranch = menuState.branches.find(b => b._id === adminBranchId);
-    }
-    if (!selectedBranch && savedBranchId) {
-      selectedBranch = menuState.branches.find(b => b._id === savedBranchId || b.code === savedBranchCode);
-    }
-    if (!selectedBranch) {
-      selectedBranch = menuState.branches[0];
-    }
-
-    menuState.currentBranch = selectedBranch;
-    localStorage.setItem('eb_branch_id', selectedBranch._id);
-    localStorage.setItem('eb_branch_code', selectedBranch.code);
-
-    if (select) {
-      select.innerHTML = menuState.branches.map(b => {
-        const flag = b.countryCode === 'PK' ? '🇵🇰' : b.countryCode === 'GB' || b.countryCode === 'UK' ? '🇬🇧' : b.countryCode === 'AU' ? '🇦🇺' : '📍';
-        return `<option value="${b._id}" ${b._id === selectedBranch._id ? 'selected' : ''}>${flag} ${b.city || b.name} (${b.currencySymbol || b.currency})</option>`;
-      }).join('');
-    }
-
-    updateBranchFooter();
-    await loadMenu();
-  } catch (err) {
-    console.error('Failed to load branches:', err);
-    await loadMenu();
-  }
-}
-
-async function onBranchChange(branchId) {
-  const branch = menuState.branches.find(b => b._id === branchId);
-  if (!branch) return;
-  menuState.currentBranch = branch;
-  localStorage.setItem('eb_branch_id', branch._id);
-  localStorage.setItem('eb_branch_code', branch.code);
-  updateBranchFooter();
-  showToast(`Switched to ${branch.name || branch.city}`, 'info');
-  await loadMenu();
-  renderOrderSidebar();
-}
-
-function updateBranchFooter() {
-  const infoEl = document.getElementById('branchFooterInfo');
-  if (infoEl && menuState.currentBranch) {
-    const b = menuState.currentBranch;
-    infoEl.textContent = `${b.name || 'Ember & Brew'} · ${b.address || b.city + ', ' + b.country} · Phone: ${b.phone || 'Available online'}`;
-  }
-}
-
-async function loadMenu() {
-  // Render current items immediately
-  renderCategoryPills();
-  renderMenuGrid();
-  renderOrderSidebar();
-
-  // Background fetch to update silently
-  try {
-    const branchId = menuState.currentBranch?._id || '';
-    const url = (branchId && branchId !== 'default' && branchId !== 'usd-branch') 
-      ? ('/api/menu?branchId=' + encodeURIComponent(branchId)) 
-      : '/api/menu';
-    const res = await fetch(url);
-    if (res.ok) {
-      const items = await res.json();
-      if (Array.isArray(items) && items.length) {
-        menuState.menuItems = items.map(i => ({
-          id: i._id,
-          name: i.name,
-          desc: i.description || '',
-          price: Number(i.price) || 0,
-          cat: i.category || 'Special',
-          img: i.image || '/images/Espresso.jpeg'
-        }));
-        const catSet = new Set(['All']);
-        menuState.menuItems.forEach(i => {
-          const cat = i.category || i.cat;
-          if (cat) catSet.add(cat);
-        });
-        menuState.categories = Array.from(catSet);
-        renderCategoryPills();
-        renderMenuGrid();
-      }
-    }
-  } catch (_) {}
-  renderOrderSidebar();
-}
-
-function addDishToCart(dishId) {
-  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
-  if (!item) return;
-
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const cartItem = {
-    item: {
-      id: item._id || item.id,
-      name: item.name,
-      price: Number(item.price) || 0,
-      desc: item.description || item.desc || '',
-      cat: item.category || item.cat || 'Special',
-      img: item.image || item.img || ''
-    },
-    qty: 1,
-    addons: [],
-    addonSignature: ''
-  };
-
-  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && c.addonSignature === '');
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    menuState.cart.push(cartItem);
-  }
-
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  showToast(`Added ${item.name} to order!`, 'success');
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function updateDishQty(dishId, delta) {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const idx = menuState.cart.findIndex(c => c.item.id === dishId || c.item._id === dishId);
-  if (idx < 0) return;
-
-  menuState.cart[idx].qty += delta;
-  if (menuState.cart[idx].qty <= 0) {
-    menuState.cart.splice(idx, 1);
-  }
-
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function removeCartLine(idx) {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  if (menuState.cart[idx]) {
-    menuState.cart.splice(idx, 1);
-    localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-    renderMenuGrid();
-    renderOrderSidebar();
-  }
-}
-
-function renderOrderSidebar() {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const itemsContainer = document.getElementById('orderSidebarItems');
-  const summaryContainer = document.getElementById('orderSidebarSummary');
-  const countBadge = document.getElementById('orderSidebarCountBadge');
-
-  const totalCount = menuState.cart.reduce((sum, c) => sum + (c.qty || 1), 0);
-  countBadge.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
-
-  if (!menuState.cart.length) {
-    itemsContainer.innerHTML = `
-      <div class="empty-order-card">
-        <i class="fa-solid fa-bag-shopping"></i>
-        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
-        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
-      </div>
-    `;
-    summaryContainer.style.display = 'none';
-    return;
-  }
-
-  summaryContainer.style.display = 'block';
-
-  let subtotal = 0;
-  itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
-    const linePrice = Number(line.item.price) || 0;
-    const lineTotal = linePrice * line.qty;
-    subtotal += lineTotal;
-    const imgUrl = line.item.img || line.item.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=120&q=80';
-
-    return `
-      <div class="order-line-item">
-        <img src="${imgUrl}" alt="${escapeHtml(line.item.name)}" class="order-line-thumb">
-        <div class="order-line-info">
-          <span class="order-line-name">${escapeHtml(line.item.name)}</span>
-          <span class="order-line-price">${formatBranchMoney(linePrice)}</span>
-        </div>
-        <div class="order-line-controls">
-          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', -1)">−</button>
-          <span class="order-line-qty">${line.qty}</span>
-          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', 1)">+</button>
-        </div>
-        <button class="order-line-del" onclick="removeCartLine(${idx})" title="Remove item">
-          <i class="fa-regular fa-trash-can"></i>
-        </button>
-      </div>
-    `;
-  }).join('');
-
-  const taxRate = menuState.currentBranch?.taxRate !== undefined ? Number(menuState.currentBranch.taxRate) : 0.08;
-  const tax = subtotal * (taxRate > 1 ? taxRate / 100 : taxRate);
-  const total = subtotal + tax;
-
-  document.getElementById('orderSummarySubtotal').textContent = formatBranchMoney(subtotal);
-  document.getElementById('orderSummaryTaxLabel').textContent = `Tax (${(taxRate > 1 ? taxRate : taxRate * 100).toFixed(0)}%)`;
-  document.getElementById('orderSummaryTax').textContent = formatBranchMoney(tax);
-  document.getElementById('orderSummaryTotal').textContent = formatBranchMoney(total);
-}
-
-function goToCheckout() {
-  const branchCode = menuState.currentBranch?.code || '';
-  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=checkout` : '?view=checkout';
-  window.location.href = '/' + branchParam;
-}
-
-function goToReservation() {
-  const branchCode = menuState.currentBranch?.code || '';
-  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=reservation#reservation-section` : '?view=reservation#reservation-section';
-  window.location.href = '/' + branchParam;
-}
-
-function toggleMobileNav() {
-  const m = document.getElementById('mobile-nav');
-  if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-}
-function showToast(msg, type = 'info') {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.className = 'toast show';
-  setTimeout(() => { toast.className = 'toast'; }, 2800);
-}
-
-function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-</script>
-</body>
-</html>
-, taxRate: 0.08 },
+    { _id: 'usd-branch', code: 'us-dollar', name: 'Ember & Brew — Global ($ / USD)', city: 'Global', currency: 'USD', currencySymbol: '$', taxRate: 0.08 },
     { _id: 'uk-branch', code: 'uk-london', name: 'Ember & Brew — London', city: 'London', currency: 'GBP', currencySymbol: '£', taxRate: 0.10 },
-    { _id: 'au-branch', code: 'australia', name: 'Ember & Brew — Sydney', city: 'Sydney', currency: 'AUD', currencySymbol: 'A
-
-// URL Query support (?branch=... or ?branchId=...)
-const urlParams = new URLSearchParams(window.location.search);
-const branchParam = urlParams.get('branch') || urlParams.get('branchId');
-
-window.addEventListener('DOMContentLoaded', async () => {
-  await loadBranches();
-  renderOrderSidebar();
-});
-
-async function loadBranches() {
-  // Check if admin is logged in with assigned branch
-  let adminBranchId = null;
-  try {
-    const adminUser = JSON.parse(localStorage.getItem('eb_admin') || 'null');
-    if (adminUser && adminUser.branchId) adminBranchId = adminUser.branchId;
-  } catch (_) {}
-
-  try {
-    const res = await fetch('/api/branches/public');
-    const branches = await res.json();
-    menuState.branches = Array.isArray(branches) ? branches : [];
-    if (!menuState.branches.some(b => b.code === 'us-dollar' || b.currency === 'USD')) {
-      menuState.branches.push({
-        _id: 'usd-branch',
-        name: 'Ember & Brew — Global ($ / USD)',
-        code: 'us-dollar',
-        country: 'United States',
-        countryCode: 'US',
-        city: 'Global',
-        currency: 'USD',
-        currencySymbol: '$',
-        taxRate: 0.08,
-        phone: '+1 (555) 018-2947',
-        address: '214 Maple & 5th, Historic District'
-      });
-    }
-
-    const select = document.getElementById('branchSelect');
-    if (!menuState.branches.length) {
-      await loadMenu();
-      return;
-    }
-
-    let savedBranchId = localStorage.getItem('eb_branch_id');
-    let savedBranchCode = localStorage.getItem('eb_branch_code');
-    let selectedBranch = null;
-
-    if (branchParam) {
-      selectedBranch = menuState.branches.find(b => b.code === branchParam || b._id === branchParam);
-    }
-    if (!selectedBranch && adminBranchId) {
-      selectedBranch = menuState.branches.find(b => b._id === adminBranchId);
-    }
-    if (!selectedBranch && savedBranchId) {
-      selectedBranch = menuState.branches.find(b => b._id === savedBranchId || b.code === savedBranchCode);
-    }
-    if (!selectedBranch) {
-      selectedBranch = menuState.branches[0];
-    }
-
-    menuState.currentBranch = selectedBranch;
-    localStorage.setItem('eb_branch_id', selectedBranch._id);
-    localStorage.setItem('eb_branch_code', selectedBranch.code);
-
-    if (select) {
-      select.innerHTML = menuState.branches.map(b => {
-        const flag = b.countryCode === 'PK' ? '🇵🇰' : b.countryCode === 'GB' || b.countryCode === 'UK' ? '🇬🇧' : b.countryCode === 'AU' ? '🇦🇺' : '📍';
-        return `<option value="${b._id}" ${b._id === selectedBranch._id ? 'selected' : ''}>${flag} ${b.city || b.name} (${b.currencySymbol || b.currency})</option>`;
-      }).join('');
-    }
-
-    updateBranchFooter();
-    await loadMenu();
-  } catch (err) {
-    console.error('Failed to load branches:', err);
-    await loadMenu();
-  }
-}
-
-async function onBranchChange(branchId) {
-  const branch = menuState.branches.find(b => b._id === branchId);
-  if (!branch) return;
-  menuState.currentBranch = branch;
-  localStorage.setItem('eb_branch_id', branch._id);
-  localStorage.setItem('eb_branch_code', branch.code);
-  updateBranchFooter();
-  showToast(`Switched to ${branch.name || branch.city}`, 'info');
-  await loadMenu();
-  renderOrderSidebar();
-}
-
-function updateBranchFooter() {
-  const infoEl = document.getElementById('branchFooterInfo');
-  if (infoEl && menuState.currentBranch) {
-    const b = menuState.currentBranch;
-    infoEl.textContent = `${b.name || 'Ember & Brew'} · ${b.address || b.city + ', ' + b.country} · Phone: ${b.phone || 'Available online'}`;
-  }
-}
-
-async function loadMenu() {
-  // 1. Instant display of preloaded items (0ms wait)
-  if (!menuState.menuItems || !menuState.menuItems.length) {
-    menuState.menuItems = DEFAULT_MENU_ITEMS;
-  }
-  renderCategoryPills();
-  renderMenuGrid();
-  renderOrderSidebar();
-
-  // 2. Silent background sync from server
-  try {
-    const branchId = menuState.currentBranch?._id || '';
-    const url = branchId ? ('/api/menu?branchId=' + encodeURIComponent(branchId)) : '/api/menu';
-    const res = await fetch(url);
-    if (res.ok) {
-      const items = await res.json();
-      if (Array.isArray(items) && items.length) {
-        menuState.menuItems = items;
-        const catSet = new Set(['All']);
-        menuState.menuItems.forEach(i => {
-          const cat = i.category || i.cat;
-          if (cat) catSet.add(cat);
-        });
-        menuState.categories = Array.from(catSet);
-        renderCategoryPills();
-        renderMenuGrid();
-      }
-    }
-  } catch (_) {}
-  renderOrderSidebar();
-}
-
-function addDishToCart(dishId) {
-  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
-  if (!item) return;
-
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const cartItem = {
-    item: {
-      id: item._id || item.id,
-      name: item.name,
-      price: Number(item.price) || 0,
-      desc: item.description || item.desc || '',
-      cat: item.category || item.cat || 'Special',
-      img: item.image || item.img || ''
-    },
-    qty: 1,
-    addons: [],
-    addonSignature: ''
-  };
-
-  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && c.addonSignature === '');
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    menuState.cart.push(cartItem);
-  }
-
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  showToast(`Added ${item.name} to order!`, 'success');
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function updateDishQty(dishId, delta) {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const idx = menuState.cart.findIndex(c => c.item.id === dishId || c.item._id === dishId);
-  if (idx < 0) return;
-
-  menuState.cart[idx].qty += delta;
-  if (menuState.cart[idx].qty <= 0) {
-    menuState.cart.splice(idx, 1);
-  }
-
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function removeCartLine(idx) {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  if (menuState.cart[idx]) {
-    menuState.cart.splice(idx, 1);
-    localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-    renderMenuGrid();
-    renderOrderSidebar();
-  }
-}
-
-function renderOrderSidebar() {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const itemsContainer = document.getElementById('orderSidebarItems');
-  const summaryContainer = document.getElementById('orderSidebarSummary');
-  const countBadge = document.getElementById('orderSidebarCountBadge');
-
-  const totalCount = menuState.cart.reduce((sum, c) => sum + (c.qty || 1), 0);
-  countBadge.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
-
-  if (!menuState.cart.length) {
-    itemsContainer.innerHTML = `
-      <div class="empty-order-card">
-        <i class="fa-solid fa-bag-shopping"></i>
-        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
-        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
-      </div>
-    `;
-    summaryContainer.style.display = 'none';
-    return;
-  }
-
-  summaryContainer.style.display = 'block';
-
-  let subtotal = 0;
-  itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
-    const linePrice = Number(line.item.price) || 0;
-    const lineTotal = linePrice * line.qty;
-    subtotal += lineTotal;
-    const imgUrl = line.item.img || line.item.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=120&q=80';
-
-    return `
-      <div class="order-line-item">
-        <img src="${imgUrl}" alt="${escapeHtml(line.item.name)}" class="order-line-thumb">
-        <div class="order-line-info">
-          <span class="order-line-name">${escapeHtml(line.item.name)}</span>
-          <span class="order-line-price">${formatBranchMoney(linePrice)}</span>
-        </div>
-        <div class="order-line-controls">
-          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', -1)">−</button>
-          <span class="order-line-qty">${line.qty}</span>
-          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', 1)">+</button>
-        </div>
-        <button class="order-line-del" onclick="removeCartLine(${idx})" title="Remove item">
-          <i class="fa-regular fa-trash-can"></i>
-        </button>
-      </div>
-    `;
-  }).join('');
-
-  const taxRate = menuState.currentBranch?.taxRate !== undefined ? Number(menuState.currentBranch.taxRate) : 0.08;
-  const tax = subtotal * (taxRate > 1 ? taxRate / 100 : taxRate);
-  const total = subtotal + tax;
-
-  document.getElementById('orderSummarySubtotal').textContent = formatBranchMoney(subtotal);
-  document.getElementById('orderSummaryTaxLabel').textContent = `Tax (${(taxRate > 1 ? taxRate : taxRate * 100).toFixed(0)}%)`;
-  document.getElementById('orderSummaryTax').textContent = formatBranchMoney(tax);
-  document.getElementById('orderSummaryTotal').textContent = formatBranchMoney(total);
-}
-
-function goToCheckout() {
-  const branchCode = menuState.currentBranch?.code || '';
-  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=checkout` : '?view=checkout';
-  window.location.href = '/' + branchParam;
-}
-
-function goToReservation() {
-  const branchCode = menuState.currentBranch?.code || '';
-  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=reservation#reservation-section` : '?view=reservation#reservation-section';
-  window.location.href = '/' + branchParam;
-}
-
-function toggleMobileNav() {
-  const m = document.getElementById('mobile-nav');
-  if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-}
-function showToast(msg, type = 'info') {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.className = 'toast show';
-  setTimeout(() => { toast.className = 'toast'; }, 2800);
-}
-
-function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-</script>
-</body>
-</html>
-, taxRate: 0.10 }
+    { _id: 'au-branch', code: 'australia', name: 'Ember & Brew — Sydney', city: 'Sydney', currency: 'AUD', currencySymbol: 'A$', taxRate: 0.10 }
   ],
   currentBranch: DEFAULT_BRANCH,
   menuItems: DEFAULT_MENU_ITEMS,
@@ -1732,193 +979,109 @@ function escapeHtml(text) {
   cart: JSON.parse(localStorage.getItem('eb_cart') || '[]')
 };
 
+let activeDishModal = {
+  item: null,
+  qty: 1,
+  selectedAddons: new Set(),
+  addons: []
+};
 
-// URL Query support (?branch=... or ?branchId=...)
-const urlParams = new URLSearchParams(window.location.search);
-const branchParam = urlParams.get('branch') || urlParams.get('branchId');
+// ============================================
+// 3. MULTI-CURRENCY CONVERSION ENGINE
+// ============================================
+function formatBranchMoney(amount) {
+  const num = Number(amount) || 0;
+  const symbol = menuState.currentBranch?.currencySymbol || 'Rs';
 
-window.addEventListener('DOMContentLoaded', async () => {
-  await loadBranches();
-  renderOrderSidebar();
-});
-
-async function loadBranches() {
-  // Check if admin is logged in with assigned branch
-  let adminBranchId = null;
-  try {
-    const adminUser = JSON.parse(localStorage.getItem('eb_admin') || 'null');
-    if (adminUser && adminUser.branchId) adminBranchId = adminUser.branchId;
-  } catch (_) {}
-
-  try {
-    const res = await fetch('/api/branches/public');
-    const branches = await res.json();
-    menuState.branches = Array.isArray(branches) ? branches : [];
-    if (!menuState.branches.some(b => b.code === 'us-dollar' || b.currency === 'USD')) {
-      menuState.branches.push({
-        _id: 'usd-branch',
-        name: 'Ember & Brew — Global ($ / USD)',
-        code: 'us-dollar',
-        country: 'United States',
-        countryCode: 'US',
-        city: 'Global',
-        currency: 'USD',
-        currencySymbol: '$',
-        taxRate: 0.08,
-        phone: '+1 (555) 018-2947',
-        address: '214 Maple & 5th, Historic District'
-      });
-    }
-
-    const select = document.getElementById('branchSelect');
-    if (!menuState.branches.length) {
-      await loadMenu();
-      return;
-    }
-
-    let savedBranchId = localStorage.getItem('eb_branch_id');
-    let savedBranchCode = localStorage.getItem('eb_branch_code');
-    let selectedBranch = null;
-
-    if (branchParam) {
-      selectedBranch = menuState.branches.find(b => b.code === branchParam || b._id === branchParam);
-    }
-    if (!selectedBranch && adminBranchId) {
-      selectedBranch = menuState.branches.find(b => b._id === adminBranchId);
-    }
-    if (!selectedBranch && savedBranchId) {
-      selectedBranch = menuState.branches.find(b => b._id === savedBranchId || b.code === savedBranchCode);
-    }
-    if (!selectedBranch) {
-      selectedBranch = menuState.branches[0];
-    }
-
-    menuState.currentBranch = selectedBranch;
-    localStorage.setItem('eb_branch_id', selectedBranch._id);
-    localStorage.setItem('eb_branch_code', selectedBranch.code);
-
-    if (select) {
-      select.innerHTML = menuState.branches.map(b => {
-        const flag = b.countryCode === 'PK' ? '🇵🇰' : b.countryCode === 'GB' || b.countryCode === 'UK' ? '🇬🇧' : b.countryCode === 'AU' ? '🇦🇺' : '📍';
-        return `<option value="${b._id}" ${b._id === selectedBranch._id ? 'selected' : ''}>${flag} ${b.city || b.name} (${b.currencySymbol || b.currency})</option>`;
-      }).join('');
-    }
-
-    updateBranchFooter();
-    await loadMenu();
-  } catch (err) {
-    console.error('Failed to load branches:', err);
-    await loadMenu();
+  if (symbol === 'Rs' || symbol === 'PKR') {
+    const pkrVal = num <= 50 ? Math.round((num * 180) / 50) * 50 : Math.round(num);
+    return 'Rs ' + pkrVal.toLocaleString();
+  } else if (symbol === '$' || symbol === 'USD') {
+    const usdVal = num > 50 ? (num / 180) : num;
+    return '$' + usdVal.toFixed(2);
+  } else if (symbol === '£' || symbol === 'GBP') {
+    const gbpVal = num > 50 ? (num / 240) : num;
+    return '£' + gbpVal.toFixed(2);
+  } else if (symbol === 'A$' || symbol === 'AUD') {
+    const audVal = num > 50 ? (num / 130) : num;
+    return 'A$ ' + audVal.toFixed(2);
   }
+
+  return symbol + ' ' + num.toFixed(2);
 }
 
-async function onBranchChange(branchId) {
-  const branch = menuState.branches.find(b => b._id === branchId);
-  if (!branch) return;
-  menuState.currentBranch = branch;
-  localStorage.setItem('eb_branch_id', branch._id);
-  localStorage.setItem('eb_branch_code', branch.code);
-  updateBranchFooter();
-  showToast(`Switched to ${branch.name || branch.city}`, 'info');
-  await loadMenu();
-  renderOrderSidebar();
+function getNumericPrice(amount) {
+  const num = Number(amount) || 0;
+  const symbol = menuState.currentBranch?.currencySymbol || 'Rs';
+  if (symbol === 'Rs' || symbol === 'PKR') {
+    return num <= 50 ? Math.round((num * 180) / 50) * 50 : Math.round(num);
+  } else if (symbol === '$' || symbol === 'USD') {
+    return num > 50 ? +(num / 180).toFixed(2) : num;
+  } else if (symbol === '£' || symbol === 'GBP') {
+    return num > 50 ? +(num / 240).toFixed(2) : num;
+  } else if (symbol === 'A$' || symbol === 'AUD') {
+    return num > 50 ? +(num / 130).toFixed(2) : num;
+  }
+  return num;
 }
 
-function updateBranchFooter() {
-  const infoEl = document.getElementById('branchFooterInfo');
-  if (infoEl && menuState.currentBranch) {
-    const b = menuState.currentBranch;
-    infoEl.textContent = `${b.name || 'Ember & Brew'} · ${b.address || b.city + ', ' + b.country} · Phone: ${b.phone || 'Available online'}`;
-  }
+// ============================================
+// 4. RENDERING FUNCTIONS
+// ============================================
+function renderCategoryPills() {
+  const container = document.getElementById('categoryPills');
+  if (!container) return;
+  container.innerHTML = menuState.categories.map(cat => '<button class="cat-pill ' + (menuState.activeCategory === cat ? 'active' : '') + '" onclick="setCategory(\'' + cat + '\', this)">' + cat + '</button>').join('');
 }
 
-async function loadMenu() {
-  // 1. Instant display of preloaded items (0ms wait)
-  if (!menuState.menuItems || !menuState.menuItems.length) {
-    menuState.menuItems = DEFAULT_MENU_ITEMS;
-  }
-  renderCategoryPills();
+function setCategory(cat, btn) {
+  menuState.activeCategory = cat;
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
   renderMenuGrid();
-  renderOrderSidebar();
-
-  // 2. Silent background sync from server
-  try {
-    const branchId = menuState.currentBranch?._id || '';
-    const url = branchId ? ('/api/menu?branchId=' + encodeURIComponent(branchId)) : '/api/menu';
-    const res = await fetch(url);
-    if (res.ok) {
-      const items = await res.json();
-      if (Array.isArray(items) && items.length) {
-        menuState.menuItems = items;
-        const catSet = new Set(['All']);
-        menuState.menuItems.forEach(i => {
-          const cat = i.category || i.cat;
-          if (cat) catSet.add(cat);
-        });
-        menuState.categories = Array.from(catSet);
-        renderCategoryPills();
-        renderMenuGrid();
-      }
-    }
-  } catch (_) {}
-  renderOrderSidebar();
 }
 
-function addDishToCart(dishId) {
-  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
-  if (!item) return;
+function renderMenuGrid() {
+  const grid = document.getElementById('menuGrid');
+  if (!grid) return;
 
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const cartItem = {
-    item: {
-      id: item._id || item.id,
-      name: item.name,
-      price: Number(item.price) || 0,
-      desc: item.description || item.desc || '',
-      cat: item.category || item.cat || 'Special',
-      img: item.image || item.img || ''
-    },
-    qty: 1,
-    addons: [],
-    addonSignature: ''
-  };
-
-  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && c.addonSignature === '');
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    menuState.cart.push(cartItem);
+  let items = menuState.menuItems;
+  if (menuState.activeCategory && menuState.activeCategory !== 'All') {
+    items = items.filter(i => (i.category || i.cat || '').toLowerCase() === menuState.activeCategory.toLowerCase());
+  }
+  if (menuState.searchQuery) {
+    const q = menuState.searchQuery.toLowerCase();
+    items = items.filter(i => (i.name || '').toLowerCase().includes(q) || (i.desc || i.description || '').toLowerCase().includes(q));
   }
 
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  showToast(`Added ${item.name} to order!`, 'success');
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function updateDishQty(dishId, delta) {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  const idx = menuState.cart.findIndex(c => c.item.id === dishId || c.item._id === dishId);
-  if (idx < 0) return;
-
-  menuState.cart[idx].qty += delta;
-  if (menuState.cart[idx].qty <= 0) {
-    menuState.cart.splice(idx, 1);
+  if (!items.length) {
+    grid.innerHTML = '<div class="empty-order-card" style="grid-column:1/-1;"><i class="fa-solid fa-utensils"></i><p style="font-weight:700;color:#fff;margin-bottom:4px;">No dishes found</p><p style="font-size:13px;">Try another category or search term.</p></div>';
+    return;
   }
 
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  renderMenuGrid();
-  renderOrderSidebar();
-}
+  grid.innerHTML = items.map(item => {
+    const priceFormatted = formatBranchMoney(item.price);
+    const imgUrl = item.img || item.image || '/images/Espresso.jpeg';
+    const cat = item.cat || item.category || 'Special';
+    const id = item.id || item._id;
 
-function removeCartLine(idx) {
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  if (menuState.cart[idx]) {
-    menuState.cart.splice(idx, 1);
-    localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-    renderMenuGrid();
-    renderOrderSidebar();
-  }
+    return '<div class="dish-card" onclick="openDishModal(\'' + id + '\')">' +
+      '<div class="dish-card-img-wrap">' +
+        '<img src="' + imgUrl + '" alt="' + escapeHtml(item.name) + '" class="dish-card-img" loading="lazy">' +
+        '<span class="dish-card-cat-badge">' + escapeHtml(cat) + '</span>' +
+      '</div>' +
+      '<div class="dish-card-body">' +
+        '<h3 class="dish-card-title">' + escapeHtml(item.name) + '</h3>' +
+        '<p class="dish-card-desc">' + escapeHtml(item.desc || item.description || '') + '</p>' +
+        '<div class="dish-card-footer">' +
+          '<span class="dish-card-price">' + priceFormatted + '</span>' +
+          '<button class="dish-add-btn" onclick="event.stopPropagation();quickAddToCart(\'' + id + '\')">' +
+            '<i class="fa-solid fa-plus"></i> Add' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function renderOrderSidebar() {
@@ -1926,82 +1089,287 @@ function renderOrderSidebar() {
   const itemsContainer = document.getElementById('orderSidebarItems');
   const summaryContainer = document.getElementById('orderSidebarSummary');
   const countBadge = document.getElementById('orderSidebarCountBadge');
+  const cartNavBadge = document.getElementById('cartBadge');
 
   const totalCount = menuState.cart.reduce((sum, c) => sum + (c.qty || 1), 0);
-  countBadge.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
+  if (countBadge) countBadge.textContent = totalCount + ' item' + (totalCount === 1 ? '' : 's');
+  if (cartNavBadge) {
+    cartNavBadge.textContent = totalCount;
+    cartNavBadge.style.display = totalCount > 0 ? 'flex' : 'none';
+  }
 
   if (!menuState.cart.length) {
-    itemsContainer.innerHTML = `
-      <div class="empty-order-card">
-        <i class="fa-solid fa-bag-shopping"></i>
-        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
-        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
-      </div>
-    `;
-    summaryContainer.style.display = 'none';
+    if (itemsContainer) {
+      itemsContainer.innerHTML = '<div class="empty-order-card">' +
+        '<i class="fa-solid fa-bag-shopping"></i>' +
+        '<p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>' +
+        '<p style="font-size:12px;">Select dishes from the menu to build your meal.</p>' +
+      '</div>';
+    }
+    if (summaryContainer) summaryContainer.style.display = 'none';
     return;
   }
 
-  summaryContainer.style.display = 'block';
+  if (summaryContainer) summaryContainer.style.display = 'block';
 
   let subtotal = 0;
-  itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
-    const linePrice = Number(line.item.price) || 0;
-    const lineTotal = linePrice * line.qty;
-    subtotal += lineTotal;
-    const imgUrl = line.item.img || line.item.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=120&q=80';
+  if (itemsContainer) {
+    itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
+      const lineUnit = getNumericPrice(line.item.price);
+      const lineTotal = lineUnit * (line.qty || 1);
+      subtotal += lineTotal;
+      const imgUrl = line.item.img || line.item.image || '/images/Espresso.jpeg';
 
-    return `
-      <div class="order-line-item">
-        <img src="${imgUrl}" alt="${escapeHtml(line.item.name)}" class="order-line-thumb">
-        <div class="order-line-info">
-          <span class="order-line-name">${escapeHtml(line.item.name)}</span>
-          <span class="order-line-price">${formatBranchMoney(linePrice)}</span>
-        </div>
-        <div class="order-line-controls">
-          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', -1)">−</button>
-          <span class="order-line-qty">${line.qty}</span>
-          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', 1)">+</button>
-        </div>
-        <button class="order-line-del" onclick="removeCartLine(${idx})" title="Remove item">
-          <i class="fa-regular fa-trash-can"></i>
-        </button>
-      </div>
-    `;
-  }).join('');
+      return '<div class="order-line-item">' +
+        '<img src="' + imgUrl + '" alt="' + escapeHtml(line.item.name) + '" class="order-line-thumb">' +
+        '<div class="order-line-info">' +
+          '<span class="order-line-name">' + escapeHtml(line.item.name) + '</span>' +
+          '<span class="order-line-price">' + formatBranchMoney(lineUnit) + '</span>' +
+        '</div>' +
+        '<div class="order-line-controls">' +
+          '<button class="order-line-btn" onclick="updateCartQty(' + idx + ', -1)">−</button>' +
+          '<span class="order-line-qty">' + (line.qty || 1) + '</span>' +
+          '<button class="order-line-btn" onclick="updateCartQty(' + idx + ', 1)">+</button>' +
+        '</div>' +
+        '<button class="order-line-del" onclick="removeCartItem(' + idx + ')"><i class="fa-regular fa-trash-can"></i></button>' +
+      '</div>';
+    }).join('');
+  }
 
   const taxRate = menuState.currentBranch?.taxRate !== undefined ? Number(menuState.currentBranch.taxRate) : 0.08;
   const tax = subtotal * (taxRate > 1 ? taxRate / 100 : taxRate);
   const total = subtotal + tax;
 
-  document.getElementById('orderSummarySubtotal').textContent = formatBranchMoney(subtotal);
-  document.getElementById('orderSummaryTaxLabel').textContent = `Tax (${(taxRate > 1 ? taxRate : taxRate * 100).toFixed(0)}%)`;
-  document.getElementById('orderSummaryTax').textContent = formatBranchMoney(tax);
-  document.getElementById('orderSummaryTotal').textContent = formatBranchMoney(total);
+  const subEl = document.getElementById('orderSummarySubtotal');
+  const taxLabelEl = document.getElementById('orderSummaryTaxLabel');
+  const taxEl = document.getElementById('orderSummaryTax');
+  const totalEl = document.getElementById('orderSummaryTotal');
+
+  if (subEl) subEl.textContent = formatBranchMoney(subtotal);
+  if (taxLabelEl) taxLabelEl.textContent = 'Tax (' + (taxRate > 1 ? taxRate : taxRate * 100).toFixed(0) + '%)';
+  if (taxEl) taxEl.textContent = formatBranchMoney(tax);
+  if (totalEl) totalEl.textContent = formatBranchMoney(total);
+}
+
+// ============================================
+// 5. CART OPERATIONS
+// ============================================
+function quickAddToCart(dishId) {
+  const item = menuState.menuItems.find(i => (i.id || i._id) === dishId);
+  if (!item) return;
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const existing = menuState.cart.find(c => (c.item.id || c.item._id) === dishId && (!c.addons || c.addons.length === 0));
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    menuState.cart.push({
+      item: {
+        id: item.id || item._id,
+        name: item.name,
+        price: Number(item.price) || 0,
+        desc: item.desc || item.description || '',
+        cat: item.cat || item.category || 'Special',
+        img: item.img || item.image || '/images/Espresso.jpeg'
+      },
+      qty: 1,
+      addons: [],
+      addonSignature: ''
+    });
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  showToast('Added ' + item.name + ' to order!', 'success');
+  renderOrderSidebar();
+}
+
+function updateCartQty(idx, delta) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  if (!menuState.cart[idx]) return;
+  menuState.cart[idx].qty = (menuState.cart[idx].qty || 1) + delta;
+  if (menuState.cart[idx].qty <= 0) {
+    menuState.cart.splice(idx, 1);
+  }
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderOrderSidebar();
+}
+
+function removeCartItem(idx) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  if (!menuState.cart[idx]) return;
+  menuState.cart.splice(idx, 1);
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderOrderSidebar();
+}
+
+// ============================================
+// 6. DISH CUSTOMIZATION MODAL
+// ============================================
+function openDishModal(dishId) {
+  const item = menuState.menuItems.find(i => (i.id || i._id) === dishId);
+  if (!item) return;
+
+  activeDishModal = {
+    item,
+    qty: 1,
+    selectedAddons: new Set(),
+    addons: getAddonPresets(item.cat || item.category)
+  };
+
+  document.getElementById('modalDishTitle').textContent = item.name;
+  document.getElementById('modalDishDesc').textContent = item.desc || item.description || '';
+  document.getElementById('modalQtyNum').textContent = '1';
+
+  const addonsContainer = document.getElementById('modalAddonsGrid');
+  addonsContainer.innerHTML = activeDishModal.addons.map((addon, i) => '<div class="modal-addon-item" id="modalAddon-' + i + '" onclick="toggleModalAddon(' + i + ')">' +
+    '<span>' + escapeHtml(addon.name) + '</span>' +
+    '<span style="color:var(--gold);font-weight:700;">+ ' + formatBranchMoney(addon.price) + '</span>' +
+  '</div>').join('');
+
+  updateModalTotal();
+  document.getElementById('dishModalOverlay').style.display = 'flex';
+}
+
+function getAddonPresets(cat) {
+  const sym = menuState.currentBranch?.currencySymbol || 'Rs';
+  const isPKR = sym === 'Rs' || sym === 'PKR';
+  if (cat === 'Coffee') {
+    return [
+      { name: 'Extra Espresso Shot', price: isPKR ? 150 : 1.00 },
+      { name: 'Oat Milk Sub', price: isPKR ? 180 : 1.25 },
+      { name: 'Vanilla Bean Syrup', price: isPKR ? 120 : 0.85 }
+    ];
+  } else if (cat === 'Bakery' || cat === 'Desserts') {
+    return [
+      { name: 'Extra Vanilla Gelato Scoop', price: isPKR ? 250 : 1.75 },
+      { name: 'Warm Chocolate Ganache', price: isPKR ? 180 : 1.25 }
+    ];
+  } else {
+    return [
+      { name: 'Extra Fried Farm Egg', price: isPKR ? 150 : 1.00 },
+      { name: 'Haas Avocado Slices', price: isPKR ? 220 : 1.50 },
+      { name: 'Smoked Turkey Strips', price: isPKR ? 280 : 2.00 }
+    ];
+  }
+}
+
+function toggleModalAddon(idx) {
+  if (activeDishModal.selectedAddons.has(idx)) {
+    activeDishModal.selectedAddons.delete(idx);
+  } else {
+    if (activeDishModal.selectedAddons.size >= 3) {
+      showToast('You can pick up to 3 add-ons.', 'info');
+      return;
+    }
+    activeDishModal.selectedAddons.add(idx);
+  }
+
+  activeDishModal.addons.forEach((_, i) => {
+    const el = document.getElementById('modalAddon-' + i);
+    if (el) el.classList.toggle('checked', activeDishModal.selectedAddons.has(i));
+  });
+
+  updateModalTotal();
+}
+
+function adjustModalQty(delta) {
+  activeDishModal.qty = Math.max(1, activeDishModal.qty + delta);
+  document.getElementById('modalQtyNum').textContent = activeDishModal.qty;
+  updateModalTotal();
+}
+
+function updateModalTotal() {
+  if (!activeDishModal.item) return;
+  const base = getNumericPrice(activeDishModal.item.price);
+  const addonsSum = [...activeDishModal.selectedAddons].reduce((sum, idx) => sum + getNumericPrice(activeDishModal.addons[idx].price), 0);
+  const total = (base + addonsSum) * activeDishModal.qty;
+  document.getElementById('modalTotalAmount').textContent = formatBranchMoney(total);
+}
+
+function confirmModalAddToCart() {
+  if (!activeDishModal.item) return;
+  const item = activeDishModal.item;
+  const chosenAddons = [...activeDishModal.selectedAddons].map(idx => activeDishModal.addons[idx]);
+  const signature = chosenAddons.map(a => a.name).sort().join('|');
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  menuState.cart.push({
+    item: {
+      id: item.id || item._id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      desc: item.desc || item.description || '',
+      cat: item.cat || item.category || 'Special',
+      img: item.img || item.image || '/images/Espresso.jpeg'
+    },
+    qty: activeDishModal.qty,
+    addons: chosenAddons,
+    addonSignature: signature
+  });
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  closeDishModal();
+  showToast('Added ' + item.name + ' to order!', 'success');
+  renderOrderSidebar();
+}
+
+function closeDishModal() {
+  document.getElementById('dishModalOverlay').style.display = 'none';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target.id === 'dishModalOverlay') closeDishModal();
+}
+
+// ============================================
+// 7. SEARCH & FILTER
+// ============================================
+function onSearchInput(val) {
+  menuState.searchQuery = val.trim();
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (clearBtn) clearBtn.style.display = menuState.searchQuery ? 'block' : 'none';
+  renderMenuGrid();
+}
+
+function clearSearch() {
+  const input = document.getElementById('menuSearchInput');
+  if (input) input.value = '';
+  menuState.searchQuery = '';
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderMenuGrid();
+}
+
+// ============================================
+// 8. BRANCH & CURRENCY SWITCHER
+// ============================================
+async function onBranchChange(code) {
+  let branch = menuState.branches.find(b => b.code === code || b._id === code);
+  if (!branch && code === 'us-dollar') {
+    branch = { _id: 'usd-branch', code: 'us-dollar', name: 'Ember & Brew — Global ($ / USD)', city: 'Global', currency: 'USD', currencySymbol: '$', taxRate: 0.08 };
+  }
+  if (!branch) return;
+
+  menuState.currentBranch = branch;
+  localStorage.setItem('eb_branch_id', branch._id);
+  localStorage.setItem('eb_branch_code', branch.code);
+
+  showToast('Switched currency to ' + branch.currencySymbol + ' (' + branch.currency + ')', 'info');
+  renderMenuGrid();
+  renderOrderSidebar();
 }
 
 function goToCheckout() {
-  const branchCode = menuState.currentBranch?.code || '';
-  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=checkout` : '?view=checkout';
-  window.location.href = '/' + branchParam;
+  const branchCode = menuState.currentBranch?.code || 'default';
+  window.location.href = '/?branch=' + encodeURIComponent(branchCode) + '&view=checkout';
 }
 
-function goToReservation() {
-  const branchCode = menuState.currentBranch?.code || '';
-  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=reservation#reservation-section` : '?view=reservation#reservation-section';
-  window.location.href = '/' + branchParam;
-}
-
-function toggleMobileNav() {
-  const m = document.getElementById('mobile-nav');
-  if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-}
-function showToast(msg, type = 'info') {
+function showToast(msg, type) {
   const toast = document.getElementById('toast');
   if (!toast) return;
   toast.textContent = msg;
   toast.className = 'toast show';
-  setTimeout(() => { toast.className = 'toast'; }, 2800);
+  setTimeout(() => { toast.className = 'toast'; }, 2400);
 }
 
 function escapeHtml(text) {
@@ -2009,6 +1377,35 @@ function escapeHtml(text) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
+// ============================================
+// 9. IMMEDIATE EXECUTION (0ms Instant Load)
+// ============================================
+renderCategoryPills();
+renderMenuGrid();
+renderOrderSidebar();
+
+// Background fetch for any live admin edits
+fetch('/api/menu').then(r => r.json()).then(items => {
+  if (Array.isArray(items) && items.length) {
+    menuState.menuItems = items.map(i => ({
+      id: i._id,
+      name: i.name,
+      desc: i.description || '',
+      price: Number(i.price) || 0,
+      cat: i.category || 'Special',
+      img: i.image || '/images/Espresso.jpeg'
+    }));
+    const catSet = new Set(['All']);
+    menuState.menuItems.forEach(i => {
+      const cat = i.category || i.cat;
+      if (cat) catSet.add(cat);
+    });
+    menuState.categories = Array.from(catSet);
+    renderCategoryPills();
+    renderMenuGrid();
+  }
+}).catch(() => {});
 </script>
 </body>
 </html>
