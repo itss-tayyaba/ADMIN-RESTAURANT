@@ -1101,15 +1101,637 @@ h1, h2, h3, h4, .serif {
 
 <script>
 // State
+
+// ============================================
+// INSTANT ZERO-DELAY MENU CATALOGUE (0ms Load)
+// ============================================
+const DEFAULT_MENU_ITEMS = [
+  { id: 'item_1', name: 'Espresso', price: 550, cat: 'Coffee', desc: 'Rich, concentrated double shot with velvety crema and notes of dark chocolate.', img: '/images/Espresso.jpeg' },
+  { id: 'item_2', name: 'Americano', price: 650, cat: 'Coffee', desc: 'Double espresso poured over hot filtered water for a clean, nuanced cup.', img: '/images/Americano.jpeg' },
+  { id: 'item_3', name: 'Cappuccino', price: 750, cat: 'Coffee', desc: 'Equal parts espresso, warm milk, and dense microfoam dusted with cocoa.', img: '/images/Cappuccino.jpeg' },
+  { id: 'item_4', name: 'Flat White', price: 800, cat: 'Coffee', desc: 'Double ristretto with silky microfoam, delivering deep caramel sweetness.', img: '/images/Flat White.jpeg' },
+  { id: 'item_5', name: 'Vanilla Latte', price: 850, cat: 'Coffee', desc: 'Silky espresso with steamed whole milk and house-infused Madagascar vanilla.', img: '/images/Vanilla Latte.jpeg' },
+  { id: 'item_6', name: 'Caramel Macchiato', price: 900, cat: 'Coffee', desc: 'Steamed vanilla milk marked with espresso and drizzled with artisan butterscotch caramel.', img: '/images/Caramel Macchiato.jpeg' },
+  { id: 'item_7', name: 'Mocha', price: 900, cat: 'Coffee', desc: 'Belgian dark chocolate ganache melted into espresso and topped with steamed milk.', img: '/images/Mocha.jpeg' },
+  { id: 'item_8', name: 'Cold Brew', price: 850, cat: 'Coffee', desc: 'Steeped cold for 20 hours — smooth, sweet, low-acid, and deeply refreshing.', img: '/images/Cold Brew.jpeg' },
+  { id: 'item_9', name: 'Iced Spanish Latte', price: 950, cat: 'Coffee', desc: 'Espresso with sweetened condensed milk and cold fresh milk over crystal ice.', img: '/images/Iced Spanish Latte.jpeg' },
+  { id: 'item_10', name: 'Iced Caramel Latte', price: 900, cat: 'Coffee', desc: 'Chilled espresso over creamy whole milk and buttery caramel syrup.', img: '/images/Iced Caramel Latte.jpeg' },
+  { id: 'item_11', name: 'Butter Croissant', price: 650, cat: 'Bakery', desc: 'Flaky, golden, multilayered French pastry baked fresh every morning with Normandy butter.', img: '/images/Butter Croissant.jpeg' },
+  { id: 'item_12', name: 'Chocolate Croissant', price: 750, cat: 'Bakery', desc: 'Crisp laminated pastry wrapped around double batons of Valrhona dark chocolate.', img: '/images/Chocolate Croissant.jpeg' },
+  { id: 'item_13', name: 'Almond Croissant', price: 850, cat: 'Bakery', desc: 'Twice-baked croissant filled with rich almond frangipane and toasted sliced almonds.', img: '/images/Almond Croissant.jpeg' },
+  { id: 'item_14', name: 'Cinnamon Roll', price: 750, cat: 'Bakery', desc: 'Soft brioche dough swirled with Ceylon cinnamon and crowned with cream cheese glaze.', img: '/images/Cinnamon Roll.jpeg' },
+  { id: 'item_15', name: 'Blueberry Muffin', price: 650, cat: 'Bakery', desc: 'Tender crumb packed with fresh blueberries and topped with crunchy sugar streusel.', img: '/images/Blueberry Muffin.jpeg' },
+  { id: 'item_16', name: 'Banana Walnut Bread', price: 600, cat: 'Bakery', desc: 'Moist caramelized banana loaf studded with toasted Californian walnuts.', img: '/images/Banana Walnut Bread.jpeg' },
+  { id: 'item_17', name: 'Avocado Toast', price: 1250, cat: 'Brunch', desc: 'Sourdough toast topped with crushed Haas avocado, poached farm egg, and dukkah spice.', img: '/images/Avacado toast.jpeg' },
+  { id: 'item_18', name: 'Eggs Benedict', price: 1450, cat: 'Brunch', desc: 'Poached eggs and smoked turkey on toasted English muffins smothered in silky hollandaise.', img: '/images/Eggs Benedict.jpeg' },
+  { id: 'item_19', name: 'Shakshuka', price: 1350, cat: 'Brunch', desc: 'Eggs gently poached in a spiced tomato, bell pepper, and garlic sauce with crusty bread.', img: '/images/Shakshuka.jpeg' },
+  { id: 'item_20', name: 'Buttermilk Pancakes', price: 1150, cat: 'Brunch', desc: 'Fluffy triple-stacked pancakes served with pure maple syrup and whipped honey butter.', img: '/images/Buttermilk Pancakes.jpeg' },
+  { id: 'item_21', name: 'French Toast', price: 1250, cat: 'Brunch', desc: 'Thick brioche soaked in spiced custard, griddled golden and topped with fresh berries.', img: '/images/French Toast.jpeg' },
+  { id: 'item_22', name: 'Smoked Salmon Bagel', price: 1650, cat: 'Brunch', desc: 'Toasted sesame bagel layered with herb cream cheese, Norwegian smoked salmon, and capers.', img: '/images/Smoked Salmon Bagel.jpeg' },
+  { id: 'item_23', name: 'Grilled Chicken Panini', price: 1450, cat: 'Mains', desc: 'Herb-marinated chicken breast, sun-dried tomatoes, and fresh mozzarella on artisan ciabatta.', img: '/images/Grilled Chicken Panini.jpeg' },
+  { id: 'item_24', name: 'Wild Mushroom Pasta', price: 1650, cat: 'Mains', desc: 'Handmade tagliatelle tossed in a rich wild truffle mushroom cream and parmesan.', img: '/images/White Pasta.jpeg' },
+  { id: 'item_25', name: 'Harvest Salad Bowl', price: 1250, cat: 'Mains', desc: 'Mixed greens, roasted butternut squash, pomegranate, goat cheese, and citrus vinaigrette.', img: '/images/harvest salad.jpeg' },
+  { id: 'item_26', name: 'Classic Tiramisu', price: 1150, cat: 'Desserts', desc: 'Savoiardi ladyfingers steeped in espresso and layered with light mascarpone mousse.', img: '/images/Tiramisu.jpeg' },
+  { id: 'item_27', name: 'New York Cheesecake', price: 1150, cat: 'Desserts', desc: 'Velvety baked cream cheese with graham crust and strawberry coulis.', img: '/images/Cheesecake.jpeg' },
+  { id: 'item_28', name: 'Chocolate Lava Cake', price: 1250, cat: 'Desserts', desc: 'Warm molten chocolate center served with handcrafted vanilla bean gelato.', img: '/images/Chocoalte Lava cake.jpeg' },
+  { id: 'item_29', name: 'Artisan Gelato Scoop', price: 650, cat: 'Desserts', desc: 'Choice of Pistachio, Madagascar Vanilla, Dark Chocolate, or Salted Caramel.', img: '/images/Ice cream.jpeg' }
+];
+
+const DEFAULT_BRANCH = {
+  _id: 'default',
+  code: 'default',
+  name: 'Ember & Brew — Original',
+  city: 'Pakistan',
+  country: 'Pakistan',
+  currency: 'PKR',
+  currencySymbol: 'Rs',
+  taxRate: 0.08
+};
+
+// State initialized immediately
 const menuState = {
-  branches: [],
-  currentBranch: null,
-  menuItems: [],
-  categories: ['All'],
+  branches: [
+    DEFAULT_BRANCH,
+    { _id: 'usd-branch', code: 'us-dollar', name: 'Ember & Brew — Global ($ / USD)', city: 'Global', currency: 'USD', currencySymbol: '
+
+// URL Query support (?branch=... or ?branchId=...)
+const urlParams = new URLSearchParams(window.location.search);
+const branchParam = urlParams.get('branch') || urlParams.get('branchId');
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadBranches();
+  renderOrderSidebar();
+});
+
+async function loadBranches() {
+  // Check if admin is logged in with assigned branch
+  let adminBranchId = null;
+  try {
+    const adminUser = JSON.parse(localStorage.getItem('eb_admin') || 'null');
+    if (adminUser && adminUser.branchId) adminBranchId = adminUser.branchId;
+  } catch (_) {}
+
+  try {
+    const res = await fetch('/api/branches/public');
+    const branches = await res.json();
+    menuState.branches = Array.isArray(branches) ? branches : [];
+    if (!menuState.branches.some(b => b.code === 'us-dollar' || b.currency === 'USD')) {
+      menuState.branches.push({
+        _id: 'usd-branch',
+        name: 'Ember & Brew — Global ($ / USD)',
+        code: 'us-dollar',
+        country: 'United States',
+        countryCode: 'US',
+        city: 'Global',
+        currency: 'USD',
+        currencySymbol: '$',
+        taxRate: 0.08,
+        phone: '+1 (555) 018-2947',
+        address: '214 Maple & 5th, Historic District'
+      });
+    }
+
+    const select = document.getElementById('branchSelect');
+    if (!menuState.branches.length) {
+      await loadMenu();
+      return;
+    }
+
+    let savedBranchId = localStorage.getItem('eb_branch_id');
+    let savedBranchCode = localStorage.getItem('eb_branch_code');
+    let selectedBranch = null;
+
+    if (branchParam) {
+      selectedBranch = menuState.branches.find(b => b.code === branchParam || b._id === branchParam);
+    }
+    if (!selectedBranch && adminBranchId) {
+      selectedBranch = menuState.branches.find(b => b._id === adminBranchId);
+    }
+    if (!selectedBranch && savedBranchId) {
+      selectedBranch = menuState.branches.find(b => b._id === savedBranchId || b.code === savedBranchCode);
+    }
+    if (!selectedBranch) {
+      selectedBranch = menuState.branches[0];
+    }
+
+    menuState.currentBranch = selectedBranch;
+    localStorage.setItem('eb_branch_id', selectedBranch._id);
+    localStorage.setItem('eb_branch_code', selectedBranch.code);
+
+    if (select) {
+      select.innerHTML = menuState.branches.map(b => {
+        const flag = b.countryCode === 'PK' ? '🇵🇰' : b.countryCode === 'GB' || b.countryCode === 'UK' ? '🇬🇧' : b.countryCode === 'AU' ? '🇦🇺' : '📍';
+        return `<option value="${b._id}" ${b._id === selectedBranch._id ? 'selected' : ''}>${flag} ${b.city || b.name} (${b.currencySymbol || b.currency})</option>`;
+      }).join('');
+    }
+
+    updateBranchFooter();
+    await loadMenu();
+  } catch (err) {
+    console.error('Failed to load branches:', err);
+    await loadMenu();
+  }
+}
+
+async function onBranchChange(branchId) {
+  const branch = menuState.branches.find(b => b._id === branchId);
+  if (!branch) return;
+  menuState.currentBranch = branch;
+  localStorage.setItem('eb_branch_id', branch._id);
+  localStorage.setItem('eb_branch_code', branch.code);
+  updateBranchFooter();
+  showToast(`Switched to ${branch.name || branch.city}`, 'info');
+  await loadMenu();
+  renderOrderSidebar();
+}
+
+function updateBranchFooter() {
+  const infoEl = document.getElementById('branchFooterInfo');
+  if (infoEl && menuState.currentBranch) {
+    const b = menuState.currentBranch;
+    infoEl.textContent = `${b.name || 'Ember & Brew'} · ${b.address || b.city + ', ' + b.country} · Phone: ${b.phone || 'Available online'}`;
+  }
+}
+
+async function loadMenu() {
+  // Render current items immediately
+  renderCategoryPills();
+  renderMenuGrid();
+  renderOrderSidebar();
+
+  // Background fetch to update silently
+  try {
+    const branchId = menuState.currentBranch?._id || '';
+    const url = (branchId && branchId !== 'default' && branchId !== 'usd-branch') 
+      ? ('/api/menu?branchId=' + encodeURIComponent(branchId)) 
+      : '/api/menu';
+    const res = await fetch(url);
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items) && items.length) {
+        menuState.menuItems = items.map(i => ({
+          id: i._id,
+          name: i.name,
+          desc: i.description || '',
+          price: Number(i.price) || 0,
+          cat: i.category || 'Special',
+          img: i.image || '/images/Espresso.jpeg'
+        }));
+        const catSet = new Set(['All']);
+        menuState.menuItems.forEach(i => {
+          const cat = i.category || i.cat;
+          if (cat) catSet.add(cat);
+        });
+        menuState.categories = Array.from(catSet);
+        renderCategoryPills();
+        renderMenuGrid();
+      }
+    }
+  } catch (_) {}
+  renderOrderSidebar();
+}
+
+function addDishToCart(dishId) {
+  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
+  if (!item) return;
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const cartItem = {
+    item: {
+      id: item._id || item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      desc: item.description || item.desc || '',
+      cat: item.category || item.cat || 'Special',
+      img: item.image || item.img || ''
+    },
+    qty: 1,
+    addons: [],
+    addonSignature: ''
+  };
+
+  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && c.addonSignature === '');
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    menuState.cart.push(cartItem);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  showToast(`Added ${item.name} to order!`, 'success');
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function updateDishQty(dishId, delta) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const idx = menuState.cart.findIndex(c => c.item.id === dishId || c.item._id === dishId);
+  if (idx < 0) return;
+
+  menuState.cart[idx].qty += delta;
+  if (menuState.cart[idx].qty <= 0) {
+    menuState.cart.splice(idx, 1);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function removeCartLine(idx) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  if (menuState.cart[idx]) {
+    menuState.cart.splice(idx, 1);
+    localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+    renderMenuGrid();
+    renderOrderSidebar();
+  }
+}
+
+function renderOrderSidebar() {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const itemsContainer = document.getElementById('orderSidebarItems');
+  const summaryContainer = document.getElementById('orderSidebarSummary');
+  const countBadge = document.getElementById('orderSidebarCountBadge');
+
+  const totalCount = menuState.cart.reduce((sum, c) => sum + (c.qty || 1), 0);
+  countBadge.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
+
+  if (!menuState.cart.length) {
+    itemsContainer.innerHTML = `
+      <div class="empty-order-card">
+        <i class="fa-solid fa-bag-shopping"></i>
+        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
+        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
+      </div>
+    `;
+    summaryContainer.style.display = 'none';
+    return;
+  }
+
+  summaryContainer.style.display = 'block';
+
+  let subtotal = 0;
+  itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
+    const linePrice = Number(line.item.price) || 0;
+    const lineTotal = linePrice * line.qty;
+    subtotal += lineTotal;
+    const imgUrl = line.item.img || line.item.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=120&q=80';
+
+    return `
+      <div class="order-line-item">
+        <img src="${imgUrl}" alt="${escapeHtml(line.item.name)}" class="order-line-thumb">
+        <div class="order-line-info">
+          <span class="order-line-name">${escapeHtml(line.item.name)}</span>
+          <span class="order-line-price">${formatBranchMoney(linePrice)}</span>
+        </div>
+        <div class="order-line-controls">
+          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', -1)">−</button>
+          <span class="order-line-qty">${line.qty}</span>
+          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', 1)">+</button>
+        </div>
+        <button class="order-line-del" onclick="removeCartLine(${idx})" title="Remove item">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  const taxRate = menuState.currentBranch?.taxRate !== undefined ? Number(menuState.currentBranch.taxRate) : 0.08;
+  const tax = subtotal * (taxRate > 1 ? taxRate / 100 : taxRate);
+  const total = subtotal + tax;
+
+  document.getElementById('orderSummarySubtotal').textContent = formatBranchMoney(subtotal);
+  document.getElementById('orderSummaryTaxLabel').textContent = `Tax (${(taxRate > 1 ? taxRate : taxRate * 100).toFixed(0)}%)`;
+  document.getElementById('orderSummaryTax').textContent = formatBranchMoney(tax);
+  document.getElementById('orderSummaryTotal').textContent = formatBranchMoney(total);
+}
+
+function goToCheckout() {
+  const branchCode = menuState.currentBranch?.code || '';
+  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=checkout` : '?view=checkout';
+  window.location.href = '/' + branchParam;
+}
+
+function goToReservation() {
+  const branchCode = menuState.currentBranch?.code || '';
+  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=reservation#reservation-section` : '?view=reservation#reservation-section';
+  window.location.href = '/' + branchParam;
+}
+
+function toggleMobileNav() {
+  const m = document.getElementById('mobile-nav');
+  if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+}
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(() => { toast.className = 'toast'; }, 2800);
+}
+
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+</script>
+</body>
+</html>
+, taxRate: 0.08 },
+    { _id: 'uk-branch', code: 'uk-london', name: 'Ember & Brew — London', city: 'London', currency: 'GBP', currencySymbol: '£', taxRate: 0.10 },
+    { _id: 'au-branch', code: 'australia', name: 'Ember & Brew — Sydney', city: 'Sydney', currency: 'AUD', currencySymbol: 'A
+
+// URL Query support (?branch=... or ?branchId=...)
+const urlParams = new URLSearchParams(window.location.search);
+const branchParam = urlParams.get('branch') || urlParams.get('branchId');
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadBranches();
+  renderOrderSidebar();
+});
+
+async function loadBranches() {
+  // Check if admin is logged in with assigned branch
+  let adminBranchId = null;
+  try {
+    const adminUser = JSON.parse(localStorage.getItem('eb_admin') || 'null');
+    if (adminUser && adminUser.branchId) adminBranchId = adminUser.branchId;
+  } catch (_) {}
+
+  try {
+    const res = await fetch('/api/branches/public');
+    const branches = await res.json();
+    menuState.branches = Array.isArray(branches) ? branches : [];
+    if (!menuState.branches.some(b => b.code === 'us-dollar' || b.currency === 'USD')) {
+      menuState.branches.push({
+        _id: 'usd-branch',
+        name: 'Ember & Brew — Global ($ / USD)',
+        code: 'us-dollar',
+        country: 'United States',
+        countryCode: 'US',
+        city: 'Global',
+        currency: 'USD',
+        currencySymbol: '$',
+        taxRate: 0.08,
+        phone: '+1 (555) 018-2947',
+        address: '214 Maple & 5th, Historic District'
+      });
+    }
+
+    const select = document.getElementById('branchSelect');
+    if (!menuState.branches.length) {
+      await loadMenu();
+      return;
+    }
+
+    let savedBranchId = localStorage.getItem('eb_branch_id');
+    let savedBranchCode = localStorage.getItem('eb_branch_code');
+    let selectedBranch = null;
+
+    if (branchParam) {
+      selectedBranch = menuState.branches.find(b => b.code === branchParam || b._id === branchParam);
+    }
+    if (!selectedBranch && adminBranchId) {
+      selectedBranch = menuState.branches.find(b => b._id === adminBranchId);
+    }
+    if (!selectedBranch && savedBranchId) {
+      selectedBranch = menuState.branches.find(b => b._id === savedBranchId || b.code === savedBranchCode);
+    }
+    if (!selectedBranch) {
+      selectedBranch = menuState.branches[0];
+    }
+
+    menuState.currentBranch = selectedBranch;
+    localStorage.setItem('eb_branch_id', selectedBranch._id);
+    localStorage.setItem('eb_branch_code', selectedBranch.code);
+
+    if (select) {
+      select.innerHTML = menuState.branches.map(b => {
+        const flag = b.countryCode === 'PK' ? '🇵🇰' : b.countryCode === 'GB' || b.countryCode === 'UK' ? '🇬🇧' : b.countryCode === 'AU' ? '🇦🇺' : '📍';
+        return `<option value="${b._id}" ${b._id === selectedBranch._id ? 'selected' : ''}>${flag} ${b.city || b.name} (${b.currencySymbol || b.currency})</option>`;
+      }).join('');
+    }
+
+    updateBranchFooter();
+    await loadMenu();
+  } catch (err) {
+    console.error('Failed to load branches:', err);
+    await loadMenu();
+  }
+}
+
+async function onBranchChange(branchId) {
+  const branch = menuState.branches.find(b => b._id === branchId);
+  if (!branch) return;
+  menuState.currentBranch = branch;
+  localStorage.setItem('eb_branch_id', branch._id);
+  localStorage.setItem('eb_branch_code', branch.code);
+  updateBranchFooter();
+  showToast(`Switched to ${branch.name || branch.city}`, 'info');
+  await loadMenu();
+  renderOrderSidebar();
+}
+
+function updateBranchFooter() {
+  const infoEl = document.getElementById('branchFooterInfo');
+  if (infoEl && menuState.currentBranch) {
+    const b = menuState.currentBranch;
+    infoEl.textContent = `${b.name || 'Ember & Brew'} · ${b.address || b.city + ', ' + b.country} · Phone: ${b.phone || 'Available online'}`;
+  }
+}
+
+async function loadMenu() {
+  // 1. Instant display of preloaded items (0ms wait)
+  if (!menuState.menuItems || !menuState.menuItems.length) {
+    menuState.menuItems = DEFAULT_MENU_ITEMS;
+  }
+  renderCategoryPills();
+  renderMenuGrid();
+  renderOrderSidebar();
+
+  // 2. Silent background sync from server
+  try {
+    const branchId = menuState.currentBranch?._id || '';
+    const url = branchId ? ('/api/menu?branchId=' + encodeURIComponent(branchId)) : '/api/menu';
+    const res = await fetch(url);
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items) && items.length) {
+        menuState.menuItems = items;
+        const catSet = new Set(['All']);
+        menuState.menuItems.forEach(i => {
+          const cat = i.category || i.cat;
+          if (cat) catSet.add(cat);
+        });
+        menuState.categories = Array.from(catSet);
+        renderCategoryPills();
+        renderMenuGrid();
+      }
+    }
+  } catch (_) {}
+  renderOrderSidebar();
+}
+
+function addDishToCart(dishId) {
+  const item = menuState.menuItems.find(i => (i._id || i.id) === dishId);
+  if (!item) return;
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const cartItem = {
+    item: {
+      id: item._id || item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      desc: item.description || item.desc || '',
+      cat: item.category || item.cat || 'Special',
+      img: item.image || item.img || ''
+    },
+    qty: 1,
+    addons: [],
+    addonSignature: ''
+  };
+
+  const existing = menuState.cart.find(c => c.item.id === cartItem.item.id && c.addonSignature === '');
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    menuState.cart.push(cartItem);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  showToast(`Added ${item.name} to order!`, 'success');
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function updateDishQty(dishId, delta) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const idx = menuState.cart.findIndex(c => c.item.id === dishId || c.item._id === dishId);
+  if (idx < 0) return;
+
+  menuState.cart[idx].qty += delta;
+  if (menuState.cart[idx].qty <= 0) {
+    menuState.cart.splice(idx, 1);
+  }
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function removeCartLine(idx) {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  if (menuState.cart[idx]) {
+    menuState.cart.splice(idx, 1);
+    localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+    renderMenuGrid();
+    renderOrderSidebar();
+  }
+}
+
+function renderOrderSidebar() {
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  const itemsContainer = document.getElementById('orderSidebarItems');
+  const summaryContainer = document.getElementById('orderSidebarSummary');
+  const countBadge = document.getElementById('orderSidebarCountBadge');
+
+  const totalCount = menuState.cart.reduce((sum, c) => sum + (c.qty || 1), 0);
+  countBadge.textContent = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
+
+  if (!menuState.cart.length) {
+    itemsContainer.innerHTML = `
+      <div class="empty-order-card">
+        <i class="fa-solid fa-bag-shopping"></i>
+        <p style="font-weight:700;color:#fff;margin-bottom:2px;">Your order is empty</p>
+        <p style="font-size:12px;">Select dishes from the menu to build your meal.</p>
+      </div>
+    `;
+    summaryContainer.style.display = 'none';
+    return;
+  }
+
+  summaryContainer.style.display = 'block';
+
+  let subtotal = 0;
+  itemsContainer.innerHTML = menuState.cart.map((line, idx) => {
+    const linePrice = Number(line.item.price) || 0;
+    const lineTotal = linePrice * line.qty;
+    subtotal += lineTotal;
+    const imgUrl = line.item.img || line.item.image || 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=120&q=80';
+
+    return `
+      <div class="order-line-item">
+        <img src="${imgUrl}" alt="${escapeHtml(line.item.name)}" class="order-line-thumb">
+        <div class="order-line-info">
+          <span class="order-line-name">${escapeHtml(line.item.name)}</span>
+          <span class="order-line-price">${formatBranchMoney(linePrice)}</span>
+        </div>
+        <div class="order-line-controls">
+          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', -1)">−</button>
+          <span class="order-line-qty">${line.qty}</span>
+          <button class="order-line-btn" onclick="updateDishQty('${line.item.id}', 1)">+</button>
+        </div>
+        <button class="order-line-del" onclick="removeCartLine(${idx})" title="Remove item">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  const taxRate = menuState.currentBranch?.taxRate !== undefined ? Number(menuState.currentBranch.taxRate) : 0.08;
+  const tax = subtotal * (taxRate > 1 ? taxRate / 100 : taxRate);
+  const total = subtotal + tax;
+
+  document.getElementById('orderSummarySubtotal').textContent = formatBranchMoney(subtotal);
+  document.getElementById('orderSummaryTaxLabel').textContent = `Tax (${(taxRate > 1 ? taxRate : taxRate * 100).toFixed(0)}%)`;
+  document.getElementById('orderSummaryTax').textContent = formatBranchMoney(tax);
+  document.getElementById('orderSummaryTotal').textContent = formatBranchMoney(total);
+}
+
+function goToCheckout() {
+  const branchCode = menuState.currentBranch?.code || '';
+  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=checkout` : '?view=checkout';
+  window.location.href = '/' + branchParam;
+}
+
+function goToReservation() {
+  const branchCode = menuState.currentBranch?.code || '';
+  const branchParam = branchCode ? `?branch=${encodeURIComponent(branchCode)}&view=reservation#reservation-section` : '?view=reservation#reservation-section';
+  window.location.href = '/' + branchParam;
+}
+
+function toggleMobileNav() {
+  const m = document.getElementById('mobile-nav');
+  if (m) m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+}
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(() => { toast.className = 'toast'; }, 2800);
+}
+
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+</script>
+</body>
+</html>
+, taxRate: 0.10 }
+  ],
+  currentBranch: DEFAULT_BRANCH,
+  menuItems: DEFAULT_MENU_ITEMS,
+  categories: ['All', 'Coffee', 'Bakery', 'Brunch', 'Mains', 'Desserts'],
   activeCategory: 'All',
   searchQuery: '',
   cart: JSON.parse(localStorage.getItem('eb_cart') || '[]')
 };
+
 
 // URL Query support (?branch=... or ?branchId=...)
 const urlParams = new URLSearchParams(window.location.search);
