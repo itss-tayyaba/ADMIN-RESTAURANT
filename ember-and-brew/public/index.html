@@ -327,7 +327,10 @@ textarea.form-input{min-height:80px;resize:vertical}
       <div class="flex items-center gap-2 bg-brand-900/90 border border-brand-800 rounded-full px-3.5 py-1.5 text-xs text-brand-200 shadow-sm" title="Select Branch">
         <i class="fa-solid fa-location-dot text-brand-400"></i>
         <select id="branchNavSelect" class="bg-transparent border-none text-brand-400 font-bold text-xs outline-none cursor-pointer" onchange="onNavbarBranchChange(this.value)">
-          <option value="default" selected>🇵🇰 Pakistan (Rs)</option><option value="uk-london">🇬🇧 London (£)</option><option value="australia">🇦🇺 Sydney (A$)</option>
+          <option value="default" selected>🇵🇰 Pakistan (Rs)</option>
+          <option value="us-dollar">🇺🇸 Dollar ($ / USD)</option>
+          <option value="uk-london">🇬🇧 London (£)</option>
+          <option value="australia">🇦🇺 Sydney (A$)</option>
         </select>
       </div>
 
@@ -1338,9 +1341,81 @@ function resolveImageUrl(image) {
     : `/${value}`;
 }
 function formatMoney(value) {
-  const amount = Number(value) || 0;
+  const num = Number(value) || 0;
   const symbol = branchState.info?.currencySymbol || 'Rs';
-  return `${symbol}${symbol === 'Rs' ? ' ' : ''}${amount.toFixed(2)}`;
+
+  if (symbol === 'Rs' || symbol === 'PKR') {
+    const pkrVal = num <= 50 ? Math.round((num * 180) / 50) * 50 : Math.round(num);
+    return 'Rs ' + pkrVal.toLocaleString();
+  } else if (symbol === '$' || symbol === 'USD') {
+    const usdVal = num > 50 ? (num / 180) : num;
+    return '$' + usdVal.toFixed(2);
+  } else if (symbol === '£' || symbol === 'GBP') {
+    const gbpVal = num > 50 ? (num / 240) : num;
+    return '£' + gbpVal.toFixed(2);
+  } else if (symbol === 'A$' || symbol === 'AUD') {
+    const audVal = num > 50 ? (num / 130) : num;
+    return 'A$ ' + audVal.toFixed(2);
+  }
+
+  return symbol + ' ' + num.toFixed(2);
+}
+
+function getNumericPriceForBranch(value) {
+  const num = Number(value) || 0;
+  const symbol = branchState.info?.currencySymbol || 'Rs';
+  if (symbol === 'Rs' || symbol === 'PKR') {
+    return num <= 50 ? Math.round((num * 180) / 50) * 50 : Math.round(num);
+  } else if (symbol === '$' || symbol === 'USD') {
+    return num > 50 ? +(num / 180).toFixed(2) : num;
+  } else if (symbol === '£' || symbol === 'GBP') {
+    return num > 50 ? +(num / 240).toFixed(2) : num;
+  } else if (symbol === 'A$' || symbol === 'AUD') {
+    return num > 50 ? +(num / 130).toFixed(2) : num;
+  }
+  return num;
+}
+
+async function onNavbarBranchChange(code) {
+  if (!code) return;
+  try {
+    let branch = null;
+    if (code === 'us-dollar') {
+      branch = {
+        _id: '6a8e00000000000000000001',
+        name: 'Ember & Brew — Global ($ / USD)',
+        code: 'us-dollar',
+        country: 'United States',
+        countryCode: 'US',
+        city: 'Global',
+        currency: 'USD',
+        currencySymbol: '$',
+        taxRate: 0.08
+      };
+    } else {
+      const res = await fetch('/api/branches/by-code/' + encodeURIComponent(code));
+      if (!res.ok) throw new Error('Branch unavailable');
+      branch = await res.json();
+    }
+    
+    branchState.info = branch;
+    branchState.id = branch._id;
+    localStorage.setItem('eb_branch_id', branch._id);
+    localStorage.setItem('eb_branch_code', branch.code);
+    
+    const navSelect = document.getElementById('branchNavSelect');
+    if (navSelect) navSelect.value = code;
+
+    document.title = 'Ember & Brew — ' + (branch.city || branch.name);
+    showToast('Switched currency to ' + branch.currencySymbol + ' (' + branch.currency + ')', 'info');
+    
+    renderFanFavorites();
+    renderMenu();
+    renderCartItems();
+    if (state.currentView === 'checkout') renderCheckout();
+  } catch (e) {
+    showToast('Could not switch currency.', 'error');
+  }
 }
 async function initialiseBranch() {
   const params = new URLSearchParams(window.location.search);
