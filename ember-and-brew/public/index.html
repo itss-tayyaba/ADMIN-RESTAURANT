@@ -287,6 +287,20 @@ textarea.form-input{min-height:80px;resize:vertical}
 /* Reduced motion */
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
+<script>
+  (function() {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      if (p.get('view') === 'checkout' || localStorage.getItem('eb_return_to_checkout') === '1') {
+        document.documentElement.classList.add('preload-checkout');
+      }
+    } catch(e) {}
+  })();
+</script>
+<style>
+  html.preload-checkout #view-menu { display: none !important; }
+  html.preload-checkout #view-checkout { display: block !important; }
+</style>
 </head>
 <body class="font-body min-h-screen relative">
 
