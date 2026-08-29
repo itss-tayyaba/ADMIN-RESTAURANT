@@ -35,11 +35,11 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 #main-nav.scrolled{background:rgba(15,14,12,.85);backdrop-filter:blur(16px);box-shadow:0 1px 0 var(--border)}
 
 /* Checkout */
-.checkout-shell{display:flex;flex-direction:column;max-width:44rem;margin:0 auto;width:100%;min-height:calc(100vh - 80px);padding:0 0 2.5rem}
-.checkout-top{padding:1.5rem 1rem 0.5rem}
+.checkout-shell{display:flex;flex-direction:column;max-width:44rem;margin:0 auto;width:100%;padding:0.25rem 0 2rem}
+.checkout-top{padding:0.5rem 1rem 0.25rem}
 .checkout-scroll{padding:0.5rem 1rem 0}
 .checkout-bottom{padding:1.25rem;border:1px solid var(--border);border-radius:12px;background:var(--surface);margin:1rem 1rem 0}
-@media(min-width:640px){.checkout-top{padding:2rem 1.5rem 0.5rem}.checkout-scroll{padding:0.5rem 1.5rem 0}.checkout-bottom{margin:1.25rem 1.5rem 0;padding:1.5rem}}
+@media(min-width:640px){.checkout-top{padding:0.75rem 1.5rem 0.25rem}.checkout-scroll{padding:0.25rem 1.5rem 0}.checkout-bottom{margin:1rem 1.5rem 0;padding:1.25rem}}
 
 /* Cart panel */
 #cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;opacity:0;pointer-events:none;transition:opacity .3s}
@@ -1023,7 +1023,7 @@ textarea.form-input{min-height:80px;resize:vertical}
 
   <!-- TRACKING VIEW -->
   <section id="view-tracking" class="view" aria-label="Order Tracking">
-    <div id="tracking-content" class="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6"></div>
+    <div id="tracking-content" class="max-w-2xl mx-auto px-4 sm:px-6 pt-2 pb-8 sm:pt-4 sm:pb-12"></div>
   </section>
 
   <!-- CUSTOMER LOGIN / REGISTER VIEW -->
@@ -3645,6 +3645,7 @@ async function handleCheckout(e) {
     localStorage.removeItem('eb_return_to_checkout');
     form.reset();
     showToast(`Order ${order.orderNumber} placed successfully!`, 'success');
+    window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
     navigate('tracking', order.orderNumber);
   } catch (err) {
     showToast(err.message || 'Could not place your order. Please try again.', 'error');
@@ -3790,7 +3791,7 @@ async function renderTracking(orderNumber) {
 
   if (!lookupId) {
     container.innerHTML = `
-      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
       <div class="text-center py-16">
         <i class="fa-solid fa-receipt text-4xl text-brand-800 mb-4"></i>
         <h2 class="font-display text-2xl font-bold mb-2">Track an Order</h2>
@@ -3815,7 +3816,7 @@ async function renderTracking(orderNumber) {
     order = await apiFetch(trackingEndpoint, trackingOptions);
   } catch (err) {
     container.innerHTML = `
-      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
       <div class="text-center py-16">
         <i class="fa-solid fa-circle-exclamation text-4xl text-terra-400 mb-4"></i>
         <h2 class="font-display text-2xl font-bold mb-2">Order Not Found</h2>
@@ -3838,8 +3839,8 @@ async function renderTracking(orderNumber) {
   const isArrived = order.status === 'completed' || order.status === statusFlow[statusFlow.length - 1];
   const placedAt = new Date(order.createdAt);
   container.innerHTML = `
-    <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-8 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
-    <div class="text-center mb-10">
+    <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+    <div class="text-center mb-5">
       <p class="text-brand-400 text-xs tracking-[.2em] uppercase font-medium mb-1">Order</p>
       <h2 class="font-display text-3xl sm:text-4xl font-bold">${order.orderNumber}</h2>
       <p class="text-brand-800 text-sm mt-1">Placed at ${placedAt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>
