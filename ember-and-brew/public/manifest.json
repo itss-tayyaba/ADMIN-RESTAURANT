@@ -1,0 +1,81 @@
+{
+  "name": "Ember & Brew — Artisan Café & Cuisine",
+  "short_name": "Ember & Brew",
+  "description": "Artisan coffee, gourmet culinary creations, table reservations & real-time live order tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0E0C",
+  "theme_color": "#D4A853",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": [
+    "food",
+    "shopping",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Menu & Order",
+      "short_name": "Menu",
+      "description": "Browse our gourmet dishes & coffee",
+      "url": "/menu.html",
+      "icons": [
+        {
+          "src": "/images/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Track Order",
+      "short_name": "Tracking",
+      "description": "Live real-time order journey",
+      "url": "/?view=tracking",
+      "icons": [
+        {
+          "src": "/images/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Book a Table",
+      "short_name": "Reserve",
+      "description": "Reserve your dining experience",
+      "url": "/?view=reservation#reservation-section",
+      "icons": [
+        {
+          "src": "/images/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Customer Portal",
+      "short_name": "Account",
+      "description": "View past orders and rewards",
+      "url": "/customer.html",
+      "icons": [
+        {
+          "src": "/images/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

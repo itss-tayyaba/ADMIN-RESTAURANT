@@ -301,6 +301,17 @@ textarea.form-input{min-height:80px;resize:vertical}
   html.preload-checkout #view-menu { display: none !important; }
   html.preload-checkout #view-checkout { display: block !important; }
 </style>
+
+<!-- PWA & Mobile Web App Meta -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#D4A853">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ember & Brew">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="icon" type="image/svg+xml" href="/images/icon.svg">
+
 </head>
 <body class="font-body min-h-screen relative">
 
@@ -323,6 +334,9 @@ textarea.form-input{min-height:80px;resize:vertical}
     </div>
 
     <div class="flex items-center gap-3">
+          <button id="navInstallAppBtn" onclick="installPwaApp()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3 py-1.5 rounded-full transition-all" title="Install App">
+    <i class="fa-solid fa-mobile-screen-button"></i> Install App
+  </button>
       <!-- Branch Selector Pill Dropdown -->
       <div class="flex items-center gap-2 bg-brand-900/90 border border-brand-800 rounded-full px-3.5 py-1.5 text-xs text-brand-200 shadow-sm" title="Select Branch">
         <i class="fa-solid fa-location-dot text-brand-400"></i>
@@ -4386,5 +4400,114 @@ function reorderOrderFromTracking() {
 
 init();
 </script>
+
+<!-- PWA Install Smart Prompt Modal -->
+<div id="pwaInstallModal" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-sm bg-[#1A1917]/95 border border-[#D4A853]/40 rounded-2xl p-4 shadow-2xl backdrop-blur-xl z-[9999] transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none">
+  <div class="flex items-start justify-between gap-3 mb-2.5">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#D4A853] to-[#C67D5A] p-0.5 flex items-center justify-center shadow-lg">
+        <div class="w-full h-full bg-[#0F0E0C] rounded-[10px] flex items-center justify-center">
+          <i class="fa-solid fa-mug-hot text-[#D4A853] text-lg"></i>
+        </div>
+      </div>
+      <div>
+        <h4 class="font-bold text-sm text-[#F5F0E8] leading-snug">Ember &amp; Brew App</h4>
+        <p class="text-xs text-[#8A8478]">Install for 1-tap ordering &amp; live tracking</p>
+      </div>
+    </div>
+    <button onclick="dismissPwaPrompt()" class="text-[#8A8478] hover:text-[#F5F0E8] text-sm p-1" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  
+  <div id="pwaIosInstructions" class="hidden text-xs text-[#D4C4A8] bg-[#0F0E0C]/80 border border-[#2E2C28] rounded-xl p-2.5 mb-3 leading-relaxed">
+    <i class="fa-solid fa-apple-whole text-[#D4A853] mr-1"></i> Tap the <strong class="text-[#F5F0E8]">Share</strong> icon <i class="fa-solid fa-arrow-up-from-bracket text-[#D4A853]"></i> below, then select <strong class="text-[#D4A853]">'Add to Home Screen'</strong> 📲
+  </div>
+
+  <div class="flex gap-2">
+    <button id="pwaInstallBtn" onclick="installPwaApp()" class="flex-1 bg-[#D4A853] hover:bg-[#e2b963] text-[#0F0E0C] font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
+      <i class="fa-solid fa-download"></i> Install App
+    </button>
+    <button onclick="dismissPwaPrompt()" class="border border-[#2E2C28] hover:border-[#D4A853]/40 text-[#8A8478] hover:text-[#F5F0E8] text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors">
+      Later
+    </button>
+  </div>
+</div>
+
+
+<script>
+// ============================================
+// PWA INSTALLATION & SERVICE WORKER ENGINE
+// ============================================
+let deferredInstallPrompt = null;
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  
+  // Show install button in nav if present
+  const navBtn = document.getElementById('navInstallAppBtn');
+  if (navBtn) navBtn.style.display = 'inline-flex';
+
+  // Check if dismissed recently
+  const dismissedTime = localStorage.getItem('eb_pwa_dismissed');
+  if (!dismissedTime || (Date.now() - Number(dismissedTime)) > 86400000) {
+    setTimeout(showPwaPrompt, 3500);
+  }
+});
+
+function isIosDevice() {
+  return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) && !window.MSStream;
+}
+
+function isInStandaloneMode() {
+  return (window.matchMedia('(display-mode: standalone)').matches) || (window.navigator.standalone === true);
+}
+
+function showPwaPrompt() {
+  if (isInStandaloneMode()) return;
+  const modal = document.getElementById('pwaInstallModal');
+  if (!modal) return;
+
+  if (isIosDevice()) {
+    const iosBox = document.getElementById('pwaIosInstructions');
+    const installBtn = document.getElementById('pwaInstallBtn');
+    if (iosBox) iosBox.classList.remove('hidden');
+    if (installBtn) installBtn.style.display = 'none';
+  }
+
+  modal.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+}
+
+function dismissPwaPrompt() {
+  const modal = document.getElementById('pwaInstallModal');
+  if (modal) modal.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+  localStorage.setItem('eb_pwa_dismissed', Date.now());
+}
+
+async function installPwaApp() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      dismissPwaPrompt();
+    }
+    deferredInstallPrompt = null;
+  } else {
+    showPwaPrompt();
+  }
+}
+
+window.addEventListener('appinstalled', () => {
+  dismissPwaPrompt();
+  const navBtn = document.getElementById('navInstallAppBtn');
+  if (navBtn) navBtn.style.display = 'none';
+});
+</script>
+
 </body>
 </html>
