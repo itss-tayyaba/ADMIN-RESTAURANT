@@ -316,8 +316,11 @@ textarea.form-input{min-height:80px;resize:vertical}
 
 
 
+
+
+
 <style id="splash-styles">
-/* Standalone App Mode: Never show install buttons inside the installed app */
+/* Standalone App Mode */
 @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
   #navInstallAppBtn, #pwaInstallModal, .pwa-install-trigger {
     display: none !important;
@@ -327,10 +330,10 @@ textarea.form-input{min-height:80px;resize:vertical}
 
 @keyframes bounceSizzle {
   0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-10px) scale(1.03); }
+  50% { transform: translateY(-12px) scale(1.04); }
 }
 .animate-sizzle {
-  animation: bounceSizzle 2.4s ease-in-out infinite;
+  animation: bounceSizzle 2.2s ease-in-out infinite;
 }
 #appSplashScreen {
   position: fixed;
@@ -341,13 +344,29 @@ textarea.form-input{min-height:80px;resize:vertical}
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1), transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 #appSplashScreen.hide-splash {
   opacity: 0 !important;
   transform: scale(1.06) !important;
   pointer-events: none !important;
   visibility: hidden !important;
+}
+
+/* App Download Modal Overlay */
+#appDownloadOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999998;
+  background: rgba(15, 14, 12, 0.94);
+  backdrop-filter: blur(16px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#appDownloadOverlay.active {
+  display: flex;
 }
 </style>
 
@@ -359,39 +378,73 @@ textarea.form-input{min-height:80px;resize:vertical}
   <div style="display:flex;flex-direction:column;align-items:center;padding:24px;text-align:center;max-width:380px;width:100%;box-sizing:border-box;">
     
     <!-- Sizzling Wok Graphic (User 2nd Uploaded Image) -->
-    <div style="width:190px;height:190px;margin-bottom:14px;filter:drop-shadow(0 15px 35px rgba(212,168,83,0.45));" class="animate-sizzle">
+    <div style="width:200px;height:200px;margin-bottom:14px;filter:drop-shadow(0 18px 40px rgba(212,168,83,0.5));" class="animate-sizzle">
       <img src="/images/app-splash.png" alt="Ember &amp; Brew Sizzle" style="width:100%;height:100%;object-fit:contain;display:block;">
     </div>
     
     <!-- Official Brand Emblem (User 1st Uploaded Image) -->
-    <div style="width:58px;height:58px;border-radius:18px;overflow:hidden;border:2px solid #D4A853;box-shadow:0 6px 20px rgba(0,0,0,0.6);margin-bottom:12px;background:#141311;">
+    <div style="width:60px;height:60px;border-radius:18px;overflow:hidden;border:2px solid #D4A853;box-shadow:0 8px 24px rgba(0,0,0,0.7);margin-bottom:12px;background:#141311;">
       <img src="/images/app-logo.png" alt="Ember &amp; Brew" style="width:100%;height:100%;object-fit:cover;display:block;">
     </div>
     
     <h2 style="font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:#F5F0E8;margin:0 0 4px;letter-spacing:0.5px;">Ember &amp; Brew</h2>
-    <p style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:#D4A853;text-transform:uppercase;letter-spacing:3px;margin:0 0 22px;">Artisan Kitchen &amp; Café</p>
+    <p style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:#D4A853;text-transform:uppercase;letter-spacing:3px;margin:0 0 24px;">Artisan Kitchen &amp; Café</p>
     
     <!-- Progress Bar & Percentage -->
-    <div style="width:100%;max-width:240px;background:#242220;height:7px;border-radius:10px;overflow:hidden;border:1px solid #3D3830;position:relative;margin-bottom:8px;">
-      <div id="splashProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg, #D4A853, #C67D5A, #D4A853);border-radius:10px;transition:width 0.15s ease;"></div>
+    <div style="width:100%;max-width:250px;background:#242220;height:8px;border-radius:10px;overflow:hidden;border:1px solid #3D3830;position:relative;margin-bottom:10px;">
+      <div id="splashProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg, #D4A853, #C67D5A, #D4A853);border-radius:10px;transition:width 0.2s ease;"></div>
     </div>
     
-    <div style="display:flex;justify-content:space-between;width:100%;max-width:240px;font-family:'DM Sans',sans-serif;font-size:11px;color:#8A8478;">
-      <span>Loading menu...</span>
-      <span id="splashPercentText" style="color:#D4A853;font-weight:800;">0%</span>
+    <div style="display:flex;justify-content:space-between;width:100%;max-width:250px;font-family:'DM Sans',sans-serif;font-size:12px;color:#8A8478;">
+      <span id="splashStatusText">Downloading app resources...</span>
+      <span id="splashPercentText" style="color:#D4A853;font-weight:800;font-size:13px;">0%</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- REAL-TIME APP DOWNLOADING MODAL (Shown when clicking Install App) -->
+<div id="appDownloadOverlay">
+  <div style="background:#1A1917;border:1.5px solid #D4A853;border-radius:24px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.8);position:relative;">
+    
+    <button onclick="closeAppDownloadModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#8A8478;font-size:18px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+
+    <!-- Sizzling Wok Icon in Modal -->
+    <div style="width:110px;height:110px;margin:0 auto 12px;filter:drop-shadow(0 10px 25px rgba(212,168,83,0.4));" class="animate-sizzle">
+      <img src="/images/app-splash.png" alt="Downloading" style="width:100%;height:100%;object-fit:contain;">
+    </div>
+
+    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:#F5F0E8;margin-bottom:4px;" id="dlModalTitle">Downloading Ember &amp; Brew App</h3>
+    <p style="font-size:12px;color:#8A8478;margin-bottom:20px;" id="dlModalSub">Preparing offline catalogue &amp; 1-tap ordering...</p>
+
+    <!-- Download Progress Bar -->
+    <div style="background:#0F0E0C;height:10px;border-radius:12px;overflow:hidden;border:1px solid #2E2C28;margin-bottom:10px;position:relative;">
+      <div id="dlProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg, #D4A853, #C67D5A, #D4A853);border-radius:12px;transition:width 0.12s ease;"></div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:20px;">
+      <span style="color:#D4C4A8;" id="dlStepText">Starting download...</span>
+      <span style="color:#D4A853;font-weight:800;font-size:14px;" id="dlPercentText">0%</span>
+    </div>
+
+    <div id="dlCompletedActions" style="display:none;flex-direction:column;gap:10px;">
+      <button onclick="confirmNativeInstall()" style="background:#D4A853;color:#0F0E0C;font-weight:800;font-size:14px;padding:12px;border-radius:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 15px rgba(212,168,83,0.4);">
+        <i class="fa-solid fa-circle-check"></i> Add to Home Screen Now
+      </button>
     </div>
 
   </div>
 </div>
 
 <script>
+// 1. Splash Screen Percentage Logic (Plays cleanly on initial load)
 (function() {
   let progress = 0;
   const bar = document.getElementById('splashProgressBar');
   const txt = document.getElementById('splashPercentText');
+  const statusTxt = document.getElementById('splashStatusText');
   const splash = document.getElementById('appSplashScreen');
 
-  // Check if standalone or fresh session
   const isStandalone = (window.matchMedia('(display-mode: standalone)').matches) || (window.navigator.standalone === true);
   if (isStandalone) {
     const navBtn = document.getElementById('navInstallAppBtn');
@@ -399,25 +452,111 @@ textarea.form-input{min-height:80px;resize:vertical}
   }
 
   const interval = setInterval(() => {
-    progress += Math.floor(Math.random() * 18) + 12;
+    progress += Math.floor(Math.random() * 8) + 5;
+    if (progress >= 40 && progress < 70 && statusTxt) {
+      statusTxt.textContent = 'Loading chef favourites & roasts...';
+    } else if (progress >= 70 && progress < 95 && statusTxt) {
+      statusTxt.textContent = 'Preparing gourmet kitchen...';
+    }
+
     if (progress >= 100) {
       progress = 100;
       clearInterval(interval);
       if (bar) bar.style.width = '100%';
       if (txt) txt.textContent = '100%';
+      if (statusTxt) statusTxt.textContent = 'Ready!';
       setTimeout(() => {
         if (splash) {
           splash.classList.add('hide-splash');
-          setTimeout(() => splash.remove(), 650);
+          setTimeout(() => splash.remove(), 700);
         }
-      }, 300);
+      }, 350);
     } else {
       if (bar) bar.style.width = progress + '%';
       if (txt) txt.textContent = progress + '%';
     }
-  }, 90);
+  }, 75);
 })();
+
+// 2. Real-time App Downloading Modal Flow
+function startAppDownloadFlow() {
+  const overlay = document.getElementById('appDownloadOverlay');
+  const bar = document.getElementById('dlProgressBar');
+  const txt = document.getElementById('dlPercentText');
+  const stepTxt = document.getElementById('dlStepText');
+  const titleEl = document.getElementById('dlModalTitle');
+  const subEl = document.getElementById('dlModalSub');
+  const actions = document.getElementById('dlCompletedActions');
+
+  if (!overlay) return;
+  overlay.classList.add('active');
+  bar.style.width = '0%';
+  txt.textContent = '0%';
+  if (actions) actions.style.display = 'none';
+  if (titleEl) titleEl.textContent = 'Downloading Ember & Brew App';
+  if (subEl) subEl.textContent = 'Preparing offline catalogue & 1-tap ordering...';
+
+  let dlProgress = 0;
+  const dlInterval = setInterval(() => {
+    dlProgress += Math.floor(Math.random() * 9) + 6;
+
+    if (dlProgress < 30) {
+      stepTxt.textContent = 'Connecting to server...';
+    } else if (dlProgress < 65) {
+      stepTxt.textContent = 'Downloading app package & icons...';
+    } else if (dlProgress < 95) {
+      stepTxt.textContent = 'Caching menu dishes & photos...';
+    }
+
+    if (dlProgress >= 100) {
+      dlProgress = 100;
+      clearInterval(dlInterval);
+      bar.style.width = '100%';
+      txt.textContent = '100%';
+      stepTxt.textContent = 'Download Complete!';
+      if (titleEl) titleEl.textContent = 'App Ready to Install!';
+      if (subEl) subEl.textContent = 'Tap below to add Ember & Brew to your phone';
+      if (actions) actions.style.display = 'flex';
+
+      // Automatically trigger native prompt if supported
+      setTimeout(() => {
+        confirmNativeInstall();
+      }, 500);
+    } else {
+      bar.style.width = dlProgress + '%';
+      txt.textContent = dlProgress + '%';
+    }
+  }, 80);
+}
+
+function closeAppDownloadModal() {
+  const overlay = document.getElementById('appDownloadOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+async function confirmNativeInstall() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      closeAppDownloadModal();
+    }
+    deferredInstallPrompt = null;
+  } else if (isIosDevice()) {
+    showPwaPrompt();
+    closeAppDownloadModal();
+  } else {
+    // Show completed toast
+    closeAppDownloadModal();
+    if (typeof showToast === 'function') {
+      showToast('Ember & Brew App ready! Check your home screen or browser install prompt.', 'success');
+    }
+  }
+}
 </script>
+
+
+
 
 
 <!-- Particle canvas -->
@@ -439,7 +578,7 @@ textarea.form-input{min-height:80px;resize:vertical}
     </div>
 
     <div class="flex items-center gap-3">
-          <button id="navInstallAppBtn" onclick="installPwaApp()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3 py-1.5 rounded-full transition-all" title="Install App">
+          <button id="navInstallAppBtn" onclick="startAppDownloadFlow()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3 py-1.5 rounded-full transition-all" title="Install App">
     <i class="fa-solid fa-mobile-screen-button"></i> Install App
   </button>
       <!-- Branch Selector Pill Dropdown -->
@@ -4528,7 +4667,7 @@ init();
   </div>
 
   <div class="flex gap-2">
-    <button id="pwaInstallBtn" onclick="installPwaApp()" class="flex-1 bg-[#D4A853] hover:bg-[#e2b963] text-[#0F0E0C] font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
+    <button id="pwaInstallBtn" onclick="startAppDownloadFlow()" class="flex-1 bg-[#D4A853] hover:bg-[#e2b963] text-[#0F0E0C] font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
       <i class="fa-solid fa-download"></i> Install App
     </button>
     <button onclick="dismissPwaPrompt()" class="border border-[#2E2C28] hover:border-[#D4A853]/40 text-[#8A8478] hover:text-[#F5F0E8] text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors">
