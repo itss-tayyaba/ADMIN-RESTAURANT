@@ -218,7 +218,7 @@ function renderAuthHtml() {
       <div class="auth-wrap">
         <div class="auth-card">
           <div class="auth-brand">
-            <span class="ember-dot"></span>
+            <img src="/images/app-logo.png" alt="Ember &amp; Brew" style="width:30px;height:30px;border-radius:8px;object-fit:cover;border:1px solid #D4A853;box-shadow:0 0 6px rgba(212,168,83,0.3);">
             <span class="name">Ember <em>&amp;</em> Brew</span>
           </div>
           <p class="auth-sub">Sign in to track orders, view delivery OTP codes, reserve tables, and manage complaints.</p>
@@ -398,7 +398,7 @@ function renderDashboardHtml() {
       <!-- Luxury Dark Sidebar -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-          <span class="ember-dot"></span>
+          <img src="/images/app-logo.png" alt="Ember &amp; Brew" style="width:30px;height:30px;border-radius:8px;object-fit:cover;border:1px solid #D4A853;box-shadow:0 0 6px rgba(212,168,83,0.3);">
           <span class="name">Ember <em>&amp;</em> Brew</span>
         </div>
 

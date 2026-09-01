@@ -312,6 +312,31 @@ textarea.form-input{min-height:80px;resize:vertical}
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
 
+
+<style id="splash-styles">
+@keyframes splashProgress {
+  0% { width: 0%; transform: translateX(-100%); }
+  50% { width: 70%; transform: translateX(20%); }
+  100% { width: 100%; transform: translateX(0%); }
+}
+.animate-splash-progress {
+  animation: splashProgress 1.4s ease-in-out infinite;
+}
+@keyframes bounceSubtle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1.5deg); }
+}
+.animate-bounce-subtle {
+  animation: bounceSubtle 2.2s ease-in-out infinite;
+}
+#appSplashScreen.hide-splash {
+  opacity: 0 !important;
+  transform: scale(1.04) !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+</style>
+
 </head>
 <body class="font-body min-h-screen relative">
 

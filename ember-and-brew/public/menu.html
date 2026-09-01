@@ -817,6 +817,35 @@ h1, h2, h3, h4, .serif {
 }
 
 
+
+/* Mobile & Tablet Bottom Sticky Cart Bar */
+.mobile-menu-cart-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: rgba(26, 25, 23, 0.95);
+  border: 1.5px solid var(--gold);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+  padding: 12px 18px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  z-index: 900;
+  animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes slideUp {
+  0% { transform: translateY(100px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@media (max-width: 1024px) {
+  .mobile-menu-cart-bar.visible {
+    display: flex;
+  }
+}
+
 </style>
 
 <!-- PWA & Mobile Web App Meta -->
@@ -829,13 +858,75 @@ h1, h2, h3, h4, .serif {
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
 
+
+<style id="splash-styles">
+@keyframes splashProgress {
+  0% { width: 0%; transform: translateX(-100%); }
+  50% { width: 70%; transform: translateX(20%); }
+  100% { width: 100%; transform: translateX(0%); }
+}
+.animate-splash-progress {
+  animation: splashProgress 1.4s ease-in-out infinite;
+}
+@keyframes bounceSubtle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1.5deg); }
+}
+.animate-bounce-subtle {
+  animation: bounceSubtle 2.2s ease-in-out infinite;
+}
+#appSplashScreen.hide-splash {
+  opacity: 0 !important;
+  transform: scale(1.04) !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+</style>
+
 </head>
 <body>
+
+<!-- APP OPENING COOL SPLASH SCREEN -->
+<div id="appSplashScreen" class="fixed inset-0 z-[10000] bg-[#0F0E0C] flex flex-col items-center justify-center transition-all duration-700 ease-out">
+  <div class="relative flex flex-col items-center animate-fade-up px-6 text-center max-w-sm">
+    <!-- Animated Sizzling Wok Graphic (User 2nd Image) -->
+    <div class="relative w-44 h-44 sm:w-52 sm:h-52 mb-4 filter drop-shadow-[0_15px_35px_rgba(212,168,83,0.35)] animate-bounce-subtle">
+      <img src="/images/app-splash.png" alt="Ember &amp; Brew Sizzle" class="w-full h-full object-contain">
+    </div>
+    
+    <!-- Official Emblem (User 1st Image) -->
+    <div class="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#D4A853]/60 shadow-xl mb-3 bg-[#1A1917]">
+      <img src="/images/app-logo.png" alt="Ember &amp; Brew" class="w-full h-full object-cover">
+    </div>
+    
+    <h2 class="font-display text-2xl sm:text-3xl font-bold text-[#F5F0E8] tracking-tight mb-1">Ember &amp; Brew</h2>
+    <p class="text-xs sm:text-sm text-[#D4A853] font-semibold tracking-widest uppercase mb-5">Artisan Kitchen &amp; Café</p>
+    
+    <!-- Loading indicator -->
+    <div class="w-36 h-1.5 bg-[#1A1917] rounded-full overflow-hidden border border-[#2E2C28]">
+      <div class="h-full bg-gradient-to-r from-[#D4A853] via-[#C67D5A] to-[#D4A853] rounded-full animate-splash-progress"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto hide splash after brief pleasant intro (1.1s)
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const splash = document.getElementById('appSplashScreen');
+    if (splash) {
+      splash.classList.add('hide-splash');
+      setTimeout(() => splash.remove(), 750);
+    }
+  }, 1100);
+});
+</script>
+
 
 <!-- Top Navigation -->
 <header class="nav-header">
   <a href="/" class="nav-brand">
-    <div class="nav-brand-dot"></div>
+    <img src="/images/app-logo.png" alt="Ember &amp; Brew" style="width:34px;height:34px;border-radius:10px;object-fit:cover;border:1.5px solid var(--gold);box-shadow:0 0 8px rgba(212,168,83,0.3);">
     <span class="nav-brand-text">Ember <em>&amp;</em> Brew</span>
   </a>
 
@@ -1195,6 +1286,16 @@ function renderOrderSidebar() {
   if (taxLabelEl) taxLabelEl.textContent = 'Tax (' + (taxRate > 1 ? taxRate : taxRate * 100).toFixed(0) + '%)';
   if (taxEl) taxEl.textContent = formatBranchMoney(tax);
   if (totalEl) totalEl.textContent = formatBranchMoney(total);
+
+  // Update mobile & tablet bottom bar
+  const mobBar = document.getElementById('mobileMenuCartBar');
+  const mobCount = document.getElementById('mobileCartItemCount');
+  const mobPrice = document.getElementById('mobileCartTotalPrice');
+  if (mobBar && mobCount && mobPrice) {
+    mobCount.textContent = totalCount;
+    mobPrice.textContent = formatBranchMoney(total);
+    mobBar.classList.toggle('visible', totalCount > 0);
+  }
 }
 
 // ============================================
@@ -1582,6 +1683,23 @@ window.addEventListener('appinstalled', () => {
   if (navBtn) navBtn.style.display = 'none';
 });
 </script>
+
+
+<!-- Mobile & Tablet Sticky Floating Cart Bar -->
+<div id="mobileMenuCartBar" class="mobile-menu-cart-bar" onclick="goToCheckout()">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0F0E0C;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;" id="mobileCartItemCount">
+      0
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Your Order</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold);" id="mobileCartTotalPrice">Rs 0</div>
+    </div>
+  </div>
+  <button class="btn-sidebar-checkout" style="width:auto;margin:0;padding:8px 18px;font-size:13px;border-radius:20px;">
+    Checkout →
+  </button>
+</div>
 
 </body>
 </html>
