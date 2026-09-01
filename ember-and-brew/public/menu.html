@@ -846,6 +846,174 @@ h1, h2, h3, h4, .serif {
   }
 }
 
+
+/* Luxury Responsive Navigation */
+.nav-header {
+  height: 64px;
+  padding: 0 16px;
+  background: rgba(15, 14, 12, 0.95);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  max-width: 100%;
+}
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+.nav-brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--gold);
+  background: #141311;
+}
+.nav-brand-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.nav-brand-text em {
+  color: var(--gold);
+  font-style: normal;
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mobile-nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--gold);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.mobile-nav-drawer {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  background: rgba(15, 14, 12, 0.98);
+  border-bottom: 1px solid var(--gold);
+  padding: 16px 20px;
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 499;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.8);
+}
+.mobile-nav-drawer.open {
+  display: flex;
+}
+.mobile-nav-drawer a {
+  color: var(--text-light);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.mobile-nav-drawer a:hover, .mobile-nav-drawer a.active {
+  color: var(--gold);
+}
+
+@media (max-width: 860px) {
+  .nav-links, .btn-reserve {
+    display: none !important;
+  }
+  .mobile-nav-toggle {
+    display: flex !important;
+  }
+  .nav-brand-text {
+    font-size: 16px;
+  }
+  .branch-switcher {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .branch-select {
+    font-size: 11px;
+  }
+}
+
+/* Category Bar Smooth Horizontal Scroll */
+.cat-nav-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 8px 0 14px;
+  margin: 0 -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.cat-nav-wrap::-webkit-scrollbar {
+  display: none;
+}
+.cat-nav {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.cat-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Dish Grid Mobile Responsiveness */
+@media (max-width: 640px) {
+  .menu-page-wrapper {
+    padding: 14px 12px 90px;
+  }
+  .menu-hero {
+    padding: 20px 12px 14px;
+  }
+  .menu-hero h1 {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+  .menu-hero p {
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .menu-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  .dish-card-img-wrap {
+    height: 180px;
+  }
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 18px !important;
+  }
+}
+
 </style>
 
 <!-- PWA & Mobile Web App Meta -->
@@ -1109,10 +1277,11 @@ async function confirmNativeInstall() {
 
 
 
-<!-- Top Navigation -->
+
+<!-- Top Navigation (Mobile & Tablet Optimized) -->
 <header class="nav-header">
   <a href="/" class="nav-brand">
-    <img src="/images/app-logo.png" alt="Ember &amp; Brew" style="width:34px;height:34px;border-radius:10px;object-fit:cover;border:1.5px solid var(--gold);box-shadow:0 0 8px rgba(212,168,83,0.3);">
+    <img src="/images/app-logo.png" alt="Ember &amp; Brew">
     <span class="nav-brand-text">Ember <em>&amp;</em> Brew</span>
   </a>
 
@@ -1128,10 +1297,10 @@ async function confirmNativeInstall() {
     <div class="branch-switcher" title="Select Currency &amp; Branch">
       <i class="fa-solid fa-location-dot" style="color:var(--gold);"></i>
       <select id="branchSelect" class="branch-select" onchange="onBranchChange(this.value)">
-        <option value="default" selected>🇵🇰 Pakistan (Rs)</option>
-        <option value="us-dollar">🇺🇸 Dollar ($ / USD)</option>
-        <option value="uk-london">🇬🇧 London (£)</option>
-        <option value="australia">🇦🇺 Sydney (A$)</option>
+        <option value="default" selected>🇵🇰 Rs</option>
+        <option value="us-dollar">🇺🇸 $</option>
+        <option value="uk-london">🇬🇧 £</option>
+        <option value="australia">🇦🇺 A$</option>
       </select>
     </div>
 
@@ -1143,8 +1312,29 @@ async function confirmNativeInstall() {
       <i class="fa-solid fa-bag-shopping"></i>
       <span id="cartBadge" class="cart-badge" style="display:none;">0</span>
     </button>
+
+    <button class="mobile-nav-toggle" onclick="toggleMenuMobileNav()" aria-label="Toggle navigation">
+      <i class="fa-solid fa-bars"></i>
+    </button>
   </div>
 </header>
+
+<!-- Mobile Slide-Down Navigation Drawer -->
+<div id="menuMobileNavDrawer" class="mobile-nav-drawer">
+  <a href="/">Home</a>
+  <a href="/menu.html" class="active">Menu</a>
+  <a href="/?view=reservation#reservation-section">Table Reservation</a>
+  <a href="/?view=tracking">Track an Order</a>
+  <a href="/customer.html">Customer Portal</a>
+</div>
+
+<script>
+function toggleMenuMobileNav() {
+  const drawer = document.getElementById('menuMobileNavDrawer');
+  if (drawer) drawer.classList.toggle('open');
+}
+</script>
+
 
 <!-- Hero Section -->
 <section class="menu-hero">
