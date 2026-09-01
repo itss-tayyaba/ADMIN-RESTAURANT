@@ -1,31 +1,67 @@
 {
+  "id": "com.emberandbrew.app",
   "name": "Ember & Brew — Artisan Café & Cuisine",
   "short_name": "Ember & Brew",
   "description": "Artisan coffee, gourmet culinary creations, table reservations & real-time live order tracking.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "window-controls-overlay"
+  ],
   "background_color": "#0F0E0C",
   "theme_color": "#D4A853",
-  "orientation": "portrait-primary",
-  "scope": "/",
+  "orientation": "any",
   "lang": "en",
+  "dir": "ltr",
   "categories": [
     "food",
     "shopping",
     "lifestyle"
   ],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/images/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/images/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Ember & Brew Desktop Dining & Ordering"
+    },
+    {
+      "src": "/images/screenshot-mobile.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ember & Brew Mobile Ordering & Live Tracking"
     }
   ],
   "shortcuts": [
@@ -37,7 +73,8 @@
       "icons": [
         {
           "src": "/images/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
@@ -49,7 +86,8 @@
       "icons": [
         {
           "src": "/images/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
@@ -61,19 +99,8 @@
       "icons": [
         {
           "src": "/images/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Customer Portal",
-      "short_name": "Account",
-      "description": "View past orders and rewards",
-      "url": "/customer.html",
-      "icons": [
-        {
-          "src": "/images/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }
