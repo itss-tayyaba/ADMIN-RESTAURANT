@@ -1,5 +1,5 @@
 // Ember & Brew Service Worker - Instant Cache & App Store Capabilities
-const CACHE_NAME = 'ember-brew-v3.0';
+const CACHE_NAME = 'ember-brew-v4.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
