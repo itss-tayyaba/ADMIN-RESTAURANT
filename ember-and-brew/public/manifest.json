@@ -1,9 +1,9 @@
 {
   "id": "com.emberandbrew.app",
-  "name": "Ember & Brew — Artisan Café & Cuisine",
+  "name": "Ember & Brew",
   "short_name": "Ember & Brew",
-  "description": "Artisan coffee, gourmet culinary creations, table reservations & real-time live order tracking.",
-  "start_url": "/?source=pwa",
+  "description": "Ember & Brew Artisan Café & Cuisine — 1-Tap Online Ordering, Table Reservations & Live Order Tracking.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -13,7 +13,7 @@
   ],
   "background_color": "#0F0E0C",
   "theme_color": "#D4A853",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "lang": "en",
   "dir": "ltr",
   "categories": [
@@ -22,26 +22,6 @@
     "lifestyle"
   ],
   "prefer_related_applications": false,
-  "related_applications": [],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "launch_handler": {
-    "client_mode": [
-      "navigate-existing",
-      "auto"
-    ]
-  },
-  "edge_side_panel": {
-    "preferred_width": 480
-  },
-  "share_target": {
-    "action": "/?source=share",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
   "icons": [
     {
       "src": "/images/icon-192.png",
@@ -74,21 +54,21 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Ember & Brew Desktop Dining & Ordering"
+      "label": "Ember & Brew Desktop Menu & Ordering"
     },
     {
       "src": "/images/screenshot-mobile.png",
       "sizes": "720x1280",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Ember & Brew Mobile Ordering & Live Tracking"
+      "label": "Ember & Brew Mobile App Experience"
     }
   ],
   "shortcuts": [
     {
       "name": "Menu & Order",
       "short_name": "Menu",
-      "description": "Browse our gourmet dishes & coffee",
+      "description": "Browse gourmet dishes & drinks",
       "url": "/menu.html",
       "icons": [
         {
@@ -101,7 +81,7 @@
     {
       "name": "Track Order",
       "short_name": "Tracking",
-      "description": "Live real-time order journey",
+      "description": "Real-time live order progress",
       "url": "/?view=tracking",
       "icons": [
         {
@@ -112,9 +92,9 @@
       ]
     },
     {
-      "name": "Book a Table",
+      "name": "Reserve Table",
       "short_name": "Reserve",
-      "description": "Reserve your dining experience",
+      "description": "Book a table at Ember & Brew",
       "url": "/?view=reservation#reservation-section",
       "icons": [
         {

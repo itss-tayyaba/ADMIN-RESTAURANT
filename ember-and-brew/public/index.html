@@ -448,6 +448,7 @@ textarea.form-input{min-height:80px;resize:vertical}
 }
 </style>
 
+<script src="/pwa-engine.js"></script>
 </head>
 <body class="font-body min-h-screen relative">
 
@@ -481,38 +482,7 @@ textarea.form-input{min-height:80px;resize:vertical}
   </div>
 </div>
 
-<!-- REAL-TIME APP DOWNLOADING MODAL (Shown when clicking Install App) -->
-<div id="appDownloadOverlay">
-  <div style="background:#1A1917;border:1.5px solid #D4A853;border-radius:24px;padding:28px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,0.8);position:relative;">
-    
-    <button onclick="closeAppDownloadModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:#8A8478;font-size:18px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
 
-    <!-- Sizzling Wok Icon in Modal -->
-    <div style="width:110px;height:110px;margin:0 auto 12px;filter:drop-shadow(0 10px 25px rgba(212,168,83,0.4));" class="animate-sizzle">
-      <img src="/images/app-splash.png" alt="Downloading" style="width:100%;height:100%;object-fit:contain;">
-    </div>
-
-    <h3 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:800;color:#F5F0E8;margin-bottom:4px;" id="dlModalTitle">Downloading Ember &amp; Brew App</h3>
-    <p style="font-size:12px;color:#8A8478;margin-bottom:20px;" id="dlModalSub">Preparing offline catalogue &amp; 1-tap ordering...</p>
-
-    <!-- Download Progress Bar -->
-    <div style="background:#0F0E0C;height:10px;border-radius:12px;overflow:hidden;border:1px solid #2E2C28;margin-bottom:10px;position:relative;">
-      <div id="dlProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg, #D4A853, #C67D5A, #D4A853);border-radius:12px;transition:width 0.12s ease;"></div>
-    </div>
-
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:20px;">
-      <span style="color:#D4C4A8;" id="dlStepText">Starting download...</span>
-      <span style="color:#D4A853;font-weight:800;font-size:14px;" id="dlPercentText">0%</span>
-    </div>
-
-    <div id="dlCompletedActions" style="display:none;flex-direction:column;gap:10px;">
-      <button onclick="confirmNativeInstall()" style="background:#D4A853;color:#0F0E0C;font-weight:800;font-size:14px;padding:12px;border-radius:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 15px rgba(212,168,83,0.4);">
-        <i class="fa-solid fa-circle-check"></i> Add to Home Screen Now
-      </button>
-    </div>
-
-  </div>
-</div>
 
 <script>
 // 1. Splash Screen Percentage Logic (Plays cleanly on initial load)
@@ -657,7 +627,7 @@ async function confirmNativeInstall() {
     </div>
 
     <div class="flex items-center gap-3">
-          <button id="navInstallAppBtn" onclick="startAppDownloadFlow()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3 py-1.5 rounded-full transition-all" title="Install App">
+          <button id="navInstallAppBtn" onclick="triggerPwaInstall()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3 py-1.5 rounded-full transition-all" title="Install App">
     <i class="fa-solid fa-mobile-screen-button"></i> Install App
   </button>
       <!-- Branch Selector Pill Dropdown -->
@@ -4738,7 +4708,7 @@ init();
   </div>
 
   <div class="flex gap-2">
-    <button id="pwaInstallBtn" onclick="startAppDownloadFlow()" class="flex-1 bg-[#D4A853] hover:bg-[#e2b963] text-[#0F0E0C] font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
+    <button id="pwaInstallBtn" onclick="triggerPwaInstall()" class="flex-1 bg-[#D4A853] hover:bg-[#e2b963] text-[#0F0E0C] font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
       <i class="fa-solid fa-download"></i> Install App
     </button>
     <button onclick="dismissPwaPrompt()" class="border border-[#2E2C28] hover:border-[#D4A853]/40 text-[#8A8478] hover:text-[#F5F0E8] text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors">
@@ -4830,41 +4800,7 @@ window.addEventListener('appinstalled', () => {
 </script>
 
 
-<!-- ANDROID SYSTEM-STYLE NOTIFICATION DRAWER (Matching Foodpanda Screenshot) -->
-<div id="androidSysNotification" style="position:fixed;top:12px;left:12px;right:12px;max-width:400px;margin:0 auto;background:#2B2928;border-radius:18px;padding:14px 16px;color:#F5F0E8;box-shadow:0 12px 35px rgba(0,0,0,0.85);z-index:9999999;display:none;font-family:'DM Sans',sans-serif;border:1px solid rgba(212,168,83,0.25);animation:slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);">
-  <div style="display:flex;align-items:flex-start;gap:12px;">
-    
-    <!-- Green Android Download Icon -->
-    <div style="width:34px;height:34px;border-radius:50%;background:#0F9D58;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;flex-shrink:0;margin-top:2px;">
-      <i class="fa-solid fa-arrow-down"></i>
-    </div>
 
-    <div style="flex:1;min-width:0;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-        <div style="font-size:11px;color:#A8A29E;font-weight:600;">Ember &amp; Brew • Downloading • now</div>
-        <button onclick="closeAndroidSysNotification()" style="background:none;border:none;color:#8A8478;font-size:13px;cursor:pointer;padding:0;"><i class="fa-solid fa-chevron-up"></i></button>
-      </div>
-
-      <div style="font-size:14px;font-weight:700;color:#F5F0E8;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        Ember &amp; Brew: Artisan Café &amp; Cuisine
-      </div>
-
-      <div style="font-size:12px;color:#D4A853;margin-bottom:8px;" id="androidNotifTimeText">
-        Downloading... <span id="androidNotifPercent">0%</span>
-      </div>
-
-      <!-- Android Progress Bar -->
-      <div style="width:100%;height:4px;background:#44403C;border-radius:4px;overflow:hidden;margin-bottom:10px;">
-        <div id="androidNotifProgressBar" style="width:0%;height:100%;background:#0F9D58;border-radius:4px;transition:width 0.15s ease;"></div>
-      </div>
-
-      <div style="display:flex;gap:16px;font-size:12px;font-weight:700;color:#D4A853;text-transform:uppercase;letter-spacing:0.5px;">
-        <span onclick="closeAndroidSysNotification()" style="cursor:pointer;">Cancel</span>
-        <span style="color:#A8A29E;cursor:pointer;">Manage Notifications</span>
-      </div>
-    </div>
-
-  </div>
 </div>
 
 <style>
