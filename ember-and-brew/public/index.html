@@ -403,14 +403,32 @@ textarea.form-input{min-height:80px;resize:vertical}
 
 <style id="tracking-and-mobile-polish">
 /* Hide footer on checkout and tracking views */
+body.view-tracking-active #main-footer,
+body.view-checkout-active #main-footer,
 #view-tracking.active ~ #main-footer,
 #view-checkout.active ~ #main-footer {
   display: none !important;
 }
 
 #view-tracking {
-  min-height: 85vh;
-  padding-top: 10px;
+  display: none;
+  min-height: calc(100vh - 70px);
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+#view-tracking.active {
+  display: block !important;
+  opacity: 1 !important;
+}
+
+#tracking-content {
+  padding-top: 14px !important;
+  padding-bottom: 80px !important;
+  margin-top: 0 !important;
+}
+
+.complaint-fab {
+  z-index: 40 !important;
 }
 
 @media (max-width: 640px) {
@@ -418,7 +436,7 @@ textarea.form-input{min-height:80px;resize:vertical}
     padding-top: 0 !important;
     padding-bottom: 20px !important;
   }
-  .min-h-\[520px\] {
+  .min-h-[520px] {
     min-height: auto !important;
   }
   #branch-hero-title {
@@ -429,7 +447,7 @@ textarea.form-input{min-height:80px;resize:vertical}
   #branch-hero-label {
     margin-bottom: 6px !important;
   }
-  .pt-10.lg\:pt-20 {
+  .pt-10.lg:pt-20 {
     padding-top: 0 !important;
   }
   .mb-9 {
@@ -442,8 +460,10 @@ textarea.form-input{min-height:80px;resize:vertical}
     gap: 1.25rem !important;
   }
   #tracking-content {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-top: 8px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 90px !important;
   }
 }
 </style>
@@ -1451,7 +1471,7 @@ async function confirmNativeInstall() {
 </div>
 
 <!-- FOOTER -->
-<footer class="relative z-10 border-t border-brand-800 mt-10" style="background:var(--surface)">
+<footer id="main-footer" class="relative z-10 border-t border-brand-800 mt-10" style="background:var(--surface)">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 pt-14 pb-8">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
 
@@ -1865,6 +1885,16 @@ function updateAccountNavLabel() {
 // ============================================
 // NAVIGATION
 // ============================================
+function forceScrollTop() {
+  try {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  } catch(e) {
+    window.scrollTo(0, 0);
+  }
+  if (document.documentElement) document.documentElement.scrollTop = 0;
+  if (document.body) document.body.scrollTop = 0;
+}
+
 function navigate(view, data) {
   // Close cart if open
   closeCart();
@@ -1873,9 +1903,10 @@ function navigate(view, data) {
     window.location.href = '/customer.html';
     return;
   }
-  // Checkout no longer requires login — the checkout form itself offers
-  // "Continue as guest" fields or a "Sign in / Register" link (see
-  // goToAccountLogin()), and the cart persists in localStorage either way.
+  // Toggle body classes for active view styling
+  document.body.classList.toggle('view-tracking-active', view === 'tracking');
+  document.body.classList.toggle('view-checkout-active', view === 'checkout');
+
   // Hide all views
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   // Show target
@@ -1895,7 +1926,10 @@ function navigate(view, data) {
   if (view === 'tracking') renderTracking(data);
   if (view === 'customer-login') setCustomerAuthMode('login');
   if (view === 'account') renderAccount();
-  window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
+  
+  forceScrollTop();
+  requestAnimationFrame(forceScrollTop);
+  setTimeout(forceScrollTop, 50);
 }
 
 // ============================================
@@ -3952,7 +3986,7 @@ async function handleCheckout(e) {
     localStorage.removeItem('eb_return_to_checkout');
     form.reset();
     showToast(`Order ${order.orderNumber} placed successfully!`, 'success');
-    window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
+    forceScrollTop();
     navigate('tracking', order.orderNumber);
   } catch (err) {
     showToast(err.message || 'Could not place your order. Please try again.', 'error');
@@ -4097,8 +4131,10 @@ async function renderTracking(orderNumber) {
   const lookupId = orderNumber || localStorage.getItem('eb_last_order');
 
   if (!lookupId) {
+    /* force tracking scroll reset */
+    forceScrollTop();
     container.innerHTML = `
-      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+    <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
       <div class="text-center py-16">
         <i class="fa-solid fa-receipt text-4xl text-brand-800 mb-4"></i>
         <h2 class="font-display text-2xl font-bold mb-2">Track an Order</h2>
@@ -4256,6 +4292,9 @@ async function renderTracking(orderNumber) {
   if (order.orderType === 'delivery' && order.status === 'out-for-delivery') {
     renderDeliveryRouteEstimate(order);
   }
+  forceScrollTop();
+  requestAnimationFrame(forceScrollTop);
+  setTimeout(forceScrollTop, 60);
 
   // Poll for live status updates from the admin board while this view is open
   if (state.trackingPoll) clearInterval(state.trackingPoll);
