@@ -1,11 +1,6 @@
-// ===================== DNS FIX FOR MONGODB SRV =====================
 const dns = require("dns");
-
-// Use reliable public DNS servers so mongodb+srv:// works
-// on networks whose default DNS blocks/refuses SRV queries.
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
-// ===================== ENVIRONMENT =====================
 require("dotenv").config();
 
 console.log("================================");
@@ -22,59 +17,50 @@ const { Server } = require("socket.io");
 
 const app = express();
 
+const Tenant = require("./src/models/Tenant");
+const Branch = require("./src/models/Branch");
 const AdminUser = require("./src/models/AdminUser");
 const RestaurantTable = require("./src/models/RestaurantTable");
-const Branch = require("./src/models/Branch");
 
-// ===================== DATABASE CONNECTION =====================
-
-// Reuse the connection while a Vercel serverless instance is warm.
 let databaseConnection;
-
-// Default accounts/data must be seeded on EVERY deploy target — both local
-// `node server.js` and Vercel, where this file is require()'d as a module
-// rather than run directly. Seeding used to live only inside the
-// `require.main === module` block below, which never executes on Vercel,
-// so accounts like superadmin silently never got created there. Guard with
-// a flag so it still only runs once per warm connection/instance.
 let defaultsSeeded = false;
 
 async function seedDefaults() {
-    if (defaultsSeeded) return;
-    defaultsSeeded = true;
+  if (defaultsSeeded) return;
+  defaultsSeeded = true;
 
-    try {
-        await Branch.createDefaultBranch();
-        await AdminUser.createDefaultAdmin();
-        await AdminUser.createDefaultChef();
-        await AdminUser.createDefaultDelivery();
-        await AdminUser.createDefaultSuperadmin();
-        console.log("✅ Default Users Ready");
-    } catch (err) {
-        defaultsSeeded = false; // allow retry on next request if seeding failed
-        console.error("Seeding defaults failed:", err);
-    }
+  try {
+    const defaultTenant = await Tenant.createDefaultTenant();
+    const defaultBranch = await Branch.createDefaultBranch(defaultTenant._id);
+    await AdminUser.createDefaultSuperadmin();
+    await AdminUser.createDefaultAdmin(defaultTenant._id, defaultBranch._id);
+    await AdminUser.createDefaultChef(defaultTenant._id, defaultBranch._id);
+    await AdminUser.createDefaultDelivery(defaultTenant._id, defaultBranch._id);
+    console.log("✅ Multi-Tenant & Default Users Ready");
+  } catch (err) {
+    defaultsSeeded = false;
+    console.error("Seeding defaults failed:", err);
+  }
 }
 
 function connectDatabase() {
-    if (mongoose.connection.readyState === 1) {
-        return seedDefaults();
-    }
+  if (mongoose.connection.readyState === 1) {
+    return seedDefaults();
+  }
 
-    if (!databaseConnection) {
-        databaseConnection = mongoose
-            .connect(process.env.MONGODB_URI)
-            .catch((err) => {
-                databaseConnection = null;
-                throw err;
-            });
-    }
+  if (!databaseConnection) {
+    databaseConnection = mongoose
+      .connect(process.env.MONGODB_URI)
+      .catch((err) => {
+        databaseConnection = null;
+        throw err;
+      });
+  }
 
-    return databaseConnection.then(() => seedDefaults());
+  return databaseConnection.then(() => seedDefaults());
 }
 
-// ===================== ROUTES =====================
-
+// Routes
 const menuRoutes = require("./src/Routes/menu");
 const orderRoutes = require("./src/Routes/orders");
 const authRoutes = require("./src/Routes/auth");
@@ -88,324 +74,108 @@ const deliveryRoutes = require("./src/Routes/delivery");
 const chatbotRoutes = require("./src/Routes/chatbot");
 const branchesRoutes = require("./src/Routes/branches");
 const notificationRoutes = require("./src/Routes/notifications");
-
-// ===================== MIDDLEWARE =====================
+const tenantRoutes = require("./src/Routes/tenants");
 
 app.use(cors());
-
 app.use(express.json());
-
 app.use(express.urlencoded({ extended: true }));
 
-// ===================== STATIC FILES =====================
+// Static files
+app.use(express.static(path.join(__dirname, "ember-and-brew", "public")));
+app.use("/admin", express.static(path.join(__dirname, "ember-and-brew", "public", "admin")));
+app.use("/kitchen", express.static(path.join(__dirname, "ember-and-brew", "public", "kitchen")));
+app.use("/delivery", express.static(path.join(__dirname, "ember-and-brew", "public", "delivery")));
+app.use("/superadmin", express.static(path.join(__dirname, "ember-and-brew", "public", "superadmin")));
 
-app.use(
-    express.static(
-        path.join(__dirname, "ember-and-brew", "public")
-    )
-);
-
-// ===================== ADMIN =====================
-
-app.use(
-    "/admin",
-    express.static(
-        path.join(__dirname, "ember-and-brew", "public", "admin")
-    )
-);
-
-// ===================== KITCHEN =====================
-
-app.use(
-    "/kitchen",
-    express.static(
-        path.join(__dirname, "ember-and-brew", "public", "kitchen")
-    )
-);
-
-// ===================== DELIVERY =====================
-
-app.use(
-    "/delivery",
-    express.static(
-        path.join(__dirname, "ember-and-brew", "public", "delivery")
-    )
-);
-
-// ===================== SUPERADMIN =====================
-
-app.use(
-    "/superadmin",
-    express.static(
-        path.join(__dirname, "ember-and-brew", "public", "superadmin")
-    )
-);
-
-// ===================== CUSTOMER PORTAL =====================
+// Multi-tenant customer routes
+app.get("/r/:tenantSlug", (req, res) => {
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "index.html"));
+});
+app.get("/r/:tenantSlug/customer", (req, res) => {
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "customer.html"));
+});
+app.get("/r/:tenantSlug/order/:branchCode", (req, res) => {
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "index.html"));
+});
 
 app.get("/customer", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "customer.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "customer.html"));
 });
-
-// Clean per-branch URL, e.g. /customer/london-uk — same single-page app,
-// just with a branch code in the path. customer.js reads it from
-// window.location.pathname and resolves it to a real branchId via
-// GET /api/branches/by-code/:code.
 app.get("/customer/:branchCode", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "customer.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "customer.html"));
 });
-
-// Public ordering portal for a specific branch, e.g. /order/london-uk.
-// Keeping the code in the path makes menu links easy to share and avoids a
-// customer accidentally returning to a previously selected country.
 app.get("/order/:branchCode", (req, res) => {
-    res.sendFile(path.join(__dirname, "ember-and-brew", "public", "index.html"));
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "index.html"));
 });
 
-// ===================== API =====================
-
-// Static pages, scripts, styles, and images do not require MongoDB. Keep
-// them outside this middleware so a database cold start never delays the
-// initial page render. Every API endpoint below still waits for the shared
-// database connection before accessing data.
+// API Middleware
 app.use("/api", (req, res, next) => {
-    connectDatabase()
-        .then(() => next())
-        .catch(next);
+  connectDatabase().then(() => next()).catch(next);
 });
 
+app.use("/api/tenants", tenantRoutes);
 app.use("/api/menu", menuRoutes);
-
 app.use("/api/orders", orderRoutes);
-
 app.use("/api/auth", authRoutes);
-
 app.use("/api/customer-auth", customerAuthRoutes);
-
 app.use("/api/recommendations", recommendationRoutes);
-
 app.use("/api/complaints", complaintRoutes);
-
 app.use("/api/reservations", reservationRoutes);
-
 app.use("/api/tables", tableRoutes);
-
 app.use("/api/kitchen", kitchenRoutes);
-
 app.use("/api/delivery", deliveryRoutes);
-
 app.use("/api/chatbot", chatbotRoutes);
-
 app.use("/api/branches", branchesRoutes);
-
 app.use("/api/notifications", notificationRoutes);
 
-// ===================== LOGIN PAGE =====================
-
+// Dashboards
 app.get("/admin/login", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "admin",
-            "login.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "admin", "login.html"));
 });
-
-// ===================== ADMIN DASHBOARD =====================
-
 app.get("/admin", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "admin",
-            "index.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "admin", "index.html"));
 });
-
-// ===================== KITCHEN =====================
-
 app.get("/kitchen", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "kitchen",
-            "kitchen.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "kitchen", "kitchen.html"));
 });
-
-// ===================== DELIVERY =====================
-
 app.get("/delivery", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "delivery",
-            "delivery.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "delivery", "delivery.html"));
 });
-
-// ===================== SUPERADMIN =====================
-
 app.get("/superadmin", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "superadmin",
-            "superadmin.html"
-        )
-    );
+  res.sendFile(path.join(__dirname, "ember-and-brew", "public", "superadmin", "superadmin.html"));
 });
 
-// ===================== HOME =====================
+const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
 
-app.get("/", (req, res) => {
-    res.sendFile(
-        path.join(
-            __dirname,
-            "ember-and-brew",
-            "public",
-            "index.html"
-        )
-    );
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
 
-// ===================== 404 =====================
-
-app.get("*", (req, res) => {
-    res.redirect("/");
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+  socket.on("join-branch", (branchId) => {
+    if (branchId) socket.join('branch:' + branchId);
+  });
+  socket.on("join-tenant", (tenantId) => {
+    if (tenantId) socket.join('tenant:' + tenantId);
+  });
 });
-
-// ===================== LOCAL DATABASE + SOCKET.IO =====================
-
-// The persistent HTTP and Socket.IO server is only for local development.
-// Vercel imports this module and serves the Express app as a function.
 
 if (require.main === module) {
-    mongoose
-        .connect(process.env.MONGODB_URI)
-        .then(async () => {
-            console.log("✅ Connected to MongoDB");
-
-            await seedDefaults();
-
-            try {
-                const tableCount = await RestaurantTable.countDocuments();
-
-                if (!tableCount) {
-                    const defaultTables = [
-                        {
-                            tableNumber: "T-01",
-                            seats: 2,
-                            area: "indoor"
-                        },
-                        {
-                            tableNumber: "T-02",
-                            seats: 2,
-                            area: "indoor"
-                        },
-                        {
-                            tableNumber: "T-03",
-                            seats: 4,
-                            area: "indoor"
-                        },
-                        {
-                            tableNumber: "T-04",
-                            seats: 4,
-                            area: "outdoor"
-                        },
-                        {
-                            tableNumber: "T-05",
-                            seats: 6,
-                            area: "outdoor"
-                        },
-                        {
-                            tableNumber: "T-06",
-                            seats: 8,
-                            area: "indoor"
-                        }
-                    ];
-
-                    await RestaurantTable.insertMany(defaultTables);
-
-                    console.log(
-                        "✅ Seeded default restaurant tables"
-                    );
-                }
-            } catch (err) {
-                console.warn(
-                    "Could not seed default tables:",
-                    err && err.message
-                );
-            }
-
-            console.log("✅ Default Users Ready");
-
-            // Create HTTP server and attach Socket.IO
-            const server = http.createServer(app);
-
-            const io = new Server(server, {
-                cors: {
-                    origin: "*"
-                }
-            });
-
-            // Make io available to routes via app.locals
-            app.locals.io = io;
-
-            server.listen(
-                process.env.PORT || 3000,
-                () => {
-                    console.log(
-                        `🚀 Server Running : http://localhost:${process.env.PORT || 3000}`
-                    );
-                }
-            );
-
-            io.on("connection", (socket) => {
-                console.log(
-                    "Socket connected:",
-                    socket.id
-                );
-
-                socket.on("disconnect", () => {
-                    console.log(
-                        "Socket disconnected:",
-                        socket.id
-                    );
-                });
-            });
-        })
-        .catch((err) => {
-            console.error(err);
-        });
+  connectDatabase()
+    .then(() => {
+      server.listen(PORT, () => {
+        console.log('Server running at http://localhost:' + PORT);
+      });
+    })
+    .catch((err) => {
+      console.error("Database initialization failed:", err);
+      process.exit(1);
+    });
 }
 
 module.exports = app;

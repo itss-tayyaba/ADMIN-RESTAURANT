@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const AdminUser = require('../models/AdminUser');
+const Tenant = require('../models/Tenant');
+const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
 
 // POST /api/auth/login — admin login
@@ -16,25 +18,39 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
     if (role && user.role !== role) {
-      return res.status(403).json({ error: `This account is registered as "${user.role}", not "${role}". Please select the correct role.` });
+      return res.status(403).json({ error: 'This account is registered as "' + user.role + '", not "' + role + '". Please select the correct role.' });
     }
 
-    // Migrate pre-branch staff accounts as they next sign in. They all belong
-    // to the original restaurant branch; without this, new branch-scoped
-    // orders are invisible to an old chef/admin/rider session.
-    if (user.role !== 'superadmin' && !user.branchId) {
-      const Branch = require('../models/Branch');
-      const defaultBranch = await Branch.createDefaultBranch();
-      user.branchId = defaultBranch._id;
+    // Auto-link staff to default tenant and branch if missing
+    if (user.role !== 'superadmin' && (!user.tenantId || !user.branchId)) {
+      const defaultTenant = await Tenant.createDefaultTenant();
+      const defaultBranch = await Branch.createDefaultBranch(defaultTenant._id);
+      if (!user.tenantId) user.tenantId = defaultTenant._id;
+      if (!user.branchId) user.branchId = defaultBranch._id;
       await user.save();
     }
 
     const token = jwt.sign(
-      { id: user._id, username: user.username, role: user.role, branchId: user.branchId || null },
+      {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+        tenantId: user.tenantId || null,
+        branchId: user.branchId || null
+      },
       process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
-    res.json({ token, user: { username: user.username, role: user.role, branchId: user.branchId || null } });
+
+    res.json({
+      token,
+      user: {
+        username: user.username,
+        role: user.role,
+        tenantId: user.tenantId || null,
+        branchId: user.branchId || null
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
   }

@@ -1,3 +1,7 @@
+// Multi-tenant aware customer portal
+const currentTenantSlug = (new URLSearchParams(window.location.search)).get('tenant') ||
+  (window.location.pathname.startsWith('/r/') ? window.location.pathname.split('/')[2] : '') ||
+  localStorage.getItem('eb_tenant_slug') || 'ember-and-brew';
 // ==========================================================================
 // Ember & Brew — Customer Portal Application
 // Luxury Dashboard Architecture matching Admin Dashboard

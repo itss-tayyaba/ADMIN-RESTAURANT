@@ -4,6 +4,7 @@ const Reservation = require('../models/Reservation');
 const Customer = require('../models/Customer');
 const { customerAuth } = require('./customerAuth');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
+const { resolveTenant } = require('../utils/tenantScope');
 const { notifyReservation } = require('../services/notificationService');
 
 const router = express.Router();

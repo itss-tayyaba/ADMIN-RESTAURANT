@@ -5,6 +5,7 @@ const Customer = require('../models/Customer');
 const jwt = require('jsonwebtoken');
 const { customerAuth } = require('./customerAuth');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
+const { resolveTenant } = require('../utils/tenantScope');
 
 // Middleware: verify admin JWT
 function adminAuth(req, res, next) {
@@ -35,7 +36,9 @@ router.post('/', customerAuth, async (req, res) => {
     const customer = await Customer.findById(req.customer.id);
     if (!customer) return res.status(401).json({ error: 'Account not found. Please log in again.' });
 
+    const tenantId = await resolveTenant(req);
     const complaint = new Complaint({
+      tenantId,
       branchId: await resolvePublicBranchId(req.query),
       customer: customer._id,
       customerName: customer.name,

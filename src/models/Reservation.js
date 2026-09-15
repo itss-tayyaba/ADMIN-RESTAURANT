@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const reservationSchema = new mongoose.Schema({
+  tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', default: null, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', index: true },
   guestName: { type: String, required: true, trim: true },
@@ -17,5 +18,7 @@ const reservationSchema = new mongoose.Schema({
     default: 'pending'
   }
 }, { timestamps: true });
+
+reservationSchema.index({ tenantId: 1, branchId: 1, date: 1 });
 
 module.exports = mongoose.model('Reservation', reservationSchema);

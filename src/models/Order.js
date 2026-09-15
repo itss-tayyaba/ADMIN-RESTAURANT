@@ -14,6 +14,7 @@ const statusLogSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, required: true, unique: true },
+  tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', default: null, index: true },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: false, default: null, index: true },
   isGuestOrder: { type: Boolean, default: false },
@@ -89,6 +90,7 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 orderSchema.index({ deliveryLocation: '2dsphere' });
+orderSchema.index({ tenantId: 1, branchId: 1, createdAt: -1 });
 
 orderSchema.post('save', async function() {
   if (this.items.length < 2) return;
@@ -98,10 +100,8 @@ orderSchema.post('save', async function() {
   for (let i = 0; i < itemIds.length; i++) {
     for (let j = 0; j < itemIds.length; j++) {
       if (i === j) continue;
-      await MenuItem.updateOne(
-        { _id: itemIds[i] },
-        { $inc: { [`pairCounts.${itemIds[j]}`]: 1 } }
-      );
+      const key = 'pairCounts.' + itemIds[j];
+      await MenuItem.findByIdAndUpdate(itemIds[i], { $inc: { [key]: 1 } }).catch(() => {});
     }
   }
 });
