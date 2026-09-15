@@ -30,7 +30,7 @@ const tenantSchema = new mongoose.Schema({
   },
   banner: {
     type: String,
-    default: '/images/app-splash.png'
+    default: '/images/app-logo.png'
   },
   theme: {
     primaryColor: { type: String, default: '#D4A853' },
@@ -101,7 +101,7 @@ tenantSchema.statics.createDefaultTenant = async function () {
       tagline: 'Artisan Coffee & Kitchen',
       description: 'Small-batch coffee, seasonal plates, and a warm room to slow down in.',
       logo: '/images/app-logo.png',
-      banner: '/images/app-splash.png',
+      banner: '/images/app-logo.png',
       theme: {
         primaryColor: '#D4A853',
         secondaryColor: '#C67D5A',
