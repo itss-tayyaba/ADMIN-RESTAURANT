@@ -1962,178 +1962,207 @@ fetch('/api/menu').then(r => r.json()).then(items => {
     });
     menuState.categories = Array.from(catSet);
     renderCategoryPills();
+  activeDishModal = {
+    item,
+    qty: 1,
+    selectedAddons: new Set(),
+    addons: getAddonPresets(item.cat || item.category)
+  };
+
+  document.getElementById('modalDishTitle').textContent = item.name;
+  document.getElementById('modalDishDesc').textContent = item.desc || item.description || '';
+  document.getElementById('modalQtyNum').textContent = '1';
+
+  const addonsContainer = document.getElementById('modalAddonsGrid');
+  addonsContainer.innerHTML = activeDishModal.addons.map((addon, i) => '<div class="modal-addon-item" id="modalAddon-' + i + '" onclick="toggleModalAddon(' + i + ')">' +
+    '<span>' + escapeHtml(addon.name) + '</span>' +
+    '<span style="color:var(--gold);font-weight:700;">+ ' + formatBranchMoney(addon.price) + '</span>' +
+  '</div>').join('');
+
+  updateModalTotal();
+  document.getElementById('dishModalOverlay').style.display = 'flex';
+}
+
+function getAddonPresets(cat) {
+  const sym = menuState.currentBranch?.currencySymbol || 'Rs';
+  const isPKR = sym === 'Rs' || sym === 'PKR';
+  if (cat === 'Coffee') {
+    return [
+      { name: 'Extra Espresso Shot', price: isPKR ? 150 : 1.00 },
+      { name: 'Oat Milk Sub', price: isPKR ? 180 : 1.25 },
+      { name: 'Vanilla Bean Syrup', price: isPKR ? 120 : 0.85 }
+    ];
+  } else if (cat === 'Bakery' || cat === 'Desserts') {
+    return [
+      { name: 'Extra Vanilla Gelato Scoop', price: isPKR ? 250 : 1.75 },
+      { name: 'Warm Chocolate Ganache', price: isPKR ? 180 : 1.25 }
+    ];
+  } else {
+    return [
+      { name: 'Extra Fried Farm Egg', price: isPKR ? 150 : 1.00 },
+      { name: 'Haas Avocado Slices', price: isPKR ? 220 : 1.50 },
+      { name: 'Smoked Turkey Strips', price: isPKR ? 280 : 2.00 }
+    ];
+  }
+}
+
+function toggleModalAddon(idx) {
+  if (activeDishModal.selectedAddons.has(idx)) {
+    activeDishModal.selectedAddons.delete(idx);
+  } else {
+    if (activeDishModal.selectedAddons.size >= 3) {
+      showToast('You can pick up to 3 add-ons.', 'info');
+      return;
+    }
+    activeDishModal.selectedAddons.add(idx);
+  }
+
+  activeDishModal.addons.forEach((_, i) => {
+    const el = document.getElementById('modalAddon-' + i);
+    if (el) el.classList.toggle('checked', activeDishModal.selectedAddons.has(i));
+  });
+
+  updateModalTotal();
+}
+
+function adjustModalQty(delta) {
+  activeDishModal.qty = Math.max(1, activeDishModal.qty + delta);
+  document.getElementById('modalQtyNum').textContent = activeDishModal.qty;
+  updateModalTotal();
+}
+
+function updateModalTotal() {
+  if (!activeDishModal.item) return;
+  const base = getNumericPrice(activeDishModal.item.price);
+  const addonsSum = [...activeDishModal.selectedAddons].reduce((sum, idx) => sum + getNumericPrice(activeDishModal.addons[idx].price), 0);
+  const total = (base + addonsSum) * activeDishModal.qty;
+  document.getElementById('modalTotalAmount').textContent = formatBranchMoney(total);
+}
+
+function confirmModalAddToCart() {
+  if (!activeDishModal.item) return;
+  const item = activeDishModal.item;
+  const chosenAddons = [...activeDishModal.selectedAddons].map(idx => activeDishModal.addons[idx]);
+  const signature = chosenAddons.map(a => a.name).sort().join('|');
+
+  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
+  menuState.cart.push({
+    item: {
+      id: item.id || item._id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      desc: item.desc || item.description || '',
+      cat: item.cat || item.category || 'Special',
+      img: item.img || item.image || '/images/Espresso.jpeg'
+    },
+    qty: activeDishModal.qty,
+    addons: chosenAddons,
+    addonSignature: signature
+  });
+
+  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
+  closeDishModal();
+  showToast('Added ' + item.name + ' to order!', 'success');
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function closeDishModal() {
+  document.getElementById('dishModalOverlay').style.display = 'none';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target.id === 'dishModalOverlay') closeDishModal();
+}
+
+// ============================================
+// 7. SEARCH & FILTER
+// ============================================
+function onSearchInput(val) {
+  menuState.searchQuery = val.trim();
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (clearBtn) clearBtn.style.display = menuState.searchQuery ? 'block' : 'none';
+  renderMenuGrid();
+}
+
+function clearSearch() {
+  const input = document.getElementById('menuSearchInput');
+  if (input) input.value = '';
+  menuState.searchQuery = '';
+  const clearBtn = document.getElementById('clearSearchBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderMenuGrid();
+}
+
+// ============================================
+// 8. BRANCH & CURRENCY SWITCHER
+// ============================================
+async function onBranchChange(code) {
+  let branch = menuState.branches.find(b => b.code === code || b._id === code);
+  if (!branch && code === 'us-dollar') {
+    branch = { _id: 'usd-branch', code: 'us-dollar', name: 'Ember & Brew — Global ($ / USD)', city: 'Global', currency: 'USD', currencySymbol: '$', taxRate: 0.08 };
+  }
+  if (!branch) return;
+
+  menuState.currentBranch = branch;
+  localStorage.setItem('eb_branch_id', branch._id);
+  localStorage.setItem('eb_branch_code', branch.code);
+
+  showToast('Switched currency to ' + branch.currencySymbol + ' (' + branch.currency + ')', 'info');
+  renderMenuGrid();
+  renderOrderSidebar();
+}
+
+function goToCheckout() {
+  const branchCode = menuState.currentBranch?.code || 'default';
+  window.location.href = '/?branch=' + encodeURIComponent(branchCode) + '&view=checkout';
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.textContent = msg;
+  toast.className = 'toast show';
+  setTimeout(() => { toast.className = 'toast'; }, 2400);
+}
+
+function escapeHtml(text) {
+  return String(text || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// ============================================
+// 9. IMMEDIATE EXECUTION (0ms Instant Load)
+// ============================================
+renderCategoryPills();
+renderMenuGrid();
+renderOrderSidebar();
+
+// Background fetch for any live admin edits
+fetch('/api/menu').then(r => r.json()).then(items => {
+  if (Array.isArray(items) && items.length) {
+    menuState.menuItems = items.map(i => ({
+      id: i._id,
+      name: i.name,
+      desc: i.description || '',
+      price: Number(i.price) || 0,
+      cat: i.category || 'Special',
+      img: i.image || '/images/Espresso.jpeg'
+    }));
+    const catSet = new Set(['All']);
+    menuState.menuItems.forEach(i => {
+      const cat = i.category || i.cat;
+      if (cat) catSet.add(cat);
+    });
+    menuState.categories = Array.from(catSet);
+    renderCategoryPills();
     renderMenuGrid();
   }
 }).catch(() => {});
 </script>
 
-
-      <div>
-        <h4 class="font-bold text-sm text-[#F5F0E8] leading-snug">Ember &amp; Brew App</h4>
-        <p class="text-xs text-[#8A8478]">Install for 1-tap ordering &amp; live tracking</p>
-      </div>
-    </div>
-    <button onclick="dismissPwaPrompt()" class="text-[#8A8478] hover:text-[#F5F0E8] text-sm p-1" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
-  </div>
-  
-  <div id="pwaIosInstructions" class="hidden text-xs text-[#D4C4A8] bg-[#0F0E0C]/80 border border-[#2E2C28] rounded-xl p-2.5 mb-3 leading-relaxed">
-    <i class="fa-solid fa-apple-whole text-[#D4A853] mr-1"></i> Tap the <strong class="text-[#F5F0E8]">Share</strong> icon <i class="fa-solid fa-arrow-up-from-bracket text-[#D4A853]"></i> below, then select <strong class="text-[#D4A853]">'Add to Home Screen'</strong> 📲
-  </div>
-
-  <div class="flex gap-2">
-    <button id="pwaInstallBtn" onclick="triggerPwaInstall()" class="flex-1 bg-[#D4A853] hover:bg-[#e2b963] text-[#0F0E0C] font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md">
-      <i class="fa-solid fa-download"></i> Install App
-    </button>
-    <button onclick="dismissPwaPrompt()" class="border border-[#2E2C28] hover:border-[#D4A853]/40 text-[#8A8478] hover:text-[#F5F0E8] text-xs font-semibold py-2.5 px-3 rounded-xl transition-colors">
-      Later
-    </button>
-  </div>
-</div>
-
-
-<script>
-// ============================================
-// PWA INSTALLATION & SERVICE WORKER ENGINE
-// ============================================
-let deferredInstallPrompt = null;
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
-}
-
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  
-  // Show install button in nav if present
-  const navBtn = document.getElementById('navInstallAppBtn');
-  if (navBtn) navBtn.style.display = 'inline-flex';
-
-  // Check if dismissed recently
-  const dismissedTime = localStorage.getItem('eb_pwa_dismissed');
-  if (!dismissedTime || (Date.now() - Number(dismissedTime)) > 86400000) {
-    setTimeout(showPwaPrompt, 3500);
-  }
-});
-
-function isIosDevice() {
-  return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) && !window.MSStream;
-}
-
-function isInStandaloneMode() {
-  return (window.matchMedia('(display-mode: standalone)').matches) || (window.navigator.standalone === true);
-}
-
-
-
-async function installPwaApp() {
-  if (deferredInstallPrompt) {
-    deferredInstallPrompt.prompt();
-    const choice = await deferredInstallPrompt.userChoice;
-    if (choice.outcome === 'accepted') {
-      dismissPwaPrompt();
-    }
-    deferredInstallPrompt = null;
-  } else {
-    showPwaPrompt();
-  }
-}
-
-window.addEventListener('appinstalled', () => {
-  dismissPwaPrompt();
-  const navBtn = document.getElementById('navInstallAppBtn');
-  if (navBtn) navBtn.style.display = 'none';
-});
-</script>
-
-
-<!-- Mobile & Tablet Sticky Floating Cart Bar -->
-<div id="mobileMenuCartBar" class="mobile-menu-cart-bar" onclick="goToCheckout()">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0F0E0C;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;" id="mobileCartItemCount">
-      0
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Your Order</div>
-      <div style="font-size:16px;font-weight:800;color:var(--gold);" id="mobileCartTotalPrice">Rs 0</div>
-    </div>
-  </div>
-  <button class="btn-sidebar-checkout" style="width:auto;margin:0;padding:8px 18px;font-size:13px;border-radius:20px;">
-    Checkout →
-  </button>
-</div>
-
-
-
-</div>
-
-<style>
-@keyframes slideDown {
-  0% { transform: translateY(-80px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-</style>
-
-<script>
-function triggerAndroidNotificationDownload() {
-  const notif = document.getElementById('androidSysNotification');
-  const bar = document.getElementById('androidNotifProgressBar');
-  const pct = document.getElementById('androidNotifPercent');
-  const timeTxt = document.getElementById('androidNotifTimeText');
-
-  if (!notif) return;
-  notif.style.display = 'block';
-  bar.style.width = '0%';
-  pct.textContent = '0%';
-
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.floor(Math.random() * 8) + 4;
-    if (progress >= 100) {
-      progress = 100;
-      clearInterval(interval);
-      bar.style.width = '100%';
-      pct.textContent = '100%';
-      timeTxt.innerHTML = '<span style="color:#0F9D58;font-weight:bold;">Download complete • Tap to open</span>';
-      setTimeout(() => {
-        confirmNativeInstall();
-      }, 600);
-    } else {
-      bar.style.width = progress + '%';
-      pct.textContent = progress + '%';
-      const timeLeft = Math.max(1, Math.round((100 - progress) / 25));
-      timeTxt.innerHTML = timeLeft + ' seconds left • ' + progress + '%';
-    }
-  }, 100);
-}
-
-function closeAndroidSysNotification() {
-  const notif = document.getElementById('androidSysNotification');
-  if (notif) notif.style.display = 'none';
-}
-</script>
-
-<!-- Mobile Floating App Install Bar (Prominent on Mobile Phones) -->
-<div id="mobileFloatingInstallBar" class="mobile-floating-install-bar" style="position:fixed;bottom:16px;left:16px;right:16px;z-index:9999;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:18px;background:rgba(26,25,23,0.95);border:1px solid rgba(212,168,83,0.4);box-shadow:0 12px 36px rgba(0,0,0,0.7);backdrop-filter:blur(14px);">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <img src="/images/app-logo.png" alt="Ember &amp; Brew App" style="width:40px;height:40px;border-radius:12px;border:1px solid #D4A853;object-fit:cover;flex-shrink:0;">
-    <div>
-      <h4 style="font-size:13px;font-weight:700;color:#F5F0E8;margin:0;line-height:1.2;">Ember &amp; Brew App</h4>
-      <p style="font-size:11px;color:#D4A853;font-weight:600;margin:2px 0 0;">Fast Ordering &amp; Live Tracking</p>
-    </div>
-  </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <button onclick="triggerPwaInstall()" style="background:linear-gradient(135deg,#D4A853,#C4923A);color:#0F0E0C;font-size:12px;font-weight:800;padding:8px 14px;border-radius:12px;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(212,168,83,0.3);white-space:nowrap;">
-      <i class="fa-solid fa-download"></i> Install
-    </button>
-    <button onclick="document.getElementById('mobileFloatingInstallBar').style.display='none'" style="background:none;border:none;color:#8A8478;cursor:pointer;padding:4px;font-size:16px;" aria-label="Dismiss">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-  </div>
-</div>
-
+<div class="toast" id="toast"></div>
 <script src="/pwa-engine.js"></script>
 </body>
 </html>

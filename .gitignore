@@ -17,6 +17,7 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
-.vercel
 *.apk
+!ember-and-brew/public/downloads/ember-and-brew.apk
+
 

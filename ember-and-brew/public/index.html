@@ -693,14 +693,11 @@ async function confirmNativeInstall() {
               <p class="text-brand-300 text-base sm:text-lg max-w-lg mx-auto lg:mx-0 mb-9">Hand-roasted single-origin coffee, seasonal pastries, and plates made from locally sourced ingredients — poured and plated fresh, every morning.</p>
             </div>
             <div>
-              <div class="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 mb-10">
-                <button onclick="document.getElementById('menu-section').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 bg-brand-400 text-brand-950 font-semibold px-7 py-3.5 rounded-full hover:bg-brand-500 transition-colors text-sm">
+              <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-10">
+                <button onclick="document.getElementById('menu-section').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 bg-brand-400 text-brand-950 font-semibold px-8 py-3.5 rounded-full hover:bg-brand-500 transition-colors text-sm">
                   Browse Menu <i class="fa-solid fa-arrow-down text-xs"></i>
                 </button>
-                <button onclick="triggerPwaInstall()" class="inline-flex items-center gap-2 bg-[#D4A853]/15 border border-[#D4A853]/50 text-[#D4A853] font-bold px-6 py-3.5 rounded-full hover:bg-[#D4A853]/25 transition-colors text-sm shadow-sm">
-                  <i class="fa-solid fa-mobile-screen-button"></i> Download App
-                </button>
-                <a href="#" onclick="navigate('tracking');return false" class="inline-flex items-center gap-2 border border-brand-800 text-brand-100 font-medium px-6 py-3.5 rounded-full hover:border-brand-400 transition-colors text-sm">Track Order</a>
+                <a href="#" onclick="navigate('tracking');return false" class="inline-flex items-center gap-2 border border-brand-800 text-brand-100 font-medium px-8 py-3.5 rounded-full hover:border-brand-400 transition-colors text-sm">Track an Order</a>
               </div>
               
               <!-- Stats Row: Bold Visible Gold-Brown Numbers & Labels -->
@@ -4714,25 +4711,5 @@ init();
 </script>
 
 <script src="/pwa-engine.js"></script>
-
-<!-- Mobile Floating App Install Bar (Prominent on Mobile Phones) -->
-<div id="mobileFloatingInstallBar" class="fixed bottom-4 left-4 right-4 z-40 sm:hidden flex items-center justify-between p-3 rounded-2xl bg-[#1A1917]/95 border border-[#D4A853]/40 shadow-2xl backdrop-blur-xl transition-all duration-300">
-  <div class="flex items-center gap-2.5">
-    <img src="/images/app-logo.png" alt="Ember &amp; Brew App" class="w-10 h-10 rounded-xl border border-[#D4A853] object-cover flex-shrink-0">
-    <div>
-      <h4 class="text-xs font-bold text-[#F5F0E8] leading-tight">Ember &amp; Brew App</h4>
-      <p class="text-[10.5px] text-[#D4A853] font-semibold">Fast Ordering &amp; Live Tracking</p>
-    </div>
-  </div>
-  <div class="flex items-center gap-2">
-    <button onclick="triggerPwaInstall()" class="bg-gradient-to-r from-[#D4A853] to-[#C4923A] text-[#0F0E0C] text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-md flex items-center gap-1.5 whitespace-nowrap">
-      <i class="fa-solid fa-download"></i> Install
-    </button>
-    <button onclick="document.getElementById('mobileFloatingInstallBar').style.display='none'" class="text-[#8A8478] hover:text-[#F5F0E8] p-1 text-sm" aria-label="Dismiss">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-  </div>
-</div>
-
 </body>
 </html>

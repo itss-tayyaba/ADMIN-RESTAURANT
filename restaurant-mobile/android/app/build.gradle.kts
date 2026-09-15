@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.restaurant.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -16,7 +17,7 @@ android {
     defaultConfig {
         applicationId = "com.restaurant.app"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -24,12 +25,6 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-
-    packaging {
-        jniLibs {
-            keepDebugSymbols += "**/*.so"
         }
     }
 }
