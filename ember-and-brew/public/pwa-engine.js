@@ -3,12 +3,13 @@
 
 let deferredPwaPrompt = null;
 
-// Register Service Worker
+// Register Service Worker & Proactively Auto-Update Cache
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then(reg => {
-        console.log('[App] Service Worker registered successfully:', reg.scope);
+        reg.update();
+        console.log('[App] Service Worker registered and updated:', reg.scope);
       })
       .catch(err => {
         console.warn('[App] Service Worker registration failed:', err);
