@@ -622,11 +622,8 @@ async function confirmNativeInstall() {
     }
   }
 }
+
 </script>
-
-
-
-
 
 <!-- Particle canvas -->
 <canvas id="particles-canvas" aria-hidden="true"></canvas>
@@ -647,9 +644,10 @@ async function confirmNativeInstall() {
     </div>
 
     <div class="flex items-center gap-3">
-          <button id="navInstallAppBtn" onclick="triggerPwaInstall()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3 py-1.5 rounded-full transition-all" title="Install App">
-    <i class="fa-solid fa-mobile-screen-button"></i> Install App
-  </button>
+      <button id="navInstallAppBtn" onclick="triggerPwaInstall()" class="hidden sm:inline-flex items-center gap-1.5 bg-[#D4A853]/15 hover:bg-[#D4A853]/25 border border-[#D4A853]/40 text-[#D4A853] text-xs font-bold px-3.5 py-1.5 rounded-full transition-all shadow-sm" title="Download Official App">
+        <i class="fa-solid fa-mobile-screen-button text-[#D4A853]"></i> Download App
+      </button>
+
       <!-- Branch Selector Pill Dropdown -->
       <div class="flex items-center gap-2 bg-brand-900/90 border border-brand-800 rounded-full px-3.5 py-1.5 text-xs text-brand-200 shadow-sm" title="Select Branch">
         <i class="fa-solid fa-location-dot text-brand-400"></i>
@@ -684,8 +682,10 @@ async function confirmNativeInstall() {
     <a href="/menu.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Menu</a>
     <a href="#reservation-section" onclick="scrollToReservation();closeMobileNav();return false" class="text-sm text-brand-300 hover:text-brand-100 py-2">Reservation</a>
     <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Customer Portal</a>
+    <button onclick="triggerPwaInstall();closeMobileNav()" class="pwa-install-btn flex items-center justify-center gap-2 bg-[#D4A853]/20 border border-[#D4A853]/50 text-[#D4A853] text-sm font-bold py-2.5 px-4 rounded-xl mt-1">
+      <i class="fa-solid fa-mobile-screen-button"></i> Download App / Install
+    </button>
   </div>
-</div>
 </div>
 
 <!-- Main content -->
@@ -701,12 +701,11 @@ async function confirmNativeInstall() {
         <a href="#" onclick="clearQrTable();return false" class="underline underline-offset-2 font-medium opacity-80 hover:opacity-100">Not you?</a>
       </div>
     </div>
-        <!-- Hero -->
+    <!-- Hero -->
     <div id="hero-section" class="relative overflow-hidden border-b border-brand-800" style="background:radial-gradient(ellipse at 30% 20%,rgba(212,168,83,.1) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(198,125,90,.06) 0%,transparent 50%)">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16 relative z-10">
         <div class="grid lg:grid-cols-2 gap-14 lg:gap-10 items-start">
-
-          <!-- Copy -->
+<!-- Copy -->
           <div class="text-center lg:text-left animate-fade-up flex flex-col justify-start min-h-[520px]">
             <div class="pt-10 lg:pt-20">
               <p id="branch-hero-label" class="text-brand-400 text-xs sm:text-sm tracking-[.3em] uppercase font-medium mb-6 inline-flex items-center gap-2 justify-center lg:justify-start">
