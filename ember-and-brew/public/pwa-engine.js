@@ -32,7 +32,7 @@ function isStandaloneMode() {
 // Update UI buttons based on installability
 function syncPwaInstallButtons() {
   const isInstalled = isStandaloneMode();
-  const installButtons = document.querySelectorAll('.pwa-install-btn, #navInstallAppBtn, #menuInstallBtn, .app-download-btn');
+  const installButtons = document.querySelectorAll('.pwa-install-btn, #navInstallAppBtn, #menuInstallBtn, .app-download-btn, #mobileFloatingInstallBar');
 
   installButtons.forEach(btn => {
     if (isInstalled) {
@@ -238,6 +238,9 @@ function createAppModal() {
   const div = document.createElement('div');
   div.innerHTML = modalHtml;
   document.body.appendChild(div.firstElementChild);
+  if (isIos) {
+    switchAppModalTab('pwa');
+  }
 }
 
 function trackApkDownload() {
