@@ -263,7 +263,7 @@
     try {
       return JSON.parse(text);
     } catch {
-      return { error: `Server returned an unexpected response (status ${res.status}). Is the server running and connected to MongoDB?` };
+      return { error: `Server returned an unexpected response (status ${res.status}).` };
     }
   }
 
@@ -277,6 +277,7 @@
       reservations: document.getElementById('view-reservations'),
       floorplans: document.getElementById('view-floorplans'),
       complaints: document.getElementById('view-complaints'),
+      chefs: document.getElementById('view-chefs'),
       riders: document.getElementById('view-riders'),
       payments: document.getElementById('view-payments')
     },
@@ -377,6 +378,23 @@
     riderFormError: document.getElementById('riderFormError'),
     riderModalCancel: document.getElementById('riderModalCancel'),
 
+    chefsBody: document.getElementById('chefsBody'),
+    chefsCountLabel: document.getElementById('chefsCountLabel'),
+    addChefBtn: document.getElementById('addChefBtn'),
+    chefModalBackdrop: document.getElementById('chefModalBackdrop'),
+    chefModalTitle: document.getElementById('chefModalTitle'),
+    chefForm: document.getElementById('chefForm'),
+    chefId: document.getElementById('chefId'),
+    chefUsername: document.getElementById('chefUsername'),
+    chefUsernameField: document.getElementById('chefUsernameField'),
+    chefPassword: document.getElementById('chefPassword'),
+    chefPasswordField: document.getElementById('chefPasswordField'),
+    chefName: document.getElementById('chefName'),
+    chefEmail: document.getElementById('chefEmail'),
+    chefPhone: document.getElementById('chefPhone'),
+    chefFormError: document.getElementById('chefFormError'),
+    chefModalCancel: document.getElementById('chefModalCancel'),
+
     toast: document.getElementById('toast')
   };
 
@@ -395,8 +413,81 @@
   let currentComplaintFilter = '';
   let deliveryRiders = []; // active riders only, for the orders-view assign dropdown
   let allRiders = [];      // every rider (active + inactive), for the Riders view
+  let allChefs = [];
   let regions = [];
   let maxActiveOrders = 5;
+
+  // ---------- Kitchen chefs ----------
+  async function refreshChefsView() {
+    els.chefsBody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading…</td></tr>';
+    try {
+      const res = await fetch('/api/kitchen/chefs', { headers: authHeaders });
+      if (handleAuthFailure(res)) return;
+      const data = await safeJson(res);
+      if (!res.ok || !data.success) throw new Error(data.message || 'Could not load chefs');
+      allChefs = data.chefs || [];
+      renderChefsTable();
+    } catch (err) {
+      els.chefsBody.innerHTML = `<tr><td colspan="6" class="empty-state">${escapeHtml(err.message || 'Could not load chefs')}</td></tr>`;
+    }
+  }
+
+  function renderChefsTable() {
+    els.chefsCountLabel.textContent = allChefs.length ? `${allChefs.length} chef${allChefs.length === 1 ? '' : 's'}` : 'No chefs yet';
+    if (!allChefs.length) {
+      els.chefsBody.innerHTML = '<tr><td colspan="6" class="empty-state">No kitchen chefs yet. Add one to get started.</td></tr>';
+      return;
+    }
+    els.chefsBody.innerHTML = allChefs.map(c => `
+      <tr>
+        <td>${escapeHtml(c.name || c.username)}</td><td class="cust">${escapeHtml(c.username)}</td>
+        <td>${c.email ? escapeHtml(c.email) : '<span class="cust">Not set</span>'}</td>
+        <td>${c.phone ? escapeHtml(c.phone) : '<span class="cust">Not set</span>'}</td>
+        <td><span class="badge ${c.active ? 'delivered' : 'cancelled'}">${c.active ? 'active' : 'inactive'}</span></td>
+        <td style="display:flex;gap:8px;flex-wrap:wrap;"><button class="reply-save-btn edit-chef-btn" data-id="${c._id}">Edit Chef</button><button class="btn-ghost toggle-chef-btn" data-id="${c._id}" style="padding:6px 12px;font-size:12px;">${c.active ? 'Deactivate' : 'Activate'}</button></td>
+      </tr>`).join('');
+    els.chefsBody.querySelectorAll('.edit-chef-btn').forEach(btn => btn.addEventListener('click', () => openChefModal(allChefs.find(c => c._id === btn.dataset.id))));
+    els.chefsBody.querySelectorAll('.toggle-chef-btn').forEach(btn => btn.addEventListener('click', () => toggleChef(btn.dataset.id)));
+  }
+
+  function openChefModal(chef = null) {
+    els.chefForm.reset(); els.chefFormError.hidden = true;
+    const editing = Boolean(chef);
+    els.chefModalTitle.textContent = editing ? `Edit Chef — ${chef.name || chef.username}` : 'Add Kitchen Chef';
+    els.chefId.value = editing ? chef._id : '';
+    els.chefUsernameField.hidden = editing; els.chefPasswordField.hidden = editing;
+    els.chefName.value = editing ? (chef.name || '') : '';
+    els.chefEmail.value = editing ? (chef.email || '') : '';
+    els.chefPhone.value = editing ? (chef.phone || '') : '';
+    els.chefModalBackdrop.hidden = false;
+  }
+  function closeChefModal() { els.chefModalBackdrop.hidden = true; }
+  async function toggleChef(id) {
+    try {
+      const res = await fetch(`/api/kitchen/chefs/${id}/toggle`, { method: 'PUT', headers: authHeaders });
+      if (handleAuthFailure(res)) return;
+      const data = await safeJson(res);
+      if (!res.ok || !data.success) throw new Error(data.message || 'Could not update chef');
+      showToast(data.message); refreshChefsView();
+    } catch (err) { showToast(err.message || 'Could not update chef', true); }
+  }
+  els.addChefBtn && els.addChefBtn.addEventListener('click', () => openChefModal());
+  els.chefModalCancel && els.chefModalCancel.addEventListener('click', closeChefModal);
+  els.chefModalBackdrop && els.chefModalBackdrop.addEventListener('click', e => { if (e.target === els.chefModalBackdrop) closeChefModal(); });
+  els.chefForm && els.chefForm.addEventListener('submit', async e => {
+    e.preventDefault(); els.chefFormError.hidden = true;
+    const id = els.chefId.value;
+    const body = { name: els.chefName.value.trim(), email: els.chefEmail.value.trim(), phone: els.chefPhone.value.trim() };
+    if (!id) { body.username = els.chefUsername.value.trim(); body.password = els.chefPassword.value; }
+    if (!id && (!body.username || !body.password)) { els.chefFormError.textContent = 'Username and password are required.'; els.chefFormError.hidden = false; return; }
+    try {
+      const res = await fetch(id ? `/api/kitchen/chefs/${id}` : '/api/kitchen/chefs', { method: id ? 'PUT' : 'POST', headers: authHeaders, body: JSON.stringify(body) });
+      if (handleAuthFailure(res)) return;
+      const data = await safeJson(res);
+      if (!res.ok || !data.success) throw new Error(data.message || 'Could not save chef');
+      showToast(data.message || 'Chef saved'); closeChefModal(); refreshChefsView();
+    } catch (err) { els.chefFormError.textContent = err.message || 'Something went wrong'; els.chefFormError.hidden = false; }
+  });
 
   // ---------- Delivery riders ----------
   async function loadRiders() {
@@ -637,7 +728,7 @@
     currentView = name;
     Object.entries(els.views).forEach(([key, el]) => { el.hidden = key !== name; });
     els.navItems.forEach(btn => btn.classList.toggle('active', btn.dataset.view === name));
-    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', floorplans: 'Floor Plans', complaints: 'Complaints', riders: 'Delivery Riders', payments: 'Payment Settings' };
+    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', floorplans: 'Floor Plans', complaints: 'Complaints', chefs: 'Kitchen Chefs', riders: 'Delivery Riders', payments: 'Payment Settings' };
     els.pageTitle.textContent = titles[name] || 'Overview';
     if (name === 'orders') { loadRiders(); loadOrders(); }
     if (name === 'overview') loadOverview();
@@ -646,6 +737,7 @@
     if (name === 'floorplans') { loadTables(); loadReservations(); }
     if (name === 'complaints') loadComplaints();
     if (name === 'riders') refreshRidersView();
+    if (name === 'chefs') refreshChefsView();
     if (name === 'payments') loadPaymentSettings();
   }
   els.navItems.forEach(btn => btn.addEventListener('click', () => { switchView(btn.dataset.view); closeSidebar(); }));
@@ -736,52 +828,58 @@
   // ---------- Overview ----------
   async function loadOverview() {
     try {
-      const [statsRes, ordersRes] = await Promise.all([
-        fetch('/api/orders/stats/summary', { headers: authHeaders }),
-        fetch('/api/orders', { headers: authHeaders })
-      ]);
-      if (handleAuthFailure(statsRes) || handleAuthFailure(ordersRes)) return;
-
+      const statsRes = await fetch('/api/orders/stats/summary', { headers: authHeaders });
+      if (handleAuthFailure(statsRes)) return;
       const stats = await safeJson(statsRes);
-      const orders = await safeJson(ordersRes);
-      if (!statsRes.ok) throw new Error(stats.error || 'Failed to load stats');
-      if (!ordersRes.ok) throw new Error(orders.error || 'Failed to load orders');
-
-      // If this is the first load, prime prevOrdersMap
-      if (prevOrdersMap.size === 0) {
-        orders.forEach(o => prevOrdersMap.set(o._id || o.id || o.orderNumber, { status: o.status }));
+      if (statsRes.ok) {
+        els.statRevenue.textContent = money(stats.totalRevenue);
+        els.statRevenueSub.textContent = (stats.totalOrders || 0) + ' orders total';
+        els.statToday.textContent = stats.todayOrders || 0;
+        els.statPending.textContent = stats.pendingCount || 0;
+        renderPopularDishes(stats.popularDishes || []);
+      } else {
+        throw new Error(stats.error || 'Failed to load stats');
       }
-      // detect status transitions (prev -> current) and notify admin when an order becomes ready
-      const newOrdersMap = new Map();
-      orders.forEach(o => newOrdersMap.set(o._id || o.id || o.orderNumber, o));
-
-      // compare against prevOrdersMap and show notifications for transitions to 'ready'
-      newOrdersMap.forEach((order, id) => {
-        const prev = prevOrdersMap.get(id);
-        if (prev && prev.status !== 'ready' && order.status === 'ready') {
-          showToast(`Order ${order.orderNumber || id} is READY — send to service`, false);
-        }
-      });
-
-      // update previous map
-      prevOrdersMap = new Map();
-      orders.forEach(o => prevOrdersMap.set(o._id || o.id || o.orderNumber, { status: o.status }));
-
-      allOrders = orders;
-
-      els.statRevenue.textContent = money(stats.totalRevenue);
-      els.statRevenueSub.textContent = stats.totalOrders + ' orders total';
-      els.statToday.textContent = stats.todayOrders;
-      els.statPending.textContent = stats.pendingCount;
-
-      renderRecentOrders(orders.slice(0, 6));
-      renderPopularDishes(stats.popularDishes || []);
-      renderRevenueOverview(orders);
-      renderOrderTypeDonut(orders);
     } catch (err) {
       showToast(err.message || 'Could not load dashboard stats', true);
-      els.recentOrdersBody.innerHTML = '<tr><td colspan="4" class="empty-state">Could not reach the server.</td></tr>';
       els.popularDishesBody.innerHTML = '<div class="empty-state">Could not reach the server.</div>';
+    }
+
+    try {
+      const ordersRes = await fetch('/api/orders', { headers: authHeaders });
+      if (handleAuthFailure(ordersRes)) return;
+      const orders = await safeJson(ordersRes);
+      if (!ordersRes.ok) throw new Error(orders.error || 'Failed to load orders');
+
+      if (Array.isArray(orders)) {
+        // If this is the first load, prime prevOrdersMap
+        if (prevOrdersMap.size === 0) {
+          orders.forEach(o => prevOrdersMap.set(o._id || o.id || o.orderNumber, { status: o.status }));
+        }
+        // detect status transitions (prev -> current) and notify admin when an order becomes ready
+        const newOrdersMap = new Map();
+        orders.forEach(o => newOrdersMap.set(o._id || o.id || o.orderNumber, o));
+
+        // compare against prevOrdersMap and show notifications for transitions to 'ready'
+        newOrdersMap.forEach((order, id) => {
+          const prev = prevOrdersMap.get(id);
+          if (prev && prev.status !== 'ready' && order.status === 'ready') {
+            showToast(`Order ${order.orderNumber || id} is READY — send to service`, false);
+          }
+        });
+
+        // update previous map
+        prevOrdersMap = new Map();
+        orders.forEach(o => prevOrdersMap.set(o._id || o.id || o.orderNumber, { status: o.status }));
+
+        allOrders = orders;
+
+        renderRecentOrders(orders.slice(0, 6));
+        renderRevenueOverview(orders);
+        renderOrderTypeDonut(orders);
+      }
+    } catch (err) {
+      els.recentOrdersBody.innerHTML = '<tr><td colspan="4" class="empty-state">Could not reach the server.</td></tr>';
     }
 
     try {
@@ -789,9 +887,9 @@
       if (handleAuthFailure(res)) return;
       const items = await safeJson(res);
       if (!res.ok) throw new Error(items.error || 'Failed to load menu');
-      allMenuItems = items;
-      els.statMenuCount.textContent = items.length;
-      const unavailable = items.filter(i => !i.available).length;
+      allMenuItems = Array.isArray(items) ? items : [];
+      els.statMenuCount.textContent = allMenuItems.length;
+      const unavailable = allMenuItems.filter(i => !i.available).length;
       els.statMenuSub.textContent = unavailable ? unavailable + ' unavailable' : 'all available';
     } catch (err) {
       showToast(err.message || 'Could not load menu stats', true);
@@ -2098,7 +2196,7 @@
   // ---------- Boot ----------
   async function boot() {
     await loadTenantBranding();
-    loadOverviewLite();
+    loadOverview();
   }
   boot();
   // Defer heavier badge/table requests slightly so the UI paints first
@@ -2109,7 +2207,7 @@
   // Keep views fresh, but with a longer interval and lighter overview refresh
   setInterval(() => {
     if (currentView === 'orders') loadOrders();
-    if (currentView === 'overview') loadOverviewLite();
+    if (currentView === 'overview') loadOverview();
     if (currentView === 'reservations') loadReservations();
   }, 20000);
 })();

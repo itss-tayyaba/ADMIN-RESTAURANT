@@ -140,7 +140,7 @@ form.addEventListener("submit", async (e) => {
 
     if (data.user.role === "superadmin") {
       window.location.href = "/superadmin";
-    } else if (data.user.role === "admin") {
+    } else if (data.user.role === "admin" || data.user.role === "owner") {
       window.location.href = "/admin";
     } else if (data.user.role === "chef") {
       window.location.href = "/kitchen";

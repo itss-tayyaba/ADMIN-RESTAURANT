@@ -101,6 +101,91 @@ const adminAuth = (req, res, next) => {
 
 };
 
+// =====================================
+// ADMIN: MANAGE CHEF ACCOUNTS
+// =====================================
+async function chefScope(req) {
+    const branchId = resolveBranchId(req.user, req.query);
+    const scope = { role: "chef" };
+    if (branchId) scope.branchId = branchId;
+    const tenantId = req.user.role === "superadmin" ? (req.query.tenantId || null) : req.user.tenantId;
+    if (tenantId) await addTenantScope(scope, tenantId);
+    return scope;
+}
+
+router.get("/chefs", adminAuth, async (req, res) => {
+    try {
+        const chefs = await AdminUser.find(await chefScope(req))
+            .select("name username email phone active branchId createdAt")
+            .sort({ createdAt: -1 });
+        res.json({ success: true, chefs });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.post("/chefs", adminAuth, async (req, res) => {
+    try {
+        const { username, password, name, email, phone } = req.body;
+        if (!username?.trim() || !password) return res.status(400).json({ success: false, message: "Username and password are required." });
+        const branchId = req.user.role === "superadmin" ? req.body.branchId : req.user.branchId;
+        if (!branchId) return res.status(400).json({ success: false, message: "A branch is required when adding a chef." });
+
+        const Branch = require("../models/Branch");
+        const branch = await Branch.findById(branchId).select("tenantId");
+        if (!branch || (req.user.role !== "superadmin" && String(branch.tenantId) !== String(req.user.tenantId))) {
+            return res.status(404).json({ success: false, message: "Branch not found." });
+        }
+        const cleanUsername = username.trim();
+        if (await AdminUser.findOne({ tenantId: branch.tenantId, username: cleanUsername })) {
+            return res.status(409).json({ success: false, message: "That username is already taken." });
+        }
+        const chef = await AdminUser.create({ username: cleanUsername, password, name: name?.trim() || cleanUsername, email: email?.trim() || "", phone: phone?.trim() || "", role: "chef", active: true, tenantId: branch.tenantId, branchId });
+        res.status(201).json({
+            success: true,
+            message: `${chef.name} was added as a chef.`,
+            chef: { _id: chef._id, name: chef.name, username: chef.username, email: chef.email, phone: chef.phone, active: chef.active }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put("/chefs/:id", adminAuth, async (req, res) => {
+    try {
+        const chef = await AdminUser.findOne({ _id: req.params.id, ...(await chefScope(req)) });
+        if (!chef) return res.status(404).json({ success: false, message: "Chef not found." });
+        const { name, email, phone } = req.body;
+        if (typeof name === "string" && name.trim()) chef.name = name.trim();
+        if (typeof email === "string") chef.email = email.trim();
+        if (typeof phone === "string") chef.phone = phone.trim();
+        await chef.save();
+        res.json({
+            success: true,
+            message: `${chef.name || chef.username}'s details were updated.`,
+            chef: { _id: chef._id, name: chef.name, username: chef.username, email: chef.email, phone: chef.phone, active: chef.active }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put("/chefs/:id/toggle", adminAuth, async (req, res) => {
+    try {
+        const chef = await AdminUser.findOne({ _id: req.params.id, ...(await chefScope(req)) });
+        if (!chef) return res.status(404).json({ success: false, message: "Chef not found." });
+        chef.active = !chef.active;
+        await chef.save();
+        res.json({
+            success: true,
+            message: `${chef.name || chef.username} is now ${chef.active ? "active" : "inactive"}.`,
+            chef: { _id: chef._id, name: chef.name, username: chef.username, email: chef.email, phone: chef.phone, active: chef.active }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 
 
 // =====================================

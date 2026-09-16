@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
@@ -149,6 +150,37 @@ router.get('/', adminAuth, async (req, res) => {
 });
 
 // GET /api/orders/:orderNumber — public order tracking lookup
+// GET /api/orders/stats/summary - Admin dashboard overview metrics
+router.get('/stats/summary', adminAuth, async (req, res) => {
+  try {
+    const tenantId = req.admin.role === 'superadmin' ? (req.query.tenantId || null) : req.admin.tenantId;
+    const branchId = resolveBranchId(req.admin, req.query);
+    const filter = {};
+    if (tenantId) await addTenantScope(filter, tenantId);
+    if (branchId) filter.branchId = branchId;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const activeFilter = { ...filter, status: { $ne: 'cancelled' } };
+    const [totals, todayOrders, pendingCount, popularDishes] = await Promise.all([
+      Order.aggregate([{ $match: activeFilter }, { $group: { _id: null, totalRevenue: { $sum: '$total' }, totalOrders: { $sum: 1 } } }]),
+      Order.countDocuments({ ...filter, createdAt: { $gte: todayStart } }),
+      Order.countDocuments({ ...filter, status: { $in: ['pending_admin', 'pending_kitchen', 'received', 'preparing'] } }),
+      Order.aggregate([
+        { $match: activeFilter },
+        { $unwind: '$items' },
+        { $group: { _id: '$items.name', orders: { $sum: '$items.qty' }, revenue: { $sum: { $multiply: ['$items.price', '$items.qty'] } } } },
+        { $sort: { orders: -1 } }, { $limit: 5 },
+        { $project: { _id: 0, name: '$_id', qty: '$orders', orders: 1, revenue: 1 } }
+      ])
+    ]);
+    const summary = totals[0] || { totalRevenue: 0, totalOrders: 0 };
+    res.json({ totalRevenue: summary.totalRevenue || 0, totalOrders: summary.totalOrders || 0, todayOrders, pendingCount, popularDishes });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to fetch dashboard stats' });
+  }
+});
+
 router.get('/:orderNumber', async (req, res) => {
   try {
     const order = await Order.findOne({ orderNumber: req.params.orderNumber.toUpperCase() })
@@ -161,11 +193,15 @@ router.get('/:orderNumber', async (req, res) => {
   }
 });
 
-// PATCH /api/orders/:id/status — Admin update status
-router.patch('/:id/status', adminAuth, async (req, res) => {
+// PUT & PATCH /api/orders/:id/status — Admin update status (supports _id or orderNumber)
+const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const query = { _id: req.params.id };
+    const idOrNum = req.params.id;
+    const query = mongoose.isValidObjectId(idOrNum)
+      ? { $or: [{ _id: idOrNum }, { orderNumber: String(idOrNum).toUpperCase() }] }
+      : { orderNumber: String(idOrNum).toUpperCase() };
+
     const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
     if (tenantId) await addTenantScope(query, tenantId);
     const branchId = resolveBranchId(req.admin, req.query);
@@ -180,6 +216,9 @@ router.patch('/:id/status', adminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });
   }
-});
+};
+
+router.patch('/:id/status', adminAuth, updateOrderStatus);
+router.put('/:id/status', adminAuth, updateOrderStatus);
 
 module.exports = router;
