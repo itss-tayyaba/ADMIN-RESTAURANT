@@ -21,3 +21,6 @@ Thumbs.db
 !ember-and-brew/public/downloads/ember-and-brew.apk
 
 
+
+# Vercel
+.vercel/
