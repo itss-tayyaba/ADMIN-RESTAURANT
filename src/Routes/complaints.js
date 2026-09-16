@@ -61,7 +61,9 @@ router.post('/', customerAuth, async (req, res) => {
 // including the admin's status/response
 router.get('/mine/list', customerAuth, async (req, res) => {
   try {
-    const complaints = await Complaint.find({ customer: req.customer.id }).sort({ createdAt: -1 });
+    const query = { customer: req.customer.id };
+    if (req.customer.tenantId) query.tenantId = req.customer.tenantId;
+    const complaints = await Complaint.find(query).sort({ createdAt: -1 });
     res.json(complaints);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch your complaints' });

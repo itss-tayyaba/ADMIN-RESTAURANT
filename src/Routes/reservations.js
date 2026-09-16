@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const Reservation = require('../models/Reservation');
 const Customer = require('../models/Customer');
+const Branch = require('../models/Branch');
 const { customerAuth } = require('./customerAuth');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
 const { resolveTenant } = require('../utils/tenantScope');
@@ -150,9 +151,15 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const branchId = await resolvePublicBranchId(req.query);
+    const tenantId = await resolveTenant(req);
+    const requestedBranchId = req.query.branchId;
+    const branchQuery = { tenantId, isActive: true };
+    if (requestedBranchId) branchQuery._id = requestedBranchId;
+    const branch = await Branch.findOne(branchQuery).sort({ createdAt: 1 }).select('_id tenantId');
+    if (!branch) return res.status(400).json({ error: 'Choose an active branch for this restaurant.' });
     const reservation = await Reservation.create({
-      branchId,
+      tenantId: branch.tenantId,
+      branchId: branch._id,
       guestName,
       email,
       phone: cleanPhone,
@@ -205,6 +212,7 @@ router.get('/mine/list', customerAuth, async (req, res) => {
       }
       query.$or.push({ phone: { $in: Array.from(new Set(phoneVars)) } });
     }
+    if (req.customer.tenantId) query.tenantId = req.customer.tenantId;
     const reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
     res.json(reservations);
   } catch (err) {

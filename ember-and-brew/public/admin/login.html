@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -31,6 +31,10 @@
         <label class="field">
           <span>Username</span>
           <input type="text" id="username" autocomplete="username" required />
+        </label>
+        <label class="field" id="tenantField">
+          <span>Restaurant code <small>(only if supplied by your owner)</small></span>
+          <input type="text" id="tenant" autocomplete="organization" placeholder="e.g. bella-italia" />
         </label>
         <label class="field">
           <span>Password</span>
@@ -72,11 +76,13 @@ const errorEl = document.getElementById("loginError");
 const btn = document.getElementById("loginBtn");
 const roleButtons = document.querySelectorAll(".role-btn");
 let selectedRole = null;
+const tenantField = document.getElementById('tenantField');
 
 roleButtons.forEach(b => {
   b.addEventListener("click", () => {
     selectedRole = b.dataset.role;
     roleButtons.forEach(x => x.classList.toggle("active", x === b));
+    tenantField.hidden = selectedRole === 'superadmin';
     errorEl.hidden = true;
   });
 });
@@ -88,7 +94,7 @@ const user = JSON.parse(localStorage.getItem("eb_admin_user") || 'null');
 if (token && user) {
   if (user.role === "superadmin") {
     window.location.href = "/superadmin";
-  } else if (user.role === "admin") {
+  } else if (user.role === "admin" || user.role === "owner") {
     window.location.href = "/admin";
   } else if (user.role === "chef") {
     window.location.href = "/kitchen";
@@ -114,12 +120,13 @@ form.addEventListener("submit", async (e) => {
 
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
+  const tenant = document.getElementById("tenant").value.trim();
 
   try {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, role: selectedRole })
+      body: JSON.stringify({ username, password, role: selectedRole, tenant })
     });
 
     const data = await response.json();

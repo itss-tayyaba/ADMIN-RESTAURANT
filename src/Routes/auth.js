@@ -4,21 +4,48 @@ const AdminUser = require('../models/AdminUser');
 const Tenant = require('../models/Tenant');
 const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 // POST /api/auth/login — admin login
 router.post('/login', async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, password, role, tenant } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-    const user = await AdminUser.findOne({ username });
+    let tenantRecord = null;
+    if (tenant && role !== 'superadmin') {
+      const tenantValue = String(tenant).trim().toLowerCase();
+      tenantRecord = await Tenant.findOne({
+        $or: [{ slug: tenantValue }, ...(mongoose.isValidObjectId(tenantValue) ? [{ _id: tenantValue }] : [])]
+      });
+      if (!tenantRecord || !['active', 'trial'].includes(tenantRecord.status)) {
+        return res.status(401).json({ error: 'This restaurant is unavailable.' });
+      }
+    }
+
+    const userQuery = { username: String(username).trim() };
+    if (tenantRecord) userQuery.tenantId = tenantRecord._id;
+    if (role) {
+      if (role === 'admin') userQuery.role = { $in: ['admin', 'owner'] };
+      else userQuery.role = role;
+    }
+    const matches = await AdminUser.find(userQuery).limit(2);
+    if (!tenantRecord && matches.length > 1) {
+      return res.status(400).json({ error: 'Enter your restaurant code to sign in.' });
+    }
+    const user = matches[0];
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    if (!user.active) return res.status(403).json({ error: 'This account has been disabled.' });
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
     if (role && user.role !== role) {
-      return res.status(403).json({ error: 'This account is registered as "' + user.role + '", not "' + role + '". Please select the correct role.' });
+      const isOwnerAdmin = role === 'admin' && user.role === 'owner';
+      if (!isOwnerAdmin) {
+        return res.status(403).json({ error: 'This account is registered as "' + user.role + '", not "' + role + '". Please select the correct role.' });
+      }
     }
 
     // Auto-link staff to default tenant and branch if missing
@@ -28,6 +55,13 @@ router.post('/login', async (req, res) => {
       if (!user.tenantId) user.tenantId = defaultTenant._id;
       if (!user.branchId) user.branchId = defaultBranch._id;
       await user.save();
+    }
+
+    if (user.role !== 'superadmin') {
+      const accountTenant = await Tenant.findById(user.tenantId).select('status');
+      if (!accountTenant || !['active', 'trial'].includes(accountTenant.status)) {
+        return res.status(403).json({ error: 'This restaurant account is suspended.' });
+      }
     }
 
     const token = jwt.sign(

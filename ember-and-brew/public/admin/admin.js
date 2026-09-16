@@ -15,7 +15,7 @@
   // Without that param there is nothing for this dashboard to show, so
   // send them back to pick one.
   let viewingBranchId = null;
-  if (user.role !== 'admin') {
+  if (user.role !== 'admin' && user.role !== 'owner') {
     if (user.role === 'superadmin') {
       viewingBranchId = new URLSearchParams(window.location.search).get('branchId');
       if (!viewingBranchId) {

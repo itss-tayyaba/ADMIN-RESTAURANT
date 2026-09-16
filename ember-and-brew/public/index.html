@@ -1629,10 +1629,17 @@ let CATEGORIES = ["All","Desi","Fast Food","Pizza","Coffee","Sandwiches","Bakery
 // as /?branch=london-uk (or retain a direct ?branchId= link); this makes a
 // London menu/cart/order independent from the Pakistan branch.
 const branchState = { id: localStorage.getItem('eb_branch_id') || '', info: null };
+const publicTenantSlug = new URLSearchParams(window.location.search).get('tenant') ||
+  (window.location.pathname.startsWith('/r/') ? window.location.pathname.split('/')[2] : '') ||
+  localStorage.getItem('eb_tenant_slug') || 'ember-and-brew';
+localStorage.setItem('eb_tenant_slug', publicTenantSlug);
 function branchUrl(url) {
-  if (!branchState.id || !url.startsWith('/api/')) return url;
+  if (!url.startsWith('/api/')) return url;
+  const params = [];
+  if (branchState.id) params.push(`branchId=${encodeURIComponent(branchState.id)}`);
+  params.push(`tenant=${encodeURIComponent(publicTenantSlug)}`);
   const joiner = url.includes('?') ? '&' : '?';
-  return `${url}${joiner}branchId=${encodeURIComponent(branchState.id)}`;
+  return `${url}${joiner}${params.join('&')}`;
 }
 // Images can be uploaded by an admin (stored as a data URI) or entered as a
 // URL/path.  Make only relative public-image paths absolute so they work on

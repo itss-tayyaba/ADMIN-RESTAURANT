@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const RestaurantTable = require('../models/RestaurantTable');
 const Reservation = require('../models/Reservation');
+const Branch = require('../models/Branch');
 const { isAdminRole, resolveBranchId, addBranchScope } = require('../utils/branchScope');
 const router = express.Router();
 
@@ -98,7 +99,9 @@ router.post('/', adminAuth, async (req, res) => {
     if (!tableNumber || !Number.isInteger(seats) || seats < 1 || seats > 30 || !VALID_AREAS.includes(area)) return res.status(400).json({ error: 'Enter a table number, area, and seat count.' });
     const branchId = resolveBranchId(req.admin, req.query);
     if (!branchId) return res.status(400).json({ error: 'Select a branch before adding a table.' });
-    const table = await RestaurantTable.create({ branchId, tableNumber, seats, area });
+    const branch = await Branch.findById(branchId).select('tenantId');
+    if (!branch) return res.status(404).json({ error: 'Branch not found.' });
+    const table = await RestaurantTable.create({ tenantId: branch.tenantId, branchId, tableNumber, seats, area });
     res.status(201).json(table);
   } catch (err) {
     res.status(err.code === 11000 ? 409 : 500).json({ error: err.code === 11000 ? 'That table number already exists.' : 'Failed to add table.' });

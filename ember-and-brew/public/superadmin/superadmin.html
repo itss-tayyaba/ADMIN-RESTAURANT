@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Superadmin — Ember & Brew</title>
+<title>Super Admin — Platform Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="superadmin.css">
 </head>
 <body>
@@ -14,45 +15,325 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="sidebar-brand">
-      <img src="/images/app-logo.png" alt="Ember &amp; Brew" style="width:30px;height:30px;border-radius:8px;object-fit:cover;border:1px solid #D4A853;box-shadow:0 0 6px rgba(212,168,83,0.3);">
-      <span class="name">Ember <em>&amp;</em> Brew</span>
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <img src="/images/app-logo.png" alt="Platform Logo" class="sidebar-logo">
+        <div class="brand-text">
+          <span class="brand-title">SUPER ADMIN</span>
+          <span class="brand-sub">Multi-Tenant Platform</span>
+        </div>
+      </div>
     </div>
-    <p class="sidebar-tagline">Superadmin</p>
 
-    <button class="nav-item active" data-view="overview"><span class="ic">🌐</span> All Branches</button>
+    <nav class="sidebar-nav">
+      <button class="nav-item" data-view="dashboard">
+        <span class="ic">📊</span>
+        <span class="txt">Dashboard</span>
+      </button>
+
+      <div class="nav-divider"></div>
+
+      <button class="nav-item active" data-view="tenants">
+        <span class="ic">🏪</span>
+        <span class="txt">Tenants</span>
+      </button>
+
+      <button class="nav-item" data-view="branches">
+        <span class="ic">🏢</span>
+        <span class="txt">Branches</span>
+      </button>
+
+      <button class="nav-item" data-view="users">
+        <span class="ic">👥</span>
+        <span class="txt">Users</span>
+      </button>
+
+      <button class="nav-item" data-view="orders">
+        <span class="ic">📦</span>
+        <span class="txt">Orders</span>
+      </button>
+
+      <button class="nav-item" data-view="subscriptions">
+        <span class="ic">💳</span>
+        <span class="txt">Subscriptions</span>
+      </button>
+
+      <button class="nav-item" data-view="settings">
+        <span class="ic">⚙️</span>
+        <span class="txt">Settings</span>
+      </button>
+    </nav>
 
     <div class="sidebar-foot">
       <div class="sidebar-user">
         <div class="sidebar-avatar" id="userAvatar">S</div>
         <div class="who">
           <span class="n" id="userNameLabel">Superadmin</span>
-          <span class="r">Platform-wide access</span>
+          <span class="r">Platform Root</span>
         </div>
       </div>
-      <button class="logout-btn" id="logoutBtn">Log out</button>
+      <button class="logout-btn" id="logoutBtn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log out</button>
     </div>
   </aside>
 
-  <!-- Main -->
+  <!-- Main Workspace -->
   <div class="main">
     <header class="topbar">
-      <div>
-        <h1 class="serif" id="pageTitle">All Branches</h1>
-        <div class="crumb" id="breadcrumb"></div>
+      <div class="topbar-left">
+        <h1 class="serif" id="pageTitle">Tenants</h1>
+        <div class="crumb" id="breadcrumb">Tenant Restaurant Brands</div>
       </div>
       <div class="topbar-right">
-        <span class="scope-pill" id="scopePill">Combined — all branches</span>
+        <div class="global-search-wrap">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="globalSearchInput" placeholder="Search restaurants, users, branches…">
+        </div>
+        <span class="scope-pill" id="scopePill">Platform Superadmin</span>
       </div>
     </header>
 
-    <div class="content" id="content">
-      <div class="loading">Loading branches…</div>
-    </div>
+    <main class="content" id="content">
+      <div class="loading">Loading Super Admin platform…</div>
+    </main>
   </div>
 
 </div>
 
+<!-- MODAL 1: Create New Tenant Restaurant -->
+<div class="modal-overlay hidden" id="createTenantModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <h2><i class="fa-solid fa-store" style="color:var(--gold);"></i> Add New Restaurant Tenant</h2>
+        <p class="modal-subtitle">Register a new restaurant brand and auto-provision owner credentials.</p>
+      </div>
+      <button class="modal-close-btn" id="closeCreateTenantModal">&times;</button>
+    </div>
+
+    <form id="createTenantForm" class="modal-form">
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Restaurant Name *</span>
+          <input type="text" id="newTenantName" name="name" placeholder="e.g. Bella Italia" required autocomplete="off">
+        </label>
+        <label class="form-label">
+          <span>Restaurant Slug *</span>
+          <input type="text" id="newTenantSlug" name="slug" placeholder="e.g. bella-italia" required autocomplete="off">
+          <small class="field-hint">Auto-derived for URLs: <code>/r/your-slug</code></small>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Owner Name *</span>
+          <input type="text" id="newOwnerName" name="ownerName" placeholder="e.g. Marco Rossi" required>
+        </label>
+        <label class="form-label">
+          <span>Owner Email *</span>
+          <input type="email" id="newOwnerEmail" name="ownerEmail" placeholder="e.g. owner@restaurant.com" required>
+        </label>
+      </div>
+
+      <div class="form-row-3">
+        <label class="form-label">
+          <span>Country *</span>
+          <select id="newTenantCountry" name="country" required>
+            <option value="Pakistan" selected>Pakistan</option>
+            <option value="Australia">Australia</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="United States">United States</option>
+            <option value="United Arab Emirates">United Arab Emirates</option>
+            <option value="Canada">Canada</option>
+            <option value="Germany">Germany</option>
+            <option value="Saudi Arabia">Saudi Arabia</option>
+            <option value="Qatar">Qatar</option>
+            <option value="Singapore">Singapore</option>
+          </select>
+        </label>
+
+        <label class="form-label">
+          <span>Currency (ISO) *</span>
+          <input type="text" id="newTenantCurrency" name="currency" value="PKR" required>
+        </label>
+
+        <label class="form-label">
+          <span>Timezone *</span>
+          <input type="text" id="newTenantTimezone" name="timezone" value="Asia/Karachi" required>
+        </label>
+      </div>
+
+      <div class="form-accordion-toggle" id="toggleAdvTenantDetails">
+        <span><i class="fa-solid fa-sliders"></i> Optional Brand Details (Tagline &amp; Colors)</span>
+        <i class="fa-solid fa-chevron-down" id="advChevron"></i>
+      </div>
+
+      <div class="form-accordion-content hidden" id="advTenantDetails">
+        <div class="form-row-2">
+          <label class="form-label">
+            <span>Tagline / Slogan</span>
+            <input type="text" name="tagline" placeholder="e.g. Artisan Wood-Fired Pizza &amp; Pasta">
+          </label>
+          <label class="form-label">
+            <span>Primary Brand Color</span>
+            <input type="color" name="primaryColor" value="#D4A853" class="color-picker-input">
+          </label>
+        </div>
+      </div>
+
+      <div class="notice-info">
+        <i class="fa-solid fa-key" style="color:var(--gold);"></i>
+        <div>
+          <strong>Automatic Credentials Generation</strong>
+          <p>A secure temporary password and username (e.g. <code>bellaadmin</code>) will be generated automatically. You will receive them on the next screen to share with the owner.</p>
+        </div>
+      </div>
+
+      <p class="modal-error" id="createTenantError" hidden></p>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="cancelCreateTenantBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitCreateTenantBtn">
+          <i class="fa-solid fa-plus"></i> Create Restaurant
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL 2: Temporary Credentials Display Modal -->
+<div class="modal-overlay hidden" id="credentialsModal">
+  <div class="modal-card modal-card-credentials">
+    <div class="credentials-badge-header">
+      <div class="badge-icon-circle"><i class="fa-solid fa-shield-halved"></i></div>
+      <h2>Restaurant Created Successfully!</h2>
+      <p>The new restaurant tenant and initial main branch have been created.</p>
+    </div>
+
+    <div class="credentials-alert-box">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <div>
+        <strong>One-Time Temporary Credentials</strong>
+        <p>Please copy and share these credentials with the restaurant owner now. For security, the password is encrypted and will <strong>not</strong> be shown again.</p>
+      </div>
+    </div>
+
+    <div class="credentials-summary-card">
+      <div class="cred-row">
+        <span class="cred-label">Restaurant Name</span>
+        <span class="cred-value" id="credRestaurantName">—</span>
+      </div>
+      <div class="cred-row">
+        <span class="cred-label">Storefront URL</span>
+        <span class="cred-value">
+          <a href="#" target="_blank" id="credStorefrontUrl" class="cred-link">—</a>
+        </span>
+      </div>
+      <div class="cred-row">
+        <span class="cred-label">Admin Login URL</span>
+        <span class="cred-value">
+          <a href="/admin/login" target="_blank" id="credLoginUrl" class="cred-link">/admin/login</a>
+        </span>
+      </div>
+
+      <div class="cred-chip-box">
+        <div class="cred-chip-row">
+          <div class="cred-chip-left">
+            <span class="cred-chip-tag">USERNAME</span>
+            <span class="cred-chip-val" id="credUsername">—</span>
+          </div>
+          <button class="btn-chip-copy" id="copyUsernameBtn" title="Copy Username">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        </div>
+
+        <div class="cred-chip-row">
+          <div class="cred-chip-left">
+            <span class="cred-chip-tag">TEMPORARY PASSWORD</span>
+            <span class="cred-chip-val" id="credPassword">—</span>
+          </div>
+          <button class="btn-chip-copy" id="copyPasswordBtn" title="Copy Password">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-foot credentials-foot">
+      <button class="btn-copy-all" id="copyAllCredentialsBtn">
+        <i class="fa-solid fa-clipboard-check"></i> Copy All Credentials
+      </button>
+      <button class="btn-done" id="closeCredentialsModalBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: Manage / Edit Tenant -->
+<div class="modal-overlay hidden" id="editTenantModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <h2 id="editTenantHeading">Manage Restaurant</h2>
+        <p class="modal-subtitle">Update brand info, status, or subscription plan.</p>
+      </div>
+      <button class="modal-close-btn" id="closeEditTenantModal">&times;</button>
+    </div>
+    <form id="editTenantForm" class="modal-form">
+      <input type="hidden" id="editTenantId">
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Restaurant Name *</span>
+          <input type="text" id="editTenantName" required>
+        </label>
+        <label class="form-label">
+          <span>Status *</span>
+          <select id="editTenantStatus">
+            <option value="active">Active</option>
+            <option value="trial">Trial</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Owner Name</span>
+          <input type="text" id="editOwnerName">
+        </label>
+        <label class="form-label">
+          <span>Owner Email</span>
+          <input type="email" id="editOwnerEmail">
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Country</span>
+          <input type="text" id="editTenantCountry">
+        </label>
+        <label class="form-label">
+          <span>Subscription Plan</span>
+          <select id="editTenantPlan">
+            <option value="starter">Starter</option>
+            <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="modal-error" id="editTenantError" hidden></p>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="cancelEditTenantBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveEditTenantBtn">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast Feedback Notification -->
+<div id="toastNotification" class="toast hidden"></div>
+
 <script src="superadmin.js"></script>
 </body>
 </html>
+

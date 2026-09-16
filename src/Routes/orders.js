@@ -46,15 +46,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Order must contain at least one item' });
     }
 
+    const requestedTenantId = await resolveTenant(req);
     let resolvedBranch = null;
     if (branchId) {
-      resolvedBranch = await Branch.findById(branchId);
+      resolvedBranch = await Branch.findOne({ _id: branchId, tenantId: requestedTenantId, isActive: true });
     }
     if (!resolvedBranch) {
-      resolvedBranch = await Branch.findOne({ code: 'default' });
+      resolvedBranch = await Branch.findOne({ tenantId: requestedTenantId, isActive: true }).sort({ createdAt: 1 });
     }
 
-    const tenantId = resolvedBranch?.tenantId || (await resolveTenant(req));
+    const tenantId = resolvedBranch?.tenantId || requestedTenantId;
+    if (!resolvedBranch) return res.status(400).json({ error: 'Choose an active branch for this restaurant.' });
     const subtotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
     const taxRate = resolvedBranch?.taxRate ?? 0.08;
     const tax = Math.round(subtotal * taxRate * 100) / 100;
@@ -114,7 +116,12 @@ router.get('/', adminAuth, async (req, res) => {
     if (tenantId) await addTenantScope(filter, tenantId);
     if (branchId) filter.branchId = branchId;
 
-    const orders = await Order.find(filter).sort({ createdAt: -1 }).limit(200).lean();
+    const orders = await Order.find(filter)
+      .populate('tenantId', 'name slug currency currencySymbol')
+      .populate('branchId', 'name code city country')
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
     res.json(orders);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -138,7 +145,12 @@ router.get('/:orderNumber', async (req, res) => {
 router.patch('/:id/status', adminAuth, async (req, res) => {
   try {
     const { status } = req.body;
-    const order = await Order.findById(req.params.id);
+    const query = { _id: req.params.id };
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
+    const branchId = resolveBranchId(req.admin, req.query);
+    if (branchId) query.branchId = branchId;
+    const order = await Order.findOne(query);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
     order.status = status;

@@ -7,31 +7,81 @@
     return;
   }
 
+  // DOM Elements
   const content = document.getElementById('content');
   const pageTitle = document.getElementById('pageTitle');
   const breadcrumb = document.getElementById('breadcrumb');
   const scopePill = document.getElementById('scopePill');
   const userNameLabel = document.getElementById('userNameLabel');
   const userAvatar = document.getElementById('userAvatar');
-  const tenantFilterSelect = document.getElementById('tenantFilterSelect');
-  const superModal = document.getElementById('superModal');
-  const superModalContent = document.getElementById('superModalContent');
+  const globalSearchInput = document.getElementById('globalSearchInput');
+  const toastNotification = document.getElementById('toastNotification');
 
-  userNameLabel.textContent = user.username || 'Superadmin';
-  userAvatar.textContent = (user.username || 'S').charAt(0).toUpperCase();
+  // Modals
+  const createTenantModal = document.getElementById('createTenantModal');
+  const createTenantForm = document.getElementById('createTenantForm');
+  const newTenantName = document.getElementById('newTenantName');
+  const newTenantSlug = document.getElementById('newTenantSlug');
+  const newTenantCountry = document.getElementById('newTenantCountry');
+  const newTenantCurrency = document.getElementById('newTenantCurrency');
+  const newTenantTimezone = document.getElementById('newTenantTimezone');
+  const createTenantError = document.getElementById('createTenantError');
+  const submitCreateTenantBtn = document.getElementById('submitCreateTenantBtn');
+  const closeCreateTenantModal = document.getElementById('closeCreateTenantModal');
+  const cancelCreateTenantBtn = document.getElementById('cancelCreateTenantBtn');
+  const toggleAdvTenantDetails = document.getElementById('toggleAdvTenantDetails');
+  const advTenantDetails = document.getElementById('advTenantDetails');
 
+  // Credentials Modal
+  const credentialsModal = document.getElementById('credentialsModal');
+  const credRestaurantName = document.getElementById('credRestaurantName');
+  const credStorefrontUrl = document.getElementById('credStorefrontUrl');
+  const credLoginUrl = document.getElementById('credLoginUrl');
+  const credUsername = document.getElementById('credUsername');
+  const credPassword = document.getElementById('credPassword');
+  const copyUsernameBtn = document.getElementById('copyUsernameBtn');
+  const copyPasswordBtn = document.getElementById('copyPasswordBtn');
+  const copyAllCredentialsBtn = document.getElementById('copyAllCredentialsBtn');
+  const closeCredentialsModalBtn = document.getElementById('closeCredentialsModalBtn');
+
+  // Edit Tenant Modal
+  const editTenantModal = document.getElementById('editTenantModal');
+  const editTenantForm = document.getElementById('editTenantForm');
+  const closeEditTenantModal = document.getElementById('closeEditTenantModal');
+  const cancelEditTenantBtn = document.getElementById('cancelEditTenantBtn');
+
+  // State
   let currentView = 'tenants';
-  let selectedTenantId = '';
   let cachedTenants = [];
+  let cachedBranches = [];
+  let cachedUsers = [];
+  let cachedOrders = [];
+  let currentSearchTerm = '';
+  let activeCredentialsText = '';
 
+  // Setup user details
+  if (userNameLabel) userNameLabel.textContent = user.username || 'Superadmin';
+  if (userAvatar) userAvatar.textContent = (user.username || 'S').charAt(0).toUpperCase();
+
+  // Logout handler
   document.getElementById('logoutBtn').addEventListener('click', () => {
     localStorage.removeItem('eb_admin_token');
     localStorage.removeItem('eb_admin_user');
     window.location.href = '/admin/login';
   });
 
-  const money = (n, symbol) => (symbol || 'Rs ') + Number(n || 0).toFixed(2);
+  // Utilities
+  const money = (n, symbol) => (symbol || 'Rs ') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function showToast(msg) {
+    if (!toastNotification) return;
+    toastNotification.textContent = msg;
+    toastNotification.classList.remove('hidden');
+    setTimeout(() => {
+      toastNotification.classList.add('hidden');
+    }, 2800);
+  }
 
   async function api(path, options = {}) {
     const headers = { Authorization: 'Bearer ' + token, ...(options.headers || {}) };
@@ -47,470 +97,760 @@
     return data;
   }
 
-  function statCard(label, value, cls) {
-    return '<div class="stat-card ' + (cls || '') + '"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div></div>';
+  function statCard(label, value, cls, sub) {
+    return '<div class="stat-card ' + (cls || '') + '">' +
+      '<div class="label">' + esc(label) + '</div>' +
+      '<div class="value">' + value + '</div>' +
+      (sub ? '<div class="sub">' + esc(sub) + '</div>' : '') +
+      '</div>';
   }
 
-  function badge(status) {
-    return '<span class="badge ' + esc(status) + '">' + esc((status || '').replace(/-/g, ' ')) + '</span>';
+  function statusBadge(status) {
+    const s = String(status || 'active').toLowerCase();
+    return '<span class="badge ' + esc(s) + '">' + esc(s) + '</span>';
   }
 
-  function closeModal() {
-    superModal.classList.add('hidden');
-    superModalContent.innerHTML = '';
+  function roleBadge(role) {
+    const r = String(role || 'admin').toLowerCase();
+    return '<span class="badge ' + esc(r) + '">' + esc(r) + '</span>';
   }
-  superModal.addEventListener('click', (e) => {
-    if (e.target === superModal) closeModal();
-  });
 
-  // Nav item switching
-  document.querySelectorAll('.nav-item').forEach(btn => {
+  function planBadge(plan) {
+    const p = String(plan || 'pro').toLowerCase();
+    return '<span class="badge ' + esc(p) + '">' + esc(p) + '</span>';
+  }
+
+  // Country defaults mapping
+  const countryDefaults = {
+    'Pakistan': { currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi' },
+    'Australia': { currency: 'AUD', symbol: 'A$', tz: 'Australia/Sydney' },
+    'United Kingdom': { currency: 'GBP', symbol: '£', tz: 'Europe/London' },
+    'United States': { currency: 'USD', symbol: '$', tz: 'America/New_York' },
+    'United Arab Emirates': { currency: 'AED', symbol: 'AED', tz: 'Asia/Dubai' },
+    'Canada': { currency: 'CAD', symbol: 'C$', tz: 'America/Toronto' },
+    'Germany': { currency: 'EUR', symbol: '€', tz: 'Europe/Berlin' },
+    'Saudi Arabia': { currency: 'SAR', symbol: 'SAR', tz: 'Asia/Riyadh' },
+    'Qatar': { currency: 'QAR', symbol: 'QAR', tz: 'Asia/Qatar' },
+    'Singapore': { currency: 'SGD', symbol: 'S$', tz: 'Asia/Singapore' }
+  };
+
+  // Sidebar navigation click
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sidebar-nav .nav-item').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentView = btn.dataset.view;
-      if (currentView === 'tenants') renderTenants();
-      else if (currentView === 'branches') renderBranches();
-      else if (currentView === 'analytics') renderAnalytics();
+      if (globalSearchInput) globalSearchInput.value = '';
+      currentSearchTerm = '';
+      renderCurrentView();
     });
   });
 
-  // Load tenant filter options
-  async function loadTenantFilter() {
+  // Global search input
+  if (globalSearchInput) {
+    globalSearchInput.addEventListener('input', (e) => {
+      currentSearchTerm = e.target.value.toLowerCase().trim();
+      renderCurrentView();
+    });
+  }
+
+  function renderCurrentView() {
+    if (currentView === 'tenants') renderTenants();
+    else if (currentView === 'dashboard') renderDashboard();
+    else if (currentView === 'branches') renderBranches();
+    else if (currentView === 'users') renderUsers();
+    else if (currentView === 'orders') renderOrders();
+    else if (currentView === 'subscriptions') renderSubscriptions();
+    else if (currentView === 'settings') renderSettings();
+  }
+
+  // ================================================================
+  // 1. TENANTS VIEW (The requested TENANTS Management Screen)
+  // Columns: Restaurant | Owner | Country | Branches | Status | Actions
+  // ================================================================
+  async function renderTenants() {
+    pageTitle.textContent = 'Tenants';
+    breadcrumb.textContent = 'Tenant Restaurant Brands';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading tenants…</div>';
+
     try {
       const data = await api('/api/tenants');
       cachedTenants = data.tenants || [];
-      tenantFilterSelect.innerHTML = '<option value="">🌐 All Restaurants (Global)</option>' +
-        cachedTenants.map(t => '<option value="' + t._id + '" ' + (selectedTenantId === t._id ? 'selected' : '') + '>' + esc(t.name) + '</option>').join('');
-    } catch (_) {}
-  }
-
-  tenantFilterSelect.addEventListener('change', (e) => {
-    selectedTenantId = e.target.value;
-    if (currentView === 'tenants') renderTenants();
-    else if (currentView === 'branches') renderBranches();
-    else if (currentView === 'analytics') renderAnalytics();
-  });
-
-  // ================================================================
-  // 1. TENANTS VIEW (Restaurant Brands Management)
-  // ================================================================
-  async function renderTenants() {
-    pageTitle.textContent = 'Restaurant Brands (Tenants)';
-    breadcrumb.textContent = 'SaaS Multi-Tenant Management';
-    scopePill.textContent = selectedTenantId ? 'Filtered by Tenant' : 'Platform Superadmin';
-    content.innerHTML = '<div class="loading">Loading restaurant brands…</div>';
-
-    let data;
-    try {
-      data = await api('/api/tenants');
-      cachedTenants = data.tenants || [];
     } catch (err) {
       content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
       return;
     }
 
-    let tenants = cachedTenants;
-    if (selectedTenantId) {
-      tenants = tenants.filter(t => t._id === selectedTenantId);
+    let list = cachedTenants;
+    if (currentSearchTerm) {
+      list = list.filter(t =>
+        (t.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (t.slug || '').toLowerCase().includes(currentSearchTerm) ||
+        (t.ownerName || '').toLowerCase().includes(currentSearchTerm) ||
+        (t.ownerEmail || '').toLowerCase().includes(currentSearchTerm) ||
+        (t.country || '').toLowerCase().includes(currentSearchTerm)
+      );
     }
 
-    const totalBranches = tenants.reduce((s, t) => s + (t.stats?.branchCount || 0), 0);
-    const totalOrders = tenants.reduce((s, t) => s + (t.stats?.orderCount || 0), 0);
-    const totalStaff = tenants.reduce((s, t) => s + (t.stats?.adminCount || 0), 0);
+    const totalBranches = cachedTenants.reduce((s, t) => s + (t.stats?.branchCount || 0), 0);
+    const activeTenants = cachedTenants.filter(t => t.status === 'active').length;
 
     const statsHtml = '<div class="stat-grid">' +
-      statCard('Total Brands', tenants.length, 'gold') +
-      statCard('Total Branches', totalBranches, 'ember') +
-      statCard('Total Orders', totalOrders, 'sage') +
-      statCard('Active Staff', totalStaff, 'gold') +
+      statCard('Total Restaurants', cachedTenants.length, 'gold', 'Registered brand tenants') +
+      statCard('Active Tenants', activeTenants, 'sage', 'Operating restaurants') +
+      statCard('Total Branches', totalBranches, 'ember', 'Physical locations') +
+      statCard('SaaS Platform Tier', 'Multi-Tenant', 'blue', 'Strict database isolation') +
       '</div>';
 
-    const cardsHtml = tenants.length
-      ? tenants.map(t => {
-          const themeColor = t.theme?.primaryColor || '#D4A853';
-          return '<div class="tenant-card">' +
-            '<div class="tenant-card-header">' +
-              '<img src="' + esc(t.logo || '/images/app-logo.png') + '" alt="' + esc(t.name) + '" class="tenant-logo" style="border-color:' + themeColor + ';">' +
-              '<div class="tenant-title-wrap">' +
-                '<h3 class="tenant-title">' + esc(t.name) + '</h3>' +
-                '<span class="tenant-slug-badge">/r/' + esc(t.slug) + '</span>' +
+    const rowsHtml = list.length
+      ? list.map(t => {
+          const ownerDisplay = t.ownerUser?.name || t.ownerName || '—';
+          const ownerEmailDisplay = t.ownerUser?.email || t.ownerEmail || (t.ownerUser?.username ? '@' + t.ownerUser.username : '');
+          const countryDisplay = t.country || 'Pakistan';
+          const branchCount = t.stats?.branchCount || 0;
+          const status = t.status || 'active';
+
+          return '<tr>' +
+            '<td>' +
+              '<div class="restaurant-cell">' +
+                '<img src="' + esc(t.logo || '/images/app-logo.png') + '" alt="' + esc(t.name) + '" class="restaurant-logo" onerror="this.src=\'/images/app-logo.png\'">' +
+                '<div class="restaurant-meta">' +
+                  '<strong>' + esc(t.name) + '</strong>' +
+                  '<span>/r/' + esc(t.slug) + '</span>' +
+                '</div>' +
               '</div>' +
-              '<span class="badge ' + (t.status === 'active' ? 'ready' : 'cancelled') + '">' + esc(t.status) + '</span>' +
-            '</div>' +
-            '<p style="font-size:12.5px;color:var(--text-muted);margin:0;line-height:1.4;">' +
-              esc(t.tagline || t.description || 'Artisan Culinary & Kitchen') +
-            '</p>' +
-            '<div class="tenant-stats-row">' +
-              '<div class="tenant-stat-item"><strong>' + (t.stats?.branchCount || 0) + '</strong><span>Branches</span></div>' +
-              '<div class="tenant-stat-item"><strong>' + (t.stats?.menuCount || 0) + '</strong><span>Dishes</span></div>' +
-              '<div class="tenant-stat-item"><strong>' + (t.stats?.orderCount || 0) + '</strong><span>Orders</span></div>' +
-            '</div>' +
-            '<div class="tenant-actions">' +
-              '<a href="/r/' + encodeURIComponent(t.slug) + '" target="_blank" class="btn-brand-outline" title="Open Customer Web App"><i class="fa-solid fa-arrow-up-right-from-square"></i> Storefront</a>' +
-              '<button class="btn-brand-outline view-branches-btn" data-tenant-id="' + t._id + '"><i class="fa-solid fa-map-pin"></i> Branches</button>' +
-              '<button class="btn-brand-primary edit-tenant-btn" data-tenant-id="' + t._id + '"><i class="fa-solid fa-pen-to-square"></i> Manage</button>' +
-            '</div>' +
-          '</div>';
+            '</td>' +
+            '<td>' +
+              '<div class="owner-cell">' +
+                '<strong>' + esc(ownerDisplay) + '</strong>' +
+                '<span>' + esc(ownerEmailDisplay) + '</span>' +
+              '</div>' +
+            '</td>' +
+            '<td>' +
+              '<span class="country-pill"><i class="fa-solid fa-earth-americas" style="color:var(--gold);font-size:11px;"></i> ' + esc(countryDisplay) + '</span>' +
+            '</td>' +
+            '<td>' +
+              '<span class="branches-badge"><i class="fa-solid fa-code-branch"></i> ' + branchCount + ' ' + (branchCount === 1 ? 'branch' : 'branches') + '</span>' +
+            '</td>' +
+            '<td>' + statusBadge(status) + '</td>' +
+            '<td>' +
+              '<div class="table-actions">' +
+                '<a href="/r/' + encodeURIComponent(t.slug) + '" target="_blank" class="btn-action-icon" title="Open Storefront"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>' +
+                '<button class="btn-action-icon edit-tenant-btn" data-id="' + t._id + '" title="Manage Tenant"><i class="fa-solid fa-pen-to-square"></i></button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
         }).join('')
-      : '<div class="empty-state">No restaurant brands found.</div>';
+      : '<tr><td colspan="6" class="empty-state">No restaurant tenants found.</td></tr>';
 
     content.innerHTML = statsHtml +
       '<div class="panel">' +
         '<div class="panel-head">' +
-          '<h3>Registered Restaurant Brands (' + tenants.length + ')</h3>' +
-          '<button class="btn-ghost" id="openAddTenantModal"><i class="fa-solid fa-plus"></i> Add Restaurant Brand</button>' +
+          '<h3>TENANTS</h3>' +
+          '<div class="panel-head-actions">' +
+            '<button class="btn-primary-action" id="openCreateTenantBtn"><i class="fa-solid fa-plus"></i> Add Restaurant</button>' +
+          '</div>' +
         '</div>' +
-        '<div class="panel-body">' +
-          '<div class="tenant-grid">' + cardsHtml + '</div>' +
+        '<div class="table-scroll">' +
+          '<table class="data-table">' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Restaurant</th>' +
+                '<th>Owner</th>' +
+                '<th>Country</th>' +
+                '<th>Branches</th>' +
+                '<th>Status</th>' +
+                '<th>Actions</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rowsHtml + '</tbody>' +
+          '</table>' +
         '</div>' +
       '</div>';
 
-    document.getElementById('openAddTenantModal').addEventListener('click', openCreateTenantModal);
-    
-    content.querySelectorAll('.view-branches-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedTenantId = btn.dataset.tenantId;
-        tenantFilterSelect.value = selectedTenantId;
-        document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === 'branches'));
-        currentView = 'branches';
-        renderBranches();
-      });
-    });
+    // Hook + Add Restaurant button
+    document.getElementById('openCreateTenantBtn').addEventListener('click', openCreateTenantModalHandler);
 
+    // Hook edit buttons
     content.querySelectorAll('.edit-tenant-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const tenant = cachedTenants.find(t => t._id === btn.dataset.tenantId);
-        if (tenant) openEditTenantModal(tenant);
+        const tenant = cachedTenants.find(t => t._id === btn.dataset.id);
+        if (tenant) openEditTenantModalHandler(tenant);
       });
     });
   }
 
-  // Create Tenant Modal
-  function openCreateTenantModal() {
-    superModalContent.innerHTML = '<div class="modal-head">' +
-        '<h2><i class="fa-solid fa-store" style="color:var(--gold);"></i> Onboard New Restaurant Brand</h2>' +
-        '<button class="modal-close-btn" onclick="document.getElementById(\\'superModal\\').classList.add(\\'hidden\\')">&times;</button>' +
-      '</div>' +
-      '<form id="createTenantForm">' +
-        '<div class="modal-grid-2">' +
-          '<label class="input-label">Brand Name *<input name="name" id="newTenantName" placeholder="e.g. Bella Italia" required></label>' +
-          '<label class="input-label">Unique Brand Slug *<input name="slug" id="newTenantSlug" placeholder="e.g. bella-italia" required></label>' +
-        '</div>' +
-        '<label class="input-label">Tagline / Slogan<input name="tagline" placeholder="e.g. Authentic Wood-Fired Pizza & Pasta"></label>' +
-        '<div class="modal-grid-2">' +
-          '<label class="input-label">Owner Name<input name="ownerName" placeholder="e.g. Marco Rossi"></label>' +
-          '<label class="input-label">Owner Email<input name="ownerEmail" type="email" placeholder="owner@restaurant.com"></label>' +
-        '</div>' +
-        '<div class="modal-grid-2">' +
-          '<label class="input-label">Currency (ISO)<input name="currency" placeholder="PKR / USD / GBP" value="PKR"></label>' +
-          '<label class="input-label">Currency Symbol<input name="currencySymbol" placeholder="Rs / $ / £" value="Rs"></label>' +
-        '</div>' +
-        '<div class="modal-grid-2">' +
-          '<label class="input-label">Primary Brand Color<input name="primaryColor" type="color" value="#D4A853" style="height:42px;padding:2px;cursor:pointer;"></label>' +
-          '<label class="input-label">Logo URL / Path<input name="logo" placeholder="/images/app-logo.png" value="/images/app-logo.png"></label>' +
-        '</div>' +
-        '<div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px;">' +
-          '<h4 style="margin:0 0 10px;font-size:13px;color:var(--ink);">Initial Branch &amp; Admin User (Optional)</h4>' +
-          '<div class="modal-grid-2">' +
-            '<label class="input-label">Initial Branch Name<input name="initialBranchName" placeholder="e.g. Bella Italia — Main"></label>' +
-            '<label class="input-label">Branch City<input name="initialBranchCity" placeholder="e.g. Lahore / London" value="Lahore"></label>' +
-          '</div>' +
-          '<div class="modal-grid-2">' +
-            '<label class="input-label">Admin Login Username<input name="adminUsername" placeholder="e.g. bella_admin"></label>' +
-            '<label class="input-label">Admin Password<input name="adminPassword" type="password" minlength="6" placeholder="min. 6 characters"></label>' +
-          '</div>' +
-        '</div>' +
-        '<p id="tenantModalError" style="color:var(--danger);font-size:12px;margin:8px 0;" hidden></p>' +
-        '<button type="submit" class="btn-brand-primary" style="width:100%;padding:12px;margin-top:6px;"><i class="fa-solid fa-plus"></i> Create Restaurant Brand</button>' +
-      '</form>';
-
-    superModal.classList.remove('hidden');
-
-    const nameInput = document.getElementById('newTenantName');
-    const slugInput = document.getElementById('newTenantSlug');
-    nameInput.addEventListener('input', () => {
-      slugInput.value = nameInput.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    });
-
-    document.getElementById('createTenantForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const errEl = document.getElementById('tenantModalError');
-      errEl.hidden = true;
-      const formData = new FormData(e.target);
-      const values = Object.fromEntries(formData.entries());
-
-      try {
-        await api('/api/tenants', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...values,
-            theme: { primaryColor: values.primaryColor }
-          })
-        });
-        closeModal();
-        await loadTenantFilter();
-        renderTenants();
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.hidden = false;
-      }
-    });
-  }
-
-  // Edit Tenant Modal
-  function openEditTenantModal(tenant) {
-    superModalContent.innerHTML = '<div class="modal-head">' +
-        '<h2>Manage: ' + esc(tenant.name) + '</h2>' +
-        '<button class="modal-close-btn" onclick="document.getElementById(\\'superModal\\').classList.add(\\'hidden\\')">&times;</button>' +
-      '</div>' +
-      '<form id="editTenantForm">' +
-        '<label class="input-label">Brand Name *<input name="name" value="' + esc(tenant.name) + '" required></label>' +
-        '<label class="input-label">Tagline<input name="tagline" value="' + esc(tenant.tagline || '') + '"></label>' +
-        '<div class="modal-grid-2">' +
-          '<label class="input-label">Owner Name<input name="ownerName" value="' + esc(tenant.ownerName || '') + '"></label>' +
-          '<label class="input-label">Owner Email<input name="ownerEmail" value="' + esc(tenant.ownerEmail || '') + '"></label>' +
-        '</div>' +
-        '<div class="modal-grid-2">' +
-          '<label class="input-label">Primary Brand Color<input name="primaryColor" type="color" value="' + (tenant.theme?.primaryColor || '#D4A853') + '" style="height:42px;padding:2px;cursor:pointer;"></label>' +
-          '<label class="input-label">Status<select name="status">' +
-            '<option value="active" ' + (tenant.status === 'active' ? 'selected' : '') + '>Active</option>' +
-            '<option value="trial" ' + (tenant.status === 'trial' ? 'selected' : '') + '>Trial</option>' +
-            '<option value="suspended" ' + (tenant.status === 'suspended' ? 'selected' : '') + '>Suspended</option>' +
-          '</select></label>' +
-        '</div>' +
-        '<p id="editModalError" style="color:var(--danger);font-size:12px;margin:8px 0;" hidden></p>' +
-        '<button type="submit" class="btn-brand-primary" style="width:100%;padding:12px;margin-top:8px;">Save Changes</button>' +
-      '</form>';
-
-    superModal.classList.remove('hidden');
-
-    document.getElementById('editTenantForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const errEl = document.getElementById('editModalError');
-      errEl.hidden = true;
-      const values = Object.fromEntries(new FormData(e.target).entries());
-
-      try {
-        await api('/api/tenants/' + tenant._id, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: values.name,
-            tagline: values.tagline,
-            ownerName: values.ownerName,
-            ownerEmail: values.ownerEmail,
-            status: values.status,
-            theme: { ...(tenant.theme || {}), primaryColor: values.primaryColor }
-          })
-        });
-        closeModal();
-        await loadTenantFilter();
-        renderTenants();
-      } catch (err) {
-        errEl.textContent = err.message;
-        errEl.hidden = false;
-      }
-    });
-  }
-
   // ================================================================
-  // 2. BRANCHES VIEW
+  // 2. DASHBOARD VIEW (Platform High-Level Overview)
   // ================================================================
-  async function renderBranches() {
-    pageTitle.textContent = 'Branches';
-    breadcrumb.textContent = selectedTenantId ? 'Filtered by selected restaurant brand' : 'All platform branches';
-    scopePill.textContent = selectedTenantId ? 'Scoped Tenant' : 'All Branches';
-    content.innerHTML = '<div class="loading">Loading branches…</div>';
+  async function renderDashboard() {
+    pageTitle.textContent = 'Dashboard';
+    breadcrumb.textContent = 'Platform Cross-Tenant Overview';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading platform dashboard…</div>';
 
-    let data;
     try {
-      const query = selectedTenantId ? '?tenantId=' + selectedTenantId : '';
-      data = await api('/api/branches' + query);
-    } catch (err) {
-      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
-      return;
-    }
-
-    const { branches, combined } = data;
-
-    const statsHtml = '<div class="stat-grid">' +
-      statCard('Total Orders', combined?.totalOrders || 0, 'ember') +
-      statCard("Today's Orders", combined?.todayOrders || 0, 'sage') +
-      statCard('Pending Orders', combined?.pendingOrders || 0, 'gold') +
-      statCard('Active Riders', combined?.activeRiders || 0, 'ember') +
-      '</div>';
-
-    const cardsHtml = (branches || []).length
-      ? branches.map(b => '<div class="branch-card" data-id="' + b._id + '">' +
-          '<div class="branch-card-head">' +
-            '<h3>' + esc(b.name) + '</h3>' +
-            '<span class="branch-badge ' + (b.isActive ? '' : 'inactive') + '">' + (b.isActive ? 'Active' : 'Offline') + '</span>' +
-          '</div>' +
-          '<p class="loc">' + esc(b.city) + ', ' + esc(b.country) + ' · ' + esc(b.currencySymbol || '') + esc(b.currency || '') + (b.tenant?.name ? ' · ' + esc(b.tenant.name) : '') + '</p>' +
-          '<div class="branch-mini-stats">' +
-            '<div><strong>' + money(b.stats?.totalRevenue, b.currencySymbol) + '</strong>Total revenue</div>' +
-            '<div><strong>' + (b.stats?.todayOrders || 0) + '</strong>Orders today</div>' +
-            '<div><strong>' + (b.stats?.pendingOrders || 0) + '</strong>Pending now</div>' +
-            '<div><strong>' + (b.stats?.activeRiders || 0) + '</strong>Active riders</div>' +
-          '</div>' +
-          '<div class="branch-card-foot">View branch details →</div>' +
-        '</div>').join('')
-      : '<div class="empty-state">No branches found.</div>';
-
-    content.innerHTML = statsHtml +
-      '<div class="panel">' +
-        '<div class="panel-head">' +
-          '<h3>Branches (' + (branches || []).length + ')</h3>' +
-          '<button class="btn-ghost" id="showBranchForm">+ Add Branch</button>' +
-        '</div>' +
-        '<div class="panel-body">' +
-          '<form id="branchForm" class="setup-form hidden">' +
-            '<select name="tenantId" required>' +
-              '<option value="">Select Restaurant Brand *</option>' +
-              cachedTenants.map(t => '<option value="' + t._id + '" ' + (selectedTenantId === t._id ? 'selected' : '') + '>' + esc(t.name) + '</option>').join('') +
-            '</select>' +
-            '<input name="name" placeholder="Branch name (e.g. London West End)" required>' +
-            '<input name="code" placeholder="Unique code (e.g. uk-westend)" required>' +
-            '<input name="country" placeholder="Country" required><input name="countryCode" placeholder="Country code (GB)" maxlength="2" required>' +
-            '<input name="city" placeholder="City" required><input name="currency" placeholder="Currency (GBP)" maxlength="3" required>' +
-            '<input name="currencySymbol" placeholder="Symbol (£)" required><input name="timezone" placeholder="Timezone (Europe/London)" required>' +
-            '<input name="taxRate" type="number" min="0" max="1" step="0.01" placeholder="Tax rate (0.08)" value="0.08">' +
-            '<button class="btn-ghost" type="submit">Create branch</button><p class="form-note" id="branchFormNote"></p>' +
-          '</form>' +
-          '<div class="branch-grid">' + cardsHtml + '</div>' +
-        '</div>' +
-      '</div>';
-
-    content.querySelectorAll('.branch-card').forEach(card => {
-      card.addEventListener('click', () => renderBranchDetail(card.dataset.id));
-    });
-    document.getElementById('showBranchForm').addEventListener('click', () => document.getElementById('branchForm').classList.toggle('hidden'));
-    document.getElementById('branchForm').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const note = document.getElementById('branchFormNote');
-      const values = Object.fromEntries(new FormData(form).entries());
-      try {
-        await api('/api/branches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
-        renderBranches();
-      } catch (err) { note.textContent = err.message; }
-    });
-  }
-
-  // Branch detail view
-  async function renderBranchDetail(branchId) {
-    content.innerHTML = '<div class="loading">Loading branch…</div>';
-    breadcrumb.innerHTML = '<button id="backBtn">← All Branches</button>';
-
-    let branch, stats, riders, orders, staff;
-    try {
-      [branch, stats, riders, orders, staff] = await Promise.all([
-        api('/api/branches/' + branchId),
-        api('/api/orders/stats/summary?branchId=' + branchId),
-        api('/api/delivery/riders?branchId=' + branchId),
-        api('/api/orders?branchId=' + branchId),
-        api('/api/branches/' + branchId + '/staff')
+      const [tenantsData, branchesData] = await Promise.all([
+        api('/api/tenants'),
+        api('/api/branches')
       ]);
+      cachedTenants = tenantsData.tenants || [];
+      cachedBranches = branchesData.branches || [];
     } catch (err) {
       content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
       return;
     }
 
-    pageTitle.textContent = branch.name;
-    scopePill.textContent = 'Scoped — ' + branch.name;
-    document.getElementById('backBtn').addEventListener('click', renderBranches);
-
-    const sym = branch.currencySymbol || 'Rs ';
-
-    const statsHtml = '<div class="stat-grid">' +
-      statCard('Revenue', money(stats.totalRevenue, sym), 'gold') +
-      statCard('Total Orders', stats.totalOrders, 'ember') +
-      statCard("Today's Orders", stats.todayOrders, 'sage') +
-      statCard('Pending Orders', stats.pendingCount, 'gold') +
-      '</div>';
-
-    const recentOrders = orders.slice(0, 15);
-    content.innerHTML = statsHtml +
-      '<div class="panel">' +
-        '<div class="panel-head">' +
-          '<h3>Public Branch Settings</h3>' +
-          '<a class="btn-ghost" href="/order/' + encodeURIComponent(branch.code) + '" target="_blank" style="text-decoration:none;">Open customer page →</a>' +
-        '</div>' +
-        '<div class="panel-body">' +
-          '<p class="form-note">Status: <strong>' + (branch.isActive ? 'Active' : 'Inactive') + '</strong></p>' +
-        '</div>' +
-      '</div>' +
-      '<div class="panel">' +
-        '<div class="panel-head"><h3>Branch Team</h3></div>' +
-        '<div class="panel-body">' +
-          '<div class="table-scroll"><table><thead><tr><th>Role</th><th>Name</th><th>Username</th></tr></thead><tbody>' +
-            (staff.length ? staff.map(member => '<tr><td>' + esc(member.role) + '</td><td>' + esc(member.name || '—') + '</td><td>' + esc(member.username) + '</td></tr>').join('') : '<tr><td colspan="3" class="empty-state">No staff assigned yet.</td></tr>') +
-          '</tbody></table></div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="panel">' +
-        '<div class="panel-head"><h3>Recent Orders</h3></div>' +
-        '<div class="panel-body">' +
-          '<div class="table-scroll"><table>' +
-            '<thead><tr><th>Order</th><th>Customer</th><th>Type</th><th>Total</th><th>Status</th></tr></thead>' +
-            '<tbody>' +
-              (recentOrders.length ? recentOrders.map(o => '<tr>' +
-                  '<td>' + esc(o.orderNumber) + '</td>' +
-                  '<td>' + esc(o.customerName) + '</td>' +
-                  '<td>' + esc(o.orderType) + '</td>' +
-                  '<td>' + money(o.total, sym) + '</td>' +
-                  '<td>' + badge(o.status) + '</td>' +
-                '</tr>').join('') : '<tr><td colspan="5" class="empty-state">No orders yet for this branch.</td></tr>') +
-            '</tbody>' +
-          '</table></div>' +
-        '</div>' +
-      '</div>';
-  }
-
-  // ================================================================
-  // 3. ANALYTICS VIEW
-  // ================================================================
-  async function renderAnalytics() {
-    pageTitle.textContent = 'Platform Analytics & SaaS Health';
-    breadcrumb.textContent = 'Cross-Tenant Intelligence';
-    scopePill.textContent = 'SaaS Global';
-    content.innerHTML = '<div class="loading">Loading analytics…</div>';
-
-    let data;
-    try {
-      data = await api('/api/tenants');
-      cachedTenants = data.tenants || [];
-    } catch (err) {
-      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
-      return;
-    }
-
-    const totalBrands = cachedTenants.length;
-    const totalBranches = cachedTenants.reduce((s, t) => s + (t.stats?.branchCount || 0), 0);
+    const totalTenants = cachedTenants.length;
+    const totalBranches = cachedBranches.length;
     const totalOrders = cachedTenants.reduce((s, t) => s + (t.stats?.orderCount || 0), 0);
     const totalStaff = cachedTenants.reduce((s, t) => s + (t.stats?.adminCount || 0), 0);
 
-    content.innerHTML = '<div class="stat-grid">' +
-        statCard('Total Restaurants', totalBrands, 'gold') +
-        statCard('Total Branches', totalBranches, 'ember') +
-        statCard('All Orders Processed', totalOrders, 'sage') +
-        statCard('Platform Staff', totalStaff, 'gold') +
-      '</div>' +
+    const statsHtml = '<div class="stat-grid">' +
+      statCard('Total Restaurants', totalTenants, 'gold', 'Multi-tenant brands') +
+      statCard('Active Branches', totalBranches, 'ember', 'Global physical locations') +
+      statCard('Platform Orders', totalOrders, 'sage', 'Processed platform-wide') +
+      statCard('Staff & Users', totalStaff, 'blue', 'Restaurant admins & chefs') +
+      '</div>';
+
+    const tenantsSummary = cachedTenants.map(t => {
+      return '<tr>' +
+        '<td><strong>' + esc(t.name) + '</strong></td>' +
+        '<td>' + esc(t.country || 'Pakistan') + '</td>' +
+        '<td>' + (t.stats?.branchCount || 0) + '</td>' +
+        '<td>' + (t.stats?.orderCount || 0) + '</td>' +
+        '<td>' + statusBadge(t.status) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    content.innerHTML = statsHtml +
       '<div class="panel">' +
-        '<div class="panel-head"><h3>Multi-Tenant Architecture Status</h3></div>' +
-        '<div class="panel-body">' +
-          '<p style="font-size:14px;line-height:1.6;color:var(--text);">' +
-            '✅ <strong>Database Isolation</strong>: All collections (Branches, Menus, Orders, Staff, Tables, Reservations) are strictly partitioned by <code>tenantId</code>.<br>' +
-            '✅ <strong>Custom Branding</strong>: Each tenant can define its own brand colors, logos, slogans, and currency.<br>' +
-            '✅ <strong>Seamless Routing</strong>: Each tenant has dedicated storefront routing via <code>/r/:tenantSlug</code> or query parameter <code>?tenant=:tenantSlug</code>.' +
-          '</p>' +
+        '<div class="panel-head">' +
+          '<h3>Restaurant Brands Directory</h3>' +
+          '<button class="btn-primary-action" id="dashAddTenantBtn"><i class="fa-solid fa-plus"></i> Add Restaurant</button>' +
+        '</div>' +
+        '<div class="table-scroll">' +
+          '<table class="data-table">' +
+            '<thead><tr><th>Restaurant</th><th>Country</th><th>Branches</th><th>Orders</th><th>Status</th></tr></thead>' +
+            '<tbody>' + (tenantsSummary || '<tr><td colspan="5" class="empty-state">No tenants yet.</td></tr>') + '</tbody>' +
+          '</table>' +
         '</div>' +
       '</div>';
+
+    document.getElementById('dashAddTenantBtn').addEventListener('click', openCreateTenantModalHandler);
   }
 
-  // Initial load
-  loadTenantFilter();
+  // ================================================================
+  // 3. BRANCHES VIEW
+  // ================================================================
+  async function renderBranches() {
+    pageTitle.textContent = 'Branches';
+    breadcrumb.textContent = 'All Branches Across Restaurants';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading branches…</div>';
+
+    try {
+      const data = await api('/api/branches');
+      cachedBranches = data.branches || [];
+    } catch (err) {
+      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
+      return;
+    }
+
+    let list = cachedBranches;
+    if (currentSearchTerm) {
+      list = list.filter(b =>
+        (b.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (b.code || '').toLowerCase().includes(currentSearchTerm) ||
+        (b.city || '').toLowerCase().includes(currentSearchTerm) ||
+        (b.country || '').toLowerCase().includes(currentSearchTerm) ||
+        (b.tenantId?.name || '').toLowerCase().includes(currentSearchTerm)
+      );
+    }
+
+    const rowsHtml = list.length
+      ? list.map(b => {
+          const tenantName = b.tenantId?.name || 'Ember & Brew';
+          return '<tr>' +
+            '<td><strong>' + esc(b.name) + '</strong><br><small style="color:var(--text-muted);">' + esc(b.code) + '</small></td>' +
+            '<td>' + esc(tenantName) + '</td>' +
+            '<td>' + esc(b.city) + ', ' + esc(b.country) + '</td>' +
+            '<td>' + (b.currencySymbol || 'Rs') + ' (' + esc(b.currency || 'PKR') + ')</td>' +
+            '<td>' + (b.isActive ? '<span class="badge active">Active</span>' : '<span class="badge suspended">Inactive</span>') + '</td>' +
+            '<td>' +
+              '<a href="/order/' + encodeURIComponent(b.code) + '" target="_blank" class="btn-action-icon" title="View Menu"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>' +
+            '</td>' +
+          '</tr>';
+        }).join('')
+      : '<tr><td colspan="6" class="empty-state">No branches found.</td></tr>';
+
+    content.innerHTML = '<div class="panel">' +
+      '<div class="panel-head">' +
+        '<h3>Branches Directory (' + list.length + ')</h3>' +
+      '</div>' +
+      '<div class="table-scroll">' +
+        '<table class="data-table">' +
+          '<thead><tr><th>Branch</th><th>Restaurant Brand</th><th>Location</th><th>Currency</th><th>Status</th><th>Storefront</th></tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ================================================================
+  // 4. USERS VIEW
+  // ================================================================
+  async function renderUsers() {
+    pageTitle.textContent = 'Users';
+    breadcrumb.textContent = 'Platform Staff & Owner Accounts';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading users…</div>';
+
+    try {
+      const data = await api('/api/tenants/users/all');
+      cachedUsers = data.users || [];
+    } catch (err) {
+      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
+      return;
+    }
+
+    let list = cachedUsers;
+    if (currentSearchTerm) {
+      list = list.filter(u =>
+        (u.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (u.username || '').toLowerCase().includes(currentSearchTerm) ||
+        (u.email || '').toLowerCase().includes(currentSearchTerm) ||
+        (u.role || '').toLowerCase().includes(currentSearchTerm) ||
+        (u.tenantId?.name || '').toLowerCase().includes(currentSearchTerm)
+      );
+    }
+
+    const rowsHtml = list.length
+      ? list.map(u => {
+          const tenantName = u.tenantId?.name || (u.role === 'superadmin' ? 'Global Platform' : '—');
+          const branchName = u.branchId?.name || '—';
+          return '<tr>' +
+            '<td><strong>' + esc(u.name || u.username) + '</strong><br><small style="color:var(--text-muted);">' + esc(u.email || '') + '</small></td>' +
+            '<td><code>' + esc(u.username) + '</code></td>' +
+            '<td>' + roleBadge(u.role) + '</td>' +
+            '<td>' + esc(tenantName) + '</td>' +
+            '<td>' + esc(branchName) + '</td>' +
+            '<td>' + (u.active !== false ? '<span class="badge active">Active</span>' : '<span class="badge suspended">Disabled</span>') + '</td>' +
+          '</tr>';
+        }).join('')
+      : '<tr><td colspan="6" class="empty-state">No users found.</td></tr>';
+
+    content.innerHTML = '<div class="panel">' +
+      '<div class="panel-head">' +
+        '<h3>Platform User Accounts (' + list.length + ')</h3>' +
+      '</div>' +
+      '<div class="table-scroll">' +
+        '<table class="data-table">' +
+          '<thead><tr><th>Name &amp; Email</th><th>Username</th><th>Role</th><th>Restaurant</th><th>Branch</th><th>Status</th></tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ================================================================
+  // 5. ORDERS VIEW
+  // ================================================================
+  async function renderOrders() {
+    pageTitle.textContent = 'Orders';
+    breadcrumb.textContent = 'Cross-Tenant Orders Stream';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading orders…</div>';
+
+    try {
+      cachedOrders = await api('/api/orders');
+    } catch (err) {
+      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
+      return;
+    }
+
+    let list = cachedOrders;
+    if (currentSearchTerm) {
+      list = list.filter(o =>
+        (o.orderNumber || '').toLowerCase().includes(currentSearchTerm) ||
+        (o.customerName || '').toLowerCase().includes(currentSearchTerm) ||
+        (o.tenantId?.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (o.status || '').toLowerCase().includes(currentSearchTerm)
+      );
+    }
+
+    const rowsHtml = list.length
+      ? list.slice(0, 50).map(o => {
+          const sym = o.tenantId?.currencySymbol || 'Rs';
+          return '<tr>' +
+            '<td><strong>' + esc(o.orderNumber) + '</strong></td>' +
+            '<td>' + esc(o.tenantId?.name || 'Ember & Brew') + '</td>' +
+            '<td>' + esc(o.customerName) + '</td>' +
+            '<td>' + esc(o.orderType || 'dine-in') + '</td>' +
+            '<td><strong>' + money(o.total, sym + ' ') + '</strong></td>' +
+            '<td>' + statusBadge(o.status) + '</td>' +
+            '<td>' + new Date(o.createdAt).toLocaleDateString() + '</td>' +
+          '</tr>';
+        }).join('')
+      : '<tr><td colspan="7" class="empty-state">No orders found.</td></tr>';
+
+    content.innerHTML = '<div class="panel">' +
+      '<div class="panel-head">' +
+        '<h3>Recent Platform Orders (' + list.length + ')</h3>' +
+      '</div>' +
+      '<div class="table-scroll">' +
+        '<table class="data-table">' +
+          '<thead><tr><th>Order #</th><th>Restaurant</th><th>Customer</th><th>Type</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ================================================================
+  // 6. SUBSCRIPTIONS VIEW
+  // ================================================================
+  async function renderSubscriptions() {
+    pageTitle.textContent = 'Subscriptions';
+    breadcrumb.textContent = 'SaaS Subscription Tiers & Billing';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading subscriptions…</div>';
+
+    try {
+      const data = await api('/api/tenants');
+      cachedTenants = data.tenants || [];
+    } catch (err) {
+      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
+      return;
+    }
+
+    let list = cachedTenants;
+    if (currentSearchTerm) {
+      list = list.filter(t => (t.name || '').toLowerCase().includes(currentSearchTerm));
+    }
+
+    const rowsHtml = list.length
+      ? list.map(t => {
+          const plan = t.plan || 'pro';
+          const cycle = t.billingCycle || 'monthly';
+          const exp = t.subscriptionExpiresAt ? new Date(t.subscriptionExpiresAt).toLocaleDateString() : 'Active (Perpetual)';
+
+          return '<tr>' +
+            '<td><strong>' + esc(t.name) + '</strong></td>' +
+            '<td>' + planBadge(plan) + '</td>' +
+            '<td style="text-transform:capitalize;">' + esc(cycle) + '</td>' +
+            '<td>' + esc(exp) + '</td>' +
+            '<td>' + statusBadge(t.status) + '</td>' +
+            '<td>' +
+              '<div class="table-actions">' +
+                (t.status === 'suspended'
+                  ? '<button class="btn-action-icon activate-sub-btn" data-id="' + t._id + '" title="Activate Subscription" style="color:var(--sage);"><i class="fa-solid fa-check"></i></button>'
+                  : '<button class="btn-action-icon suspend-sub-btn" data-id="' + t._id + '" title="Suspend Restaurant" style="color:var(--danger);"><i class="fa-solid fa-ban"></i></button>') +
+                '<button class="btn-action-icon extend-sub-btn" data-id="' + t._id + '" title="Extend +1 Month"><i class="fa-solid fa-calendar-plus"></i></button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        }).join('')
+      : '<tr><td colspan="6" class="empty-state">No subscriptions found.</td></tr>';
+
+    content.innerHTML = '<div class="panel">' +
+      '<div class="panel-head">' +
+        '<h3>Active Restaurant Subscriptions</h3>' +
+      '</div>' +
+      '<div class="table-scroll">' +
+        '<table class="data-table">' +
+          '<thead><tr><th>Restaurant</th><th>Plan</th><th>Billing Cycle</th><th>Renews / Expires</th><th>Status</th><th>Quick Actions</th></tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+
+    // Hook subscription actions
+    content.querySelectorAll('.activate-sub-btn').forEach(b => {
+      b.addEventListener('click', async () => {
+        try {
+          await api('/api/tenants/' + b.dataset.id + '/subscription', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'active' })
+          });
+          showToast('Subscription activated.');
+          renderSubscriptions();
+        } catch (err) { alert(err.message); }
+      });
+    });
+
+    content.querySelectorAll('.suspend-sub-btn').forEach(b => {
+      b.addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to suspend this restaurant?')) return;
+        try {
+          await api('/api/tenants/' + b.dataset.id + '/subscription', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'suspended' })
+          });
+          showToast('Subscription suspended.');
+          renderSubscriptions();
+        } catch (err) { alert(err.message); }
+      });
+    });
+
+    content.querySelectorAll('.extend-sub-btn').forEach(b => {
+      b.addEventListener('click', async () => {
+        try {
+          await api('/api/tenants/' + b.dataset.id + '/subscription', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ extendMonths: 1 })
+          });
+          showToast('Extended subscription by 1 month.');
+          renderSubscriptions();
+        } catch (err) { alert(err.message); }
+      });
+    });
+  }
+
+  // ================================================================
+  // 7. SETTINGS VIEW
+  // ================================================================
+  async function renderSettings() {
+    pageTitle.textContent = 'Settings';
+    breadcrumb.textContent = 'Superadmin Global Platform Configuration';
+    scopePill.textContent = 'Platform Superadmin';
+
+    content.innerHTML = '<div class="panel">' +
+      '<div class="panel-head"><h3>Platform System Configuration</h3></div>' +
+      '<div class="panel-body" style="padding:22px;">' +
+        '<div style="font-size:13.5px;line-height:1.7;color:var(--text);">' +
+          '<p><strong>Multi-Tenant Architecture Status:</strong> <span style="color:var(--sage);font-weight:700;">ACTIVE &amp; OPERATIONAL</span></p>' +
+          '<p>Each restaurant tenant operates as an isolated organizational entity with independent branding, branches, menu items, orders, and owner access credentials.</p>' +
+          '<hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">' +
+          '<p><strong>Current Logged In User:</strong> <code>' + esc(user.username) + '</code> (Role: <code>' + esc(user.role) + '</code>)</p>' +
+          '<p><strong>Token Status:</strong> Authenticated with 8-hour JWT Session Token.</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ================================================================
+  // MODAL WORKFLOWS: Create Tenant & Credentials Display
+  // ================================================================
+
+  function openCreateTenantModalHandler() {
+    createTenantForm.reset();
+    createTenantError.hidden = true;
+    createTenantError.textContent = '';
+    newTenantCountry.value = 'Pakistan';
+    newTenantCurrency.value = 'PKR';
+    newTenantTimezone.value = 'Asia/Karachi';
+    createTenantModal.classList.remove('hidden');
+    newTenantName.focus();
+  }
+
+  function closeCreateTenantModalHandler() {
+    createTenantModal.classList.add('hidden');
+  }
+
+  if (closeCreateTenantModal) closeCreateTenantModal.addEventListener('click', closeCreateTenantModalHandler);
+  if (cancelCreateTenantBtn) cancelCreateTenantBtn.addEventListener('click', closeCreateTenantModalHandler);
+
+  // Auto-derive slug from Restaurant Name
+  if (newTenantName && newTenantSlug) {
+    newTenantName.addEventListener('input', () => {
+      const raw = newTenantName.value;
+      newTenantSlug.value = raw
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    });
+  }
+
+  // Country change auto-sets currency and timezone
+  if (newTenantCountry) {
+    newTenantCountry.addEventListener('change', () => {
+      const selected = newTenantCountry.value;
+      const def = countryDefaults[selected] || { currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi' };
+      if (newTenantCurrency) newTenantCurrency.value = def.currency;
+      if (newTenantTimezone) newTenantTimezone.value = def.tz;
+    });
+  }
+
+  // Optional Accordion Toggle
+  if (toggleAdvTenantDetails && advTenantDetails) {
+    toggleAdvTenantDetails.addEventListener('click', () => {
+      advTenantDetails.classList.toggle('hidden');
+      const icon = document.getElementById('advChevron');
+      if (icon) {
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
+      }
+    });
+  }
+
+  // Handle Create Tenant Form Submission
+  if (createTenantForm) {
+    createTenantForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      createTenantError.hidden = true;
+      createTenantError.textContent = '';
+
+      const submitBtn = document.getElementById('submitCreateTenantBtn');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Restaurant…';
+
+      const formData = new FormData(createTenantForm);
+      const payload = Object.fromEntries(formData.entries());
+
+      try {
+        const res = await api('/api/tenants', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: payload.name,
+            slug: payload.slug,
+            ownerName: payload.ownerName,
+            ownerEmail: payload.ownerEmail,
+            country: payload.country,
+            currency: payload.currency,
+            timezone: payload.timezone,
+            tagline: payload.tagline || undefined,
+            theme: payload.primaryColor ? { primaryColor: payload.primaryColor } : undefined
+          })
+        });
+
+        // Close creation modal
+        closeCreateTenantModalHandler();
+
+        // Populate credentials modal
+        const tenant = res.tenant;
+        const credentials = res.credentials;
+
+        const origin = window.location.origin;
+        const storefrontUrl = origin + '/r/' + tenant.slug;
+        const loginUrl = origin + '/admin/login';
+
+        credRestaurantName.textContent = tenant.name;
+        credStorefrontUrl.textContent = storefrontUrl;
+        credStorefrontUrl.href = storefrontUrl;
+        credLoginUrl.textContent = loginUrl;
+        credLoginUrl.href = loginUrl;
+        credUsername.textContent = credentials.username;
+        credPassword.textContent = credentials.tempPassword;
+
+        activeCredentialsText =
+          '========================================\n' +
+          '🎉 ' + tenant.name.toUpperCase() + ' — ACCESS CREDENTIALS\n' +
+          '========================================\n\n' +
+          '🏪 Storefront URL: ' + storefrontUrl + '\n' +
+          '🔑 Admin Portal: ' + loginUrl + '\n' +
+          '👤 Username: ' + credentials.username + '\n' +
+          '🔒 Temporary Password: ' + credentials.tempPassword + '\n' +
+          '🛡️ Role: Restaurant Owner\n\n' +
+          '⚠️ Please log in and change your password upon first sign in.';
+
+        credentialsModal.classList.remove('hidden');
+        showToast('Restaurant tenant created!');
+
+        // Refresh tenants view
+        renderTenants();
+      } catch (err) {
+        createTenantError.textContent = err.message;
+        createTenantError.hidden = false;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    });
+  }
+
+  // Credentials copy handlers
+  if (copyUsernameBtn) {
+    copyUsernameBtn.addEventListener('click', () => {
+      const username = credUsername.textContent;
+      navigator.clipboard.writeText(username).then(() => {
+        showToast('Username copied to clipboard!');
+      });
+    });
+  }
+
+  if (copyPasswordBtn) {
+    copyPasswordBtn.addEventListener('click', () => {
+      const pwd = credPassword.textContent;
+      navigator.clipboard.writeText(pwd).then(() => {
+        showToast('Temporary password copied to clipboard!');
+      });
+    });
+  }
+
+  if (copyAllCredentialsBtn) {
+    copyAllCredentialsBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(activeCredentialsText).then(() => {
+        showToast('All credentials copied to clipboard!');
+      });
+    });
+  }
+
+  if (closeCredentialsModalBtn) {
+    closeCredentialsModalBtn.addEventListener('click', () => {
+      credentialsModal.classList.add('hidden');
+      renderTenants();
+    });
+  }
+
+  // Edit Tenant Modal handlers
+  function openEditTenantModalHandler(tenant) {
+    document.getElementById('editTenantHeading').textContent = 'Manage ' + tenant.name;
+    document.getElementById('editTenantId').value = tenant._id;
+    document.getElementById('editTenantName').value = tenant.name;
+    document.getElementById('editTenantStatus').value = tenant.status || 'active';
+    document.getElementById('editOwnerName').value = tenant.ownerName || '';
+    document.getElementById('editOwnerEmail').value = tenant.ownerEmail || '';
+    document.getElementById('editTenantCountry').value = tenant.country || 'Pakistan';
+    document.getElementById('editTenantPlan').value = tenant.plan || 'pro';
+    document.getElementById('editTenantError').hidden = true;
+    editTenantModal.classList.remove('hidden');
+  }
+
+  function closeEditTenantModalHandler() {
+    editTenantModal.classList.add('hidden');
+  }
+
+  if (closeEditTenantModal) closeEditTenantModal.addEventListener('click', closeEditTenantModalHandler);
+  if (cancelEditTenantBtn) cancelEditTenantBtn.addEventListener('click', closeEditTenantModalHandler);
+
+  if (editTenantForm) {
+    editTenantForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editTenantId').value;
+      const errEl = document.getElementById('editTenantError');
+      errEl.hidden = true;
+
+      try {
+        await api('/api/tenants/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('editTenantName').value,
+            status: document.getElementById('editTenantStatus').value,
+            ownerName: document.getElementById('editOwnerName').value,
+            ownerEmail: document.getElementById('editOwnerEmail').value,
+            country: document.getElementById('editTenantCountry').value,
+            plan: document.getElementById('editTenantPlan').value
+          })
+        });
+        closeEditTenantModalHandler();
+        showToast('Restaurant updated successfully.');
+        renderTenants();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.hidden = false;
+      }
+    });
+  }
+
+  // Initial render
   renderTenants();
 })();

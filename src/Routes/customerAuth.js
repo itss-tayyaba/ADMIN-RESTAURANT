@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Customer = require('../models/Customer');
 const Order = require('../models/Order');
+const { resolveTenant } = require('../utils/tenantScope');
 
 // Middleware: verify a customer JWT (exported for use in orders/complaints routes)
 function customerAuth(req, res, next) {
@@ -70,6 +71,7 @@ function signCustomerToken(customer) {
       name: customer.name,
       email: customer.email,
       phone: customer.phone,
+      tenantId: customer.tenantId,
       role: 'customer'
     },
     process.env.JWT_SECRET,
@@ -111,7 +113,7 @@ async function claimGuestOrders(customer) {
   try {
     const phones = getPhoneVariations(customer.phone);
     await Order.updateMany(
-      { customer: null, customerPhone: { $in: phones } },
+      { customer: null, tenantId: customer.tenantId, customerPhone: { $in: phones } },
       { $set: { customer: customer._id } }
     );
   } catch (err) {
@@ -124,6 +126,7 @@ async function claimGuestOrders(customer) {
 router.post('/register', async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
+    const tenantId = await resolveTenant(req);
 
     if (!name || !phone || !password) {
       return res.status(400).json({
@@ -146,7 +149,7 @@ router.post('/register', async (req, res) => {
 
     if (email) {
       const existing = await Customer.findOne({
-        email: email.toLowerCase()
+        tenantId, email: email.toLowerCase()
       });
 
       if (existing) {
@@ -157,7 +160,7 @@ router.post('/register', async (req, res) => {
     }
 
     const phoneCandidates = getPhoneVariations(cleanPhone);
-    const existingPhone = await Customer.findOne({ phone: { $in: phoneCandidates } });
+    const existingPhone = await Customer.findOne({ tenantId, phone: { $in: phoneCandidates } });
     if (existingPhone) {
       return res.status(409).json({
         error: 'An account with this phone number already exists. Please sign in.'
@@ -168,6 +171,7 @@ router.post('/register', async (req, res) => {
       name,
       email: email || '',
       phone: cleanPhone,
+      tenantId,
       password
     });
 
@@ -199,6 +203,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { identifier, password } = req.body;
+    const tenantId = await resolveTenant(req);
 
     if (!identifier || !password) {
       return res.status(400).json({
@@ -209,10 +214,10 @@ router.post('/login', async (req, res) => {
     const cleanId = String(identifier || '').trim();
     let query;
     if (cleanId.includes('@')) {
-      query = { email: cleanId.toLowerCase() };
+      query = { tenantId, email: cleanId.toLowerCase() };
     } else {
       const phoneVars = getPhoneVariations(cleanId);
-      query = { phone: { $in: phoneVars } };
+      query = { tenantId, phone: { $in: phoneVars } };
     }
 
     const customer = await Customer.findOne(query);
@@ -257,7 +262,7 @@ router.post('/login', async (req, res) => {
 // GET /api/customer-auth/me
 router.get('/me', customerAuth, async (req, res) => {
   try {
-    const customer = await Customer.findById(req.customer.id).select('-password');
+    const customer = await Customer.findOne({ _id: req.customer.id, tenantId: req.customer.tenantId }).select('-password');
 
     if (!customer) {
       return res.status(404).json({

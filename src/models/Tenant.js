@@ -84,6 +84,30 @@ const tenantSchema = new mongoose.Schema({
     default: '',
     trim: true
   },
+  country: {
+    type: String,
+    default: 'Pakistan',
+    trim: true
+  },
+  timezone: {
+    type: String,
+    default: 'Asia/Karachi',
+    trim: true
+  },
+  plan: {
+    type: String,
+    enum: ['starter', 'pro', 'enterprise'],
+    default: 'pro'
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'annual'],
+    default: 'monthly'
+  },
+  subscriptionExpiresAt: {
+    type: Date,
+    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  },
   status: {
     type: String,
     enum: ['active', 'trial', 'suspended'],
@@ -126,6 +150,9 @@ tenantSchema.statics.createDefaultTenant = async function () {
       ownerName: 'Tayyaba Batool',
       ownerEmail: 'tayyaba@emberandbrew.co',
       ownerPhone: '+923206551696',
+      country: 'Pakistan',
+      timezone: 'Asia/Karachi',
+      plan: 'enterprise',
       status: 'active'
     });
     console.log('✅ Default Tenant (Ember & Brew) created.');

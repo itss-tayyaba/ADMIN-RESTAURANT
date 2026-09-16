@@ -2,6 +2,7 @@
 const currentTenantSlug = (new URLSearchParams(window.location.search)).get('tenant') ||
   (window.location.pathname.startsWith('/r/') ? window.location.pathname.split('/')[2] : '') ||
   localStorage.getItem('eb_tenant_slug') || 'ember-and-brew';
+localStorage.setItem('eb_tenant_slug', currentTenantSlug);
 // ==========================================================================
 // Ember & Brew — Customer Portal Application
 // Luxury Dashboard Architecture matching Admin Dashboard
@@ -101,7 +102,11 @@ function straightLineKm(from, to) {
 let customerTrackingPoll = null;
 
 function apiFetch(url, options = {}) {
-  return fetch(url, options).then(async res => {
+  const headers = new Headers(options.headers || {});
+  // Every public request carries its restaurant context. The server uses
+  // this to keep menu, orders, reservations and customer data separated.
+  headers.set('X-Tenant-Slug', currentTenantSlug);
+  return fetch(url, { ...options, headers }).then(async res => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Server error');
     return data;

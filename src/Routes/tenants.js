@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const Tenant = require('../models/Tenant');
 const Branch = require('../models/Branch');
 const AdminUser = require('../models/AdminUser');
@@ -7,6 +8,32 @@ const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
 const jwt = require('jsonwebtoken');
 const { OBJECT_ID_RE } = require('../utils/tenantScope');
+
+function generateTempPassword(length = 12) {
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const digits = '23456789';
+  const symbols = '!@#$%^&*';
+  const allChars = upper + lower + digits + symbols;
+
+  const password = [
+    upper[crypto.randomInt(0, upper.length)],
+    lower[crypto.randomInt(0, lower.length)],
+    digits[crypto.randomInt(0, digits.length)],
+    symbols[crypto.randomInt(0, symbols.length)]
+  ];
+
+  for (let i = 4; i < length; i++) {
+    password.push(allChars[crypto.randomInt(0, allChars.length)]);
+  }
+
+  for (let i = password.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(0, i + 1);
+    [password[i], password[j]] = [password[j], password[i]];
+  }
+
+  return password.join('');
+}
 
 // Middleware to extract admin auth if present
 function optionalAdminAuth(req, res, next) {
@@ -46,14 +73,16 @@ router.get('/', optionalAdminAuth, async (req, res) => {
 
     if (isSuperAdmin) {
       const enriched = await Promise.all(tenants.map(async (t) => {
-        const [branchCount, menuCount, orderCount, adminCount] = await Promise.all([
+        const [branchCount, menuCount, orderCount, adminCount, ownerUser] = await Promise.all([
           Branch.countDocuments({ tenantId: t._id }),
           MenuItem.countDocuments({ tenantId: t._id }),
           Order.countDocuments({ tenantId: t._id }),
-          AdminUser.countDocuments({ tenantId: t._id, role: { $ne: 'superadmin' } })
+          AdminUser.countDocuments({ tenantId: t._id, role: { $ne: 'superadmin' } }),
+          AdminUser.findOne({ tenantId: t._id, role: 'owner' }).select('username name email').lean()
         ]);
         return {
           ...t,
+          ownerUser: ownerUser || null,
           stats: { branchCount, menuCount, orderCount, adminCount }
         };
       }));
@@ -116,18 +145,19 @@ router.post('/', superAdminOnly, async (req, res) => {
       contact,
       currency,
       currencySymbol,
+      country,
+      timezone,
       ownerName,
       ownerEmail,
       ownerPhone,
       adminUsername,
       adminPassword,
       initialBranchName,
-      initialBranchCity,
-      initialBranchCountry
+      initialBranchCity
     } = req.body;
 
     if (!name || !slug) {
-      return res.status(400).json({ error: 'Tenant brand name and slug are required' });
+      return res.status(400).json({ error: 'Tenant restaurant name and slug are required' });
     }
 
     const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -135,6 +165,11 @@ router.post('/', superAdminOnly, async (req, res) => {
     if (existing) {
       return res.status(400).json({ error: 'A restaurant with this slug already exists' });
     }
+
+    const selectedCountry = country ? country.trim() : 'Pakistan';
+    const selectedTimezone = timezone ? timezone.trim() : 'Asia/Karachi';
+    const selectedCurrency = currency ? currency.trim().toUpperCase() : 'PKR';
+    const selectedCurrencySymbol = currencySymbol ? currencySymbol.trim() : (selectedCurrency === 'USD' ? '$' : selectedCurrency === 'GBP' ? '£' : selectedCurrency === 'EUR' ? '€' : selectedCurrency === 'AUD' ? 'A$' : 'Rs');
 
     const tenant = await Tenant.create({
       name: name.trim(),
@@ -155,11 +190,15 @@ router.post('/', superAdminOnly, async (req, res) => {
         website: contact?.website || '',
         address: contact?.address || ''
       },
-      currency: currency || 'PKR',
-      currencySymbol: currencySymbol || 'Rs',
-      ownerName: ownerName || '',
-      ownerEmail: ownerEmail || '',
+      currency: selectedCurrency,
+      currencySymbol: selectedCurrencySymbol,
+      country: selectedCountry,
+      timezone: selectedTimezone,
+      ownerName: ownerName ? ownerName.trim() : '',
+      ownerEmail: ownerEmail ? ownerEmail.trim().toLowerCase() : '',
       ownerPhone: ownerPhone || '',
+      plan: 'pro',
+      billingCycle: 'monthly',
       status: 'active'
     });
 
@@ -169,12 +208,12 @@ router.post('/', superAdminOnly, async (req, res) => {
       tenantId: tenant._id,
       name: initialBranchName || (tenant.name + ' — Main'),
       code: branchCode,
-      country: initialBranchCountry || 'Pakistan',
-      countryCode: 'PK',
-      city: initialBranchCity || 'Lahore',
+      country: selectedCountry,
+      countryCode: selectedCountry === 'Australia' ? 'AU' : selectedCountry === 'United Kingdom' ? 'GB' : selectedCountry === 'United States' ? 'US' : 'PK',
+      city: initialBranchCity || (selectedCountry === 'Pakistan' ? 'Lahore' : 'Main'),
       currency: tenant.currency,
       currencySymbol: tenant.currencySymbol,
-      timezone: 'Asia/Karachi',
+      timezone: selectedTimezone,
       taxRate: 0.08,
       address: contact?.address || '',
       phone: contact?.phone || ownerPhone || '',
@@ -182,30 +221,88 @@ router.post('/', superAdminOnly, async (req, res) => {
       paymentMethods: ['Cash on delivery', 'Card', 'Wallet']
     });
 
-    // Create Tenant Admin User if credentials provided
-    let createdAdmin = null;
-    if (adminUsername && adminPassword) {
-      const existingUser = await AdminUser.findOne({ username: adminUsername.trim() });
-      if (!existingUser) {
-        createdAdmin = await AdminUser.create({
-          username: adminUsername.trim(),
-          password: adminPassword,
-          name: ownerName || (tenant.name + ' Admin'),
-          role: 'admin',
-          tenantId: tenant._id,
-          branchId: branch._id
-        });
+    // Generate unique owner username
+    let finalUsername = adminUsername ? adminUsername.trim() : '';
+    if (!finalUsername) {
+      let baseUsername = cleanSlug.replace(/[^a-z0-9]/g, '');
+      if (!baseUsername) baseUsername = 'restaurant';
+      baseUsername += 'admin';
+      let candidateUsername = baseUsername;
+      let counter = 1;
+      while (await AdminUser.findOne({ username: candidateUsername })) {
+        candidateUsername = `${baseUsername}${counter++}`;
       }
+      finalUsername = candidateUsername;
     }
+
+    // Generate strong temporary password if not provided
+    const tempPassword = adminPassword ? adminPassword.trim() : generateTempPassword(12);
+
+    // Create Owner User
+    const ownerUser = await AdminUser.create({
+      username: finalUsername,
+      password: tempPassword,
+      name: ownerName ? ownerName.trim() : (tenant.name + ' Owner'),
+      email: ownerEmail ? ownerEmail.trim().toLowerCase() : '',
+      role: 'owner',
+      tenantId: tenant._id,
+      branchId: branch._id
+    });
 
     res.status(201).json({
       message: 'Restaurant tenant created successfully',
       tenant,
       branch,
-      admin: createdAdmin ? { username: createdAdmin.username, role: createdAdmin.role } : null
+      credentials: {
+        username: ownerUser.username,
+        tempPassword,
+        role: 'owner',
+        loginUrl: '/admin/login'
+      }
     });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to create tenant' });
+  }
+});
+
+// GET /api/tenants/users/all — List all platform users (Superadmin only)
+router.get('/users/all', superAdminOnly, async (req, res) => {
+  try {
+    const users = await AdminUser.find({})
+      .populate('tenantId', 'name slug country status')
+      .populate('branchId', 'name code city country')
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch platform users' });
+  }
+});
+
+// PUT /api/tenants/:id/subscription — Manage tenant subscription (Superadmin only)
+router.put('/:id/subscription', superAdminOnly, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { plan, billingCycle, status, extendMonths } = req.body;
+    const tenant = await Tenant.findById(id);
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+
+    if (plan) tenant.plan = plan;
+    if (billingCycle) tenant.billingCycle = billingCycle;
+    if (status) tenant.status = status;
+    if (extendMonths && Number(extendMonths) > 0) {
+      const base = (tenant.subscriptionExpiresAt && new Date(tenant.subscriptionExpiresAt) > new Date())
+        ? new Date(tenant.subscriptionExpiresAt)
+        : new Date();
+      base.setMonth(base.getMonth() + Number(extendMonths));
+      tenant.subscriptionExpiresAt = base;
+    }
+
+    await tenant.save();
+    res.json({ message: 'Subscription updated successfully', tenant });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to update subscription' });
   }
 });
 

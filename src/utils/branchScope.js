@@ -47,10 +47,9 @@ async function addBranchScope(query, branchId) {
   return query;
 }
 
-// True for both a regular branch admin and a superadmin — use this
-// anywhere a route previously did `decoded.role !== 'admin'`.
+// True for a branch admin, an owner, and a superadmin
 function isAdminRole(role) {
-  return role === 'admin' || role === 'superadmin';
+  return role === 'admin' || role === 'superadmin' || role === 'owner';
 }
 
 // decoded: the JWT payload (req.user / req.admin — has .role and .branchId)

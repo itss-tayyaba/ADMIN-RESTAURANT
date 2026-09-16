@@ -5,7 +5,6 @@ const adminUserSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
-    unique: true,
     trim: true
   },
   password: {
@@ -16,9 +15,15 @@ const adminUserSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  email: {
+    type: String,
+    default: '',
+    trim: true,
+    lowercase: true
+  },
   role: {
     type: String,
-    enum: ['admin', 'chef', 'delivery', 'superadmin'],
+    enum: ['superadmin', 'owner', 'admin', 'chef', 'delivery'],
     default: 'chef'
   },
   tenantId: {
@@ -53,6 +58,10 @@ const adminUserSchema = new mongoose.Schema({
     min: 0
   }
 }, { timestamps: true });
+
+// Staff names only need to be unique inside one restaurant. This lets every
+// customer use familiar credentials such as "admin" or "chef" safely.
+adminUserSchema.index({ tenantId: 1, username: 1 }, { unique: true });
 
 adminUserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

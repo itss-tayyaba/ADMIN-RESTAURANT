@@ -103,8 +103,17 @@ router.put('/:id', adminAuth, upload.single('image'), async (req, res) => {
     if (req.file) updates.image = bufferToDataUri(req.file);
     if (updates.price != null) updates.price = Number(updates.price);
     if (updates.available != null) updates.available = String(updates.available) === 'true';
+    // Tenant and branch ownership are server-controlled, never editable by
+    // a browser request.
+    delete updates.tenantId;
+    delete updates.branchId;
 
-    const item = await MenuItem.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+    const query = { _id: req.params.id };
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
+    const branchId = resolveBranchId(req.admin, req.query);
+    if (branchId) query.$and = [...(query.$and || []), { $or: [{ branchId }, { branchId: null }] }];
+    const item = await MenuItem.findOneAndUpdate(query, { $set: updates }, { new: true });
     if (!item) return res.status(404).json({ error: 'Item not found' });
     res.json(item);
   } catch (err) {
@@ -115,7 +124,12 @@ router.put('/:id', adminAuth, upload.single('image'), async (req, res) => {
 // DELETE /api/menu/:id — delete menu item
 router.delete('/:id', adminAuth, async (req, res) => {
   try {
-    const item = await MenuItem.findByIdAndDelete(req.params.id);
+    const query = { _id: req.params.id };
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
+    const branchId = resolveBranchId(req.admin, req.query);
+    if (branchId) query.$and = [...(query.$and || []), { $or: [{ branchId }, { branchId: null }] }];
+    const item = await MenuItem.findOneAndDelete(query);
     if (!item) return res.status(404).json({ error: 'Item not found' });
     res.json({ message: 'Item deleted' });
   } catch (err) {

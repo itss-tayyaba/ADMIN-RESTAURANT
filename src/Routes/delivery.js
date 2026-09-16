@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Order = require("../models/Order");
 const AdminUser = require("../models/AdminUser");
+const Branch = require("../models/Branch");
 const jwt = require("jsonwebtoken");
 const REGIONS = require("../data/regions");
 const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
@@ -239,7 +240,12 @@ router.post("/riders", adminAuth, async (req, res) => {
             });
         }
 
-        const existing = await AdminUser.findOne({ username });
+        const branch = await Branch.findById(branchId).select('tenantId');
+        if (!branch || (req.user.role !== 'superadmin' && String(branch.tenantId) !== String(req.user.tenantId))) {
+            return res.status(404).json({ success: false, message: "Branch not found." });
+        }
+
+        const existing = await AdminUser.findOne({ tenantId: branch.tenantId, username });
 
         if (existing) {
             return res.status(409).json({
@@ -256,6 +262,7 @@ router.post("/riders", adminAuth, async (req, res) => {
             region,
             phone: phone || '',
             active: true,
+            tenantId: branch.tenantId,
             branchId
         });
 
