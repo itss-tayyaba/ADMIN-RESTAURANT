@@ -90,24 +90,51 @@ function showAppToast(message, duration = 3500) {
   }, duration);
 }
 
-// Direct Download Action — No intermediate dialogs
-function triggerPwaInstall() {
-  const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
-  
-  if (isIos) {
-    showIosGuide();
+// Official Ember & Brew Luxury App Installation Engine
+async function triggerPwaInstall() {
+  // If Android/Chrome native install prompt is captured, trigger it immediately
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    const choice = await deferredPwaPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      showAppToast('Installing Ember & Brew App...');
+    }
+    deferredPwaPrompt = null;
     return;
   }
 
-  // Direct download valid APK file
-  showAppToast('Downloading Ember & Brew App... Tap Install when finished.');
+  // Otherwise, show luxury brand modal with the official logo and 1-tap instructions
+  showAppBrandModal();
+}
 
-  const link = document.createElement('a');
-  link.href = 'https://files.catbox.moe/i9490k.apk';
-  link.setAttribute('download', 'EmberAndBrew.apk');
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+function showAppBrandModal() {
+  let modal = document.getElementById('ebAppBrandModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ebAppBrandModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,14,12,0.92);backdrop-filter:blur(12px);z-index:9999999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:"DM Sans",sans-serif;animation:modalFadeIn 0.2s ease-out;';
+    
+    modal.innerHTML = '<div style="background:#1A1917;border:1.5px solid #D4A853;border-radius:24px;padding:26px;max-width:380px;width:100%;color:#F5F0E8;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.9);position:relative;">' +
+      '<button onclick="document.getElementById(\'ebAppBrandModal\').style.display=\'none\'" style="position:absolute;top:14px;right:14px;background:none;border:none;color:#8A8478;font-size:18px;cursor:pointer;padding:4px;"><i class="fa-solid fa-xmark"></i></button>' +
+      '<div style="width:76px;height:76px;margin:0 auto 14px;border-radius:22px;border:2px solid #D4A853;overflow:hidden;box-shadow:0 8px 24px rgba(212,168,83,0.3);background:#0F0E0C;">' +
+        '<img src="/images/app-logo.png" alt="Ember & Brew Logo" style="width:100%;height:100%;object-fit:cover;">' +
+      '</div>' +
+      '<h3 style="font-family:\'Playfair Display\',serif;font-size:21px;font-weight:700;color:#F5F0E8;margin:0 0 4px;">Ember &amp; Brew</h3>' +
+      '<p style="font-size:11px;color:#D4A853;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 16px;">Official Mobile App</p>' +
+      '<div style="background:#0F0E0C;border:1px solid #2E2C28;border-radius:16px;padding:14px;text-align:left;margin-bottom:18px;">' +
+        '<p style="font-size:12.5px;color:#F5F0E8;font-weight:700;margin:0 0 8px;"><i class="fa-solid fa-mobile-screen-button" style="color:#D4A853;margin-right:6px;"></i>How to Install on Home Screen:</p>' +
+        '<div style="font-size:12px;color:#D4C4A8;line-height:1.5;">' +
+          '<div style="margin-bottom:8px;"><strong>Android (Chrome):</strong> Tap <strong>⋮</strong> (top right) &rarr; Select <strong style="color:#D4A853;">"Install app"</strong> or <strong style="color:#D4A853;">"Add to Home screen"</strong>.</div>' +
+          '<div><strong>iPhone (Safari):</strong> Tap <strong>Share <i class="fa-solid fa-arrow-up-from-bracket"></i></strong> &rarr; Select <strong style="color:#D4A853;">"Add to Home Screen"</strong>.</div>' +
+        '</div>' +
+      '</div>' +
+      '<p style="font-size:11.5px;color:#8A8478;margin:0 0 16px;">Installs with official luxury icon &bull; Instant order updates</p>' +
+      '<button onclick="document.getElementById(\'ebAppBrandModal\').style.display=\'none\'" style="width:100%;background:linear-gradient(135deg,#D4A853,#C4923A);color:#0F0E0C;font-weight:800;font-size:13px;padding:11px;border-radius:12px;border:none;cursor:pointer;">Understood</button>' +
+    '</div>';
+
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
 }
 
 function showIosGuide() {

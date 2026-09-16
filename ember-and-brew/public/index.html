@@ -716,7 +716,7 @@ async function confirmNativeInstall() {
           </div>
 
           <!-- Image collage -->
-          <div class="relative mx-auto max-w-sm lg:max-w-none w-full animate-fade-up" style="animation-delay:.15s;transform:translateY(-12px)">
+          <div class="relative mx-auto max-w-sm lg:max-w-none w-full animate-fade-up mt-6 sm:mt-0" style="animation-delay:.15s">
             <div class="absolute -inset-8 rounded-[2rem] opacity-50 pointer-events-none" style="background:radial-gradient(circle at 50% 40%,rgba(212,168,83,.35),transparent 70%);filter:blur(30px)"></div>
             <div class="relative rounded-[2rem] overflow-hidden border border-brand-800 shadow-2xl aspect-[4/5]">
               <img id="branch-hero-image" src="/images/Avacado toast.jpeg" alt="Ember &amp; Brew, freshly plated" class="w-full h-full object-cover">
@@ -726,7 +726,7 @@ async function confirmNativeInstall() {
               <img src="/images/Cappuccino.jpeg" alt="Cappuccino" class="w-full h-full object-cover">
             </div>
             <!-- floating review badge -->
-            <div class="float-slow absolute -top-2 right-2 sm:top-6 sm:-right-8 bg-brand-900/95 backdrop-blur border border-brand-800 rounded-2xl px-5 py-4 shadow-xl max-w-[180px]" style="animation-delay:.6s">
+            <div class="float-slow absolute top-3 right-3 sm:top-6 sm:-right-8 bg-brand-900/95 backdrop-blur border border-brand-800 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 shadow-xl max-w-[170px] sm:max-w-[180px]" style="animation-delay:.6s">
               <div class="flex items-center gap-0.5 text-brand-400 text-xs mb-1.5">
                 <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
               </div>
@@ -1623,7 +1623,7 @@ async function confirmNativeInstall() {
 // We normalize {_id, description, category, image} -> {id, desc, cat, img}
 // so the rest of the file (cart, checkout, upsell, etc.) doesn't need to change.
 let MENU = [];
-let CATEGORIES = ["All","Desi","Fast Food","Pizza","Coffee","Sandwiches","Bakery","Desserts","Drinks","Breakfast","Salads"];
+let CATEGORIES = ["All","Desi","Fast Food","Pizza","Coffee","Sandwiches","Bakery","Desserts","Drinks","Salads"];
 
 // A public portal is always scoped to one branch.  Use a shareable URL such
 // as /?branch=london-uk (or retain a direct ?branchId= link); this makes a
