@@ -1369,11 +1369,16 @@ function toggleMenuMobileNav() {
   <!-- Dynamic Category Filter Pills -->
   <div class="category-bar-wrap" id="categoryPills">
     <button class="cat-pill active" onclick="setCategory('All', this)">All</button>
+    <button class="cat-pill" onclick="setCategory('Desi', this)">Desi</button>
+    <button class="cat-pill" onclick="setCategory('Fast Food', this)">Fast Food</button>
+    <button class="cat-pill" onclick="setCategory('Pizza', this)">Pizza</button>
     <button class="cat-pill" onclick="setCategory('Coffee', this)">Coffee</button>
+    <button class="cat-pill" onclick="setCategory('Sandwiches', this)">Sandwiches</button>
     <button class="cat-pill" onclick="setCategory('Bakery', this)">Bakery</button>
-    <button class="cat-pill" onclick="setCategory('Brunch', this)">Brunch</button>
-    <button class="cat-pill" onclick="setCategory('Mains', this)">Mains</button>
     <button class="cat-pill" onclick="setCategory('Desserts', this)">Desserts</button>
+    <button class="cat-pill" onclick="setCategory('Drinks', this)">Drinks</button>
+    <button class="cat-pill" onclick="setCategory('Breakfast', this)">Breakfast</button>
+    <button class="cat-pill" onclick="setCategory('Salads', this)">Salads</button>
   </div>
 </section>
 
@@ -1962,205 +1967,26 @@ fetch('/api/menu').then(r => r.json()).then(items => {
     });
     menuState.categories = Array.from(catSet);
     renderCategoryPills();
-  activeDishModal = {
-    item,
-    qty: 1,
-    selectedAddons: new Set(),
-    addons: getAddonPresets(item.cat || item.category)
-  };
-
-  document.getElementById('modalDishTitle').textContent = item.name;
-  document.getElementById('modalDishDesc').textContent = item.desc || item.description || '';
-  document.getElementById('modalQtyNum').textContent = '1';
-
-  const addonsContainer = document.getElementById('modalAddonsGrid');
-  addonsContainer.innerHTML = activeDishModal.addons.map((addon, i) => '<div class="modal-addon-item" id="modalAddon-' + i + '" onclick="toggleModalAddon(' + i + ')">' +
-    '<span>' + escapeHtml(addon.name) + '</span>' +
-    '<span style="color:var(--gold);font-weight:700;">+ ' + formatBranchMoney(addon.price) + '</span>' +
-  '</div>').join('');
-
-  updateModalTotal();
-  document.getElementById('dishModalOverlay').style.display = 'flex';
-}
-
-function getAddonPresets(cat) {
-  const sym = menuState.currentBranch?.currencySymbol || 'Rs';
-  const isPKR = sym === 'Rs' || sym === 'PKR';
-  if (cat === 'Coffee') {
-    return [
-      { name: 'Extra Espresso Shot', price: isPKR ? 150 : 1.00 },
-      { name: 'Oat Milk Sub', price: isPKR ? 180 : 1.25 },
-      { name: 'Vanilla Bean Syrup', price: isPKR ? 120 : 0.85 }
-    ];
-  } else if (cat === 'Bakery' || cat === 'Desserts') {
-    return [
-      { name: 'Extra Vanilla Gelato Scoop', price: isPKR ? 250 : 1.75 },
-      { name: 'Warm Chocolate Ganache', price: isPKR ? 180 : 1.25 }
-    ];
-  } else {
-    return [
-      { name: 'Extra Fried Farm Egg', price: isPKR ? 150 : 1.00 },
-      { name: 'Haas Avocado Slices', price: isPKR ? 220 : 1.50 },
-      { name: 'Smoked Turkey Strips', price: isPKR ? 280 : 2.00 }
-    ];
-  }
-}
-
-function toggleModalAddon(idx) {
-  if (activeDishModal.selectedAddons.has(idx)) {
-    activeDishModal.selectedAddons.delete(idx);
-  } else {
-    if (activeDishModal.selectedAddons.size >= 3) {
-      showToast('You can pick up to 3 add-ons.', 'info');
-      return;
-    }
-    activeDishModal.selectedAddons.add(idx);
-  }
-
-  activeDishModal.addons.forEach((_, i) => {
-    const el = document.getElementById('modalAddon-' + i);
-    if (el) el.classList.toggle('checked', activeDishModal.selectedAddons.has(i));
-  });
-
-  updateModalTotal();
-}
-
-function adjustModalQty(delta) {
-  activeDishModal.qty = Math.max(1, activeDishModal.qty + delta);
-  document.getElementById('modalQtyNum').textContent = activeDishModal.qty;
-  updateModalTotal();
-}
-
-function updateModalTotal() {
-  if (!activeDishModal.item) return;
-  const base = getNumericPrice(activeDishModal.item.price);
-  const addonsSum = [...activeDishModal.selectedAddons].reduce((sum, idx) => sum + getNumericPrice(activeDishModal.addons[idx].price), 0);
-  const total = (base + addonsSum) * activeDishModal.qty;
-  document.getElementById('modalTotalAmount').textContent = formatBranchMoney(total);
-}
-
-function confirmModalAddToCart() {
-  if (!activeDishModal.item) return;
-  const item = activeDishModal.item;
-  const chosenAddons = [...activeDishModal.selectedAddons].map(idx => activeDishModal.addons[idx]);
-  const signature = chosenAddons.map(a => a.name).sort().join('|');
-
-  menuState.cart = JSON.parse(localStorage.getItem('eb_cart') || '[]');
-  menuState.cart.push({
-    item: {
-      id: item.id || item._id,
-      name: item.name,
-      price: Number(item.price) || 0,
-      desc: item.desc || item.description || '',
-      cat: item.cat || item.category || 'Special',
-      img: item.img || item.image || '/images/Espresso.jpeg'
-    },
-    qty: activeDishModal.qty,
-    addons: chosenAddons,
-    addonSignature: signature
-  });
-
-  localStorage.setItem('eb_cart', JSON.stringify(menuState.cart));
-  closeDishModal();
-  showToast('Added ' + item.name + ' to order!', 'success');
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function closeDishModal() {
-  document.getElementById('dishModalOverlay').style.display = 'none';
-}
-
-function handleModalOverlayClick(e) {
-  if (e.target.id === 'dishModalOverlay') closeDishModal();
-}
-
-// ============================================
-// 7. SEARCH & FILTER
-// ============================================
-function onSearchInput(val) {
-  menuState.searchQuery = val.trim();
-  const clearBtn = document.getElementById('clearSearchBtn');
-  if (clearBtn) clearBtn.style.display = menuState.searchQuery ? 'block' : 'none';
-  renderMenuGrid();
-}
-
-function clearSearch() {
-  const input = document.getElementById('menuSearchInput');
-  if (input) input.value = '';
-  menuState.searchQuery = '';
-  const clearBtn = document.getElementById('clearSearchBtn');
-  if (clearBtn) clearBtn.style.display = 'none';
-  renderMenuGrid();
-}
-
-// ============================================
-// 8. BRANCH & CURRENCY SWITCHER
-// ============================================
-async function onBranchChange(code) {
-  let branch = menuState.branches.find(b => b.code === code || b._id === code);
-  if (!branch && code === 'us-dollar') {
-    branch = { _id: 'usd-branch', code: 'us-dollar', name: 'Ember & Brew — Global ($ / USD)', city: 'Global', currency: 'USD', currencySymbol: '$', taxRate: 0.08 };
-  }
-  if (!branch) return;
-
-  menuState.currentBranch = branch;
-  localStorage.setItem('eb_branch_id', branch._id);
-  localStorage.setItem('eb_branch_code', branch.code);
-
-  showToast('Switched currency to ' + branch.currencySymbol + ' (' + branch.currency + ')', 'info');
-  renderMenuGrid();
-  renderOrderSidebar();
-}
-
-function goToCheckout() {
-  const branchCode = menuState.currentBranch?.code || 'default';
-  window.location.href = '/?branch=' + encodeURIComponent(branchCode) + '&view=checkout';
-}
-
-function showToast(msg, type) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.className = 'toast show';
-  setTimeout(() => { toast.className = 'toast'; }, 2400);
-}
-
-function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-
-// ============================================
-// 9. IMMEDIATE EXECUTION (0ms Instant Load)
-// ============================================
-renderCategoryPills();
-renderMenuGrid();
-renderOrderSidebar();
-
-// Background fetch for any live admin edits
-fetch('/api/menu').then(r => r.json()).then(items => {
-  if (Array.isArray(items) && items.length) {
-    menuState.menuItems = items.map(i => ({
-      id: i._id,
-      name: i.name,
-      desc: i.description || '',
-      price: Number(i.price) || 0,
-      cat: i.category || 'Special',
-      img: i.image || '/images/Espresso.jpeg'
-    }));
-    const catSet = new Set(['All']);
-    menuState.menuItems.forEach(i => {
-      const cat = i.category || i.cat;
-      if (cat) catSet.add(cat);
-    });
-    menuState.categories = Array.from(catSet);
-    renderCategoryPills();
     renderMenuGrid();
   }
 }).catch(() => {});
 </script>
+
+<!-- Mobile & Tablet Sticky Floating Cart Bar -->
+<div id="mobileMenuCartBar" class="mobile-menu-cart-bar" onclick="goToCheckout()">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:36px;height:36px;border-radius:50%;background:var(--gold);color:#0F0E0C;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;" id="mobileCartItemCount">
+      0
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Your Order</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold);" id="mobileCartTotalPrice">Rs 0</div>
+    </div>
+  </div>
+  <button class="btn-sidebar-checkout" style="width:auto;margin:0;padding:8px 18px;font-size:13px;border-radius:20px;">
+    Checkout →
+  </button>
+</div>
 
 <div class="toast" id="toast"></div>
 <script src="/pwa-engine.js"></script>

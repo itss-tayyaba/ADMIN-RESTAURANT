@@ -1,5 +1,5 @@
 // Ember & Brew Official Service Worker — Fast App Shell & Real-time Live API Data
-const CACHE_NAME = 'ember-brew-v8.0';
+const CACHE_NAME = 'ember-brew-v8.1';
 
 const STATIC_APP_SHELL = [
   '/',
