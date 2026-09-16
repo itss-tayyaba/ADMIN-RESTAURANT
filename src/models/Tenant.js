@@ -113,6 +113,14 @@ const tenantSchema = new mongoose.Schema({
     enum: ['active', 'trial', 'suspended'],
     default: 'active',
     index: true
+  },
+  customPlanPrice: {
+    type: Number,
+    default: null
+  },
+  subscriptionNotes: {
+    type: String,
+    default: ''
   }
 }, { timestamps: true });
 

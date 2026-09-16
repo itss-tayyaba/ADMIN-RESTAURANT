@@ -348,14 +348,22 @@ router.get('/users/all', superAdminOnly, async (req, res) => {
 router.put('/:id/subscription', superAdminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { plan, billingCycle, status, extendMonths } = req.body;
+    const { plan, billingCycle, status, extendMonths, customExpiresAt, customPlanPrice, subscriptionNotes } = req.body;
     const tenant = await Tenant.findById(id);
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
-    if (plan) tenant.plan = plan;
-    if (billingCycle) tenant.billingCycle = billingCycle;
-    if (status) tenant.status = status;
-    if (extendMonths && Number(extendMonths) > 0) {
+    if (plan && ['starter', 'pro', 'enterprise'].includes(plan)) tenant.plan = plan;
+    if (billingCycle && ['monthly', 'annual'].includes(billingCycle)) tenant.billingCycle = billingCycle;
+    if (status && ['active', 'trial', 'suspended'].includes(status)) tenant.status = status;
+    if (customPlanPrice !== undefined) tenant.customPlanPrice = customPlanPrice ? Number(customPlanPrice) : null;
+    if (subscriptionNotes !== undefined) tenant.subscriptionNotes = String(subscriptionNotes).trim();
+
+    if (customExpiresAt) {
+      const expDate = new Date(customExpiresAt);
+      if (!isNaN(expDate.getTime())) {
+        tenant.subscriptionExpiresAt = expDate;
+      }
+    } else if (extendMonths && Number(extendMonths) > 0) {
       const base = (tenant.subscriptionExpiresAt && new Date(tenant.subscriptionExpiresAt) > new Date())
         ? new Date(tenant.subscriptionExpiresAt)
         : new Date();

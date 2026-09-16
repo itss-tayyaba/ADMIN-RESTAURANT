@@ -330,6 +330,94 @@
   </div>
 </div>
 
+<!-- MODAL 4: Manage Subscription Modal -->
+<div class="modal-overlay hidden" id="manageSubscriptionModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <h2><i class="fa-solid fa-credit-card" style="color:var(--gold);"></i> Manage Subscription</h2>
+        <p class="modal-subtitle" id="subModalSubtitle">Update SaaS plan tier, billing cycle, and expiry date.</p>
+      </div>
+      <button class="modal-close-btn" id="closeManageSubModal">&times;</button>
+    </div>
+
+    <form id="manageSubscriptionForm" class="modal-form">
+      <input type="hidden" id="subTenantId">
+
+      <div style="margin-bottom:14px;">
+        <span class="form-label"><span>Select Plan Tier *</span></span>
+        <div class="plan-select-grid" id="planSelectGrid">
+          <div class="plan-select-card" data-plan="starter">
+            <div class="plan-select-name">Starter</div>
+            <div class="plan-select-price">$49<small style="font-size:11px;color:var(--text-muted);">/mo</small></div>
+            <small style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;">1 Branch · 500 Orders</small>
+          </div>
+          <div class="plan-select-card selected" data-plan="pro">
+            <div class="plan-select-name">Pro ★</div>
+            <div class="plan-select-price">$99<small style="font-size:11px;color:var(--text-muted);">/mo</small></div>
+            <small style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;">3 Branches · KDS &amp; Riders</small>
+          </div>
+          <div class="plan-select-card" data-plan="enterprise">
+            <div class="plan-select-name">Enterprise</div>
+            <div class="plan-select-price">$199<small style="font-size:11px;color:var(--text-muted);">/mo</small></div>
+            <small style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;">Unlimited · Custom Domain</small>
+          </div>
+        </div>
+        <input type="hidden" id="subSelectedPlan" value="pro">
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Billing Cycle *</span>
+          <select id="subBillingCycle">
+            <option value="monthly">Monthly (Standard)</option>
+            <option value="annual">Annual (Save 17%)</option>
+          </select>
+        </label>
+
+        <label class="form-label">
+          <span>Subscription Status *</span>
+          <select id="subStatus">
+            <option value="active">Active (Full Access)</option>
+            <option value="trial">Trial (14-Day Evaluation)</option>
+            <option value="suspended">Suspended (Locked)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Expiration / Renewal Date *</span>
+          <input type="date" id="subExpiresAt" required>
+        </label>
+
+        <label class="form-label">
+          <span>Quick Extend</span>
+          <div class="chip-group">
+            <button type="button" class="chip-btn" id="chipExtend30">+30 Days</button>
+            <button type="button" class="chip-btn" id="chipExtend90">+90 Days</button>
+            <button type="button" class="chip-btn" id="chipExtend365">+1 Year</button>
+          </div>
+        </label>
+      </div>
+
+      <label class="form-label" style="margin-top:10px;">
+        <span>Superadmin Billing Notes / Reference</span>
+        <textarea id="subNotes" rows="2" placeholder="e.g. Paid via Bank Transfer Ref #9923, Special 20% Founder Discount applied" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+      </label>
+
+      <p class="modal-error" id="manageSubError" hidden></p>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="cancelManageSubBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveManageSubBtn">
+          <i class="fa-solid fa-check"></i> Update Subscription
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Toast Feedback Notification -->
 <div id="toastNotification" class="toast hidden"></div>
 
