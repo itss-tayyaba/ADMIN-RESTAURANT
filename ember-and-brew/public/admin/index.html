@@ -6,7 +6,7 @@
 <title>Admin Dashboard — Ember & Brew</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin.css?v=payments-revamp-v1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
@@ -334,187 +334,305 @@
 
       <!-- PAYMENTS VIEW -->
       <div class="view" id="view-payments" hidden>
-        <div class="view-header">
+        <div class="view-head" style="margin-bottom:20px;">
           <div>
-            <h2>Payment Methods &amp; Gateway Credentials</h2>
-            <p>Configure official payment gateway integrations and manual bank deposit verification for this restaurant.</p>
+            <p style="margin:0; font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--ink);">Payment Settings &amp; Gateways</p>
+            <p style="margin:4px 0 0; font-size:13px; color:var(--text-muted);">Configure official payment gateway credentials, instant transfers, and cash-on-delivery options.</p>
           </div>
-          <div class="view-actions">
-            <button class="btn-primary" id="savePaymentSettingsBtn">💾 Save Payment Settings</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <button class="btn-primary" id="savePaymentSettingsBtn" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;font-size:13.5px;font-weight:700;box-shadow:0 6px 18px rgba(196,146,58,0.35);">
+              <span>💾</span> Save Payment Settings
+            </button>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:20px;margin-bottom:24px;">
-          <!-- JazzCash Official Gateway -->
-          <div class="panel">
-            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;"></span>
-                JazzCash Official Gateway
-              </h3>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                <input type="checkbox" id="jc_enabled"> Enable
-              </label>
+        <!-- Section 1: Digital Gateways -->
+        <div class="payment-section-title">
+          <span>⚡ Official Payment Gateways</span>
+          <span class="badge" style="background:rgba(196,146,58,0.15);color:var(--gold-deep);border:1px solid rgba(196,146,58,0.3);">Automated IPN Callback</span>
+        </div>
+
+        <div class="payment-grid">
+          <!-- JazzCash Card -->
+          <div class="payment-card" id="card_jazzcash">
+            <div class="payment-card-topbar jazzcash"></div>
+            <div class="payment-card-head">
+              <div class="payment-brand">
+                <div class="payment-brand-icon jazzcash">JC</div>
+                <div class="payment-brand-info">
+                  <h3>JazzCash Gateway</h3>
+                  <p>Debit Card &amp; Mobile Wallet</p>
+                </div>
+              </div>
+              <div class="payment-toggle-wrap">
+                <label class="switch" title="Toggle JazzCash">
+                  <input type="checkbox" id="jc_enabled">
+                  <span class="slider"></span>
+                </label>
+                <span class="payment-status-tag inactive" id="jc_status_tag">Disabled</span>
+              </div>
             </div>
-            <div class="panel-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Gateway Mode</span>
-                <select id="jc_mode" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);">
+            <div class="payment-card-body">
+              <div class="payment-field-group">
+                <label for="jc_mode">Gateway Mode <small>Test in Sandbox first</small></label>
+                <select id="jc_mode">
                   <option value="sandbox">Sandbox (Testing)</option>
                   <option value="live">Live (Production)</option>
                 </select>
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Merchant ID</span>
-                <input type="text" id="jc_merchantId" placeholder="e.g. MC12345" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="jc_merchantId">Merchant ID</label>
+                <input type="text" id="jc_merchantId" placeholder="e.g. MC12345" autocomplete="off" />
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Merchant Password</span>
-                <input type="password" id="jc_password" placeholder="••••••••" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="jc_password">Merchant Password</label>
+                <div class="payment-pw-wrap">
+                  <input type="password" id="jc_password" placeholder="••••••••" autocomplete="new-password" />
+                  <button type="button" class="payment-pw-toggle" onclick="togglePassVisibility('jc_password', this)" title="Show / Hide">👁</button>
+                </div>
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Integrity Salt (HMAC Secret)</span>
-                <input type="password" id="jc_integritySalt" placeholder="••••••••" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="jc_integritySalt">Integrity Salt (HMAC Secret)</label>
+                <div class="payment-pw-wrap">
+                  <input type="password" id="jc_integritySalt" placeholder="••••••••" autocomplete="new-password" />
+                  <button type="button" class="payment-pw-toggle" onclick="togglePassVisibility('jc_integritySalt', this)" title="Show / Hide">👁</button>
+                </div>
               </div>
-              <div id="jc_status_pill" style="font-size:11px;color:var(--ink-3);padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;">
-                Verified via HMAC-SHA256 signature and IPN callbacks.
+              <div class="payment-hint-box">
+                <span>🔒</span>
+                <span>Verified via secure HMAC-SHA256 signature and instant IPN webhook callbacks.</span>
               </div>
             </div>
           </div>
 
-          <!-- Easypaisa Official Gateway -->
-          <div class="panel">
-            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#10b981;"></span>
-                Easypaisa Official Gateway
-              </h3>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                <input type="checkbox" id="ep_enabled"> Enable
-              </label>
+          <!-- Easypaisa Card -->
+          <div class="payment-card" id="card_easypaisa">
+            <div class="payment-card-topbar easypaisa"></div>
+            <div class="payment-card-head">
+              <div class="payment-brand">
+                <div class="payment-brand-icon easypaisa">EP</div>
+                <div class="payment-brand-info">
+                  <h3>Easypaisa Gateway</h3>
+                  <p>Telenor Wallet &amp; Direct QR</p>
+                </div>
+              </div>
+              <div class="payment-toggle-wrap">
+                <label class="switch" title="Toggle Easypaisa">
+                  <input type="checkbox" id="ep_enabled">
+                  <span class="slider"></span>
+                </label>
+                <span class="payment-status-tag inactive" id="ep_status_tag">Disabled</span>
+              </div>
             </div>
-            <div class="panel-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Gateway Mode</span>
-                <select id="ep_mode" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);">
+            <div class="payment-card-body">
+              <div class="payment-field-group">
+                <label for="ep_mode">Gateway Mode <small>Test in Sandbox first</small></label>
+                <select id="ep_mode">
                   <option value="sandbox">Sandbox (Testing)</option>
                   <option value="live">Live (Production)</option>
                 </select>
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Store ID</span>
-                <input type="text" id="ep_storeId" placeholder="e.g. 12345" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="ep_storeId">Store ID</label>
+                <input type="text" id="ep_storeId" placeholder="e.g. 12345" autocomplete="off" />
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Hash Key</span>
-                <input type="password" id="ep_hashKey" placeholder="••••••••" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="ep_hashKey">Hash Key (Secret)</label>
+                <div class="payment-pw-wrap">
+                  <input type="password" id="ep_hashKey" placeholder="••••••••" autocomplete="new-password" />
+                  <button type="button" class="payment-pw-toggle" onclick="togglePassVisibility('ep_hashKey', this)" title="Show / Hide">👁</button>
+                </div>
               </div>
-              <div id="ep_status_pill" style="font-size:11px;color:var(--ink-3);padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;">
-                Verified via tokenized hosted checkout and postback checksums.
-              </div>
-            </div>
-          </div>
-
-          <!-- Stripe Card Gateway -->
-          <div class="panel">
-            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#38bdf8;"></span>
-                Debit / Credit Card (Stripe Gateway)
-              </h3>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                <input type="checkbox" id="st_enabled"> Enable
-              </label>
-            </div>
-            <div class="panel-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Publishable Key</span>
-                <input type="text" id="st_publishableKey" placeholder="pk_test_..." style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
-              </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Secret Key</span>
-                <input type="password" id="st_secretKey" placeholder="sk_test_••••••••" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
-              </div>
-              <div style="font-size:11px;color:var(--ink-3);padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;">
-                PCI-DSS Level 1 compliant card processing via Stripe API.
+              <div class="payment-hint-box">
+                <span>🔒</span>
+                <span>Verified via tokenized hosted checkout and postback checksums.</span>
               </div>
             </div>
           </div>
 
-          <!-- Bank Transfer (Manual Verification) -->
-          <div class="panel">
-            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;"></span>
-                Direct Bank Transfer (Manual Staff Verification)
-              </h3>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                <input type="checkbox" id="bt_enabled"> Enable
-              </label>
+          <!-- Stripe Card -->
+          <div class="payment-card" id="card_stripe">
+            <div class="payment-card-topbar stripe"></div>
+            <div class="payment-card-head">
+              <div class="payment-brand">
+                <div class="payment-brand-icon stripe">💳</div>
+                <div class="payment-brand-info">
+                  <h3>Debit / Credit Card (Stripe)</h3>
+                  <p>Visa, Mastercard, PayPak</p>
+                </div>
+              </div>
+              <div class="payment-toggle-wrap">
+                <label class="switch" title="Toggle Stripe Card">
+                  <input type="checkbox" id="st_enabled">
+                  <span class="slider"></span>
+                </label>
+                <span class="payment-status-tag inactive" id="st_status_tag">Disabled</span>
+              </div>
             </div>
-            <div class="panel-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Bank Name</span>
-                <input type="text" id="bt_bankName" placeholder="e.g. Meezan Bank Ltd." style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+            <div class="payment-card-body">
+              <div class="payment-field-group">
+                <label for="st_publishableKey">Publishable Key</label>
+                <input type="text" id="st_publishableKey" placeholder="pk_test_..." autocomplete="off" />
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Account Title</span>
-                <input type="text" id="bt_accountTitle" placeholder="e.g. Restaurant Operating Account" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="st_secretKey">Secret Key</label>
+                <div class="payment-pw-wrap">
+                  <input type="password" id="st_secretKey" placeholder="sk_test_••••••••" autocomplete="new-password" />
+                  <button type="button" class="payment-pw-toggle" onclick="togglePassVisibility('st_secretKey', this)" title="Show / Hide">👁</button>
+                </div>
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">IBAN</span>
-                <input type="text" id="bt_iban" placeholder="PK..." style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-hint-box">
+                <span>🛡️</span>
+                <span>PCI-DSS Level 1 compliant card tokenization via Stripe Elements &amp; 3D Secure.</span>
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Account Number</span>
-                <input type="text" id="bt_accountNumber" placeholder="e.g. 0102030405" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Bank & Instant Transfers -->
+        <div class="payment-section-title">
+          <span>🏛 Bank &amp; Instant Transfers</span>
+          <span class="badge" style="background:rgba(15,118,110,0.15);color:#0F766E;border:1px solid rgba(15,118,110,0.3);">Manual Staff Verification</span>
+        </div>
+
+        <div class="payment-grid">
+          <!-- SBP Raast Instant Payment -->
+          <div class="payment-card" id="card_raast">
+            <div class="payment-card-topbar raast"></div>
+            <div class="payment-card-head">
+              <div class="payment-brand">
+                <div class="payment-brand-icon raast">⚡</div>
+                <div class="payment-brand-info">
+                  <h3>SBP Raast Instant Pay</h3>
+                  <p>State Bank of Pakistan Instant Rail</p>
+                </div>
+              </div>
+              <div class="payment-toggle-wrap">
+                <label class="switch" title="Toggle Raast">
+                  <input type="checkbox" id="rs_enabled">
+                  <span class="slider"></span>
+                </label>
+                <span class="payment-status-tag inactive" id="rs_status_tag">Disabled</span>
+              </div>
+            </div>
+            <div class="payment-card-body">
+              <div class="payment-field-group">
+                <label for="rs_iban">Raast IBAN / Phone ID</label>
+                <input type="text" id="rs_iban" placeholder="PK00XXXX0000000000000000" autocomplete="off" />
+              </div>
+              <div class="payment-field-group">
+                <label for="rs_accountTitle">Account Title</label>
+                <input type="text" id="rs_accountTitle" placeholder="e.g. Ember &amp; Brew Café" autocomplete="off" />
+              </div>
+              <div class="payment-field-group">
+                <label for="rs_bankName">Bank / Financial Institution</label>
+                <input type="text" id="rs_bankName" placeholder="e.g. Meezan Bank / Sadapay / Nayapay" autocomplete="off" />
+              </div>
+              <div class="payment-hint-box">
+                <span>📲</span>
+                <span>Customers scan Raast QR or send to your Raast ID, then input the Txn ID for admin verification.</span>
               </div>
             </div>
           </div>
 
-          <!-- Raast Instant Payment (Manual Verification) -->
-          <div class="panel">
-            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#eab308;"></span>
-                SBP Raast Instant Payment (Manual Verification)
-              </h3>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                <input type="checkbox" id="rs_enabled"> Enable
-              </label>
+          <!-- Direct Bank Transfer -->
+          <div class="payment-card" id="card_bank">
+            <div class="payment-card-topbar bank"></div>
+            <div class="payment-card-head">
+              <div class="payment-brand">
+                <div class="payment-brand-icon bank">🏛️</div>
+                <div class="payment-brand-info">
+                  <h3>Direct Bank Transfer</h3>
+                  <p>Wire / Online Internet Banking</p>
+                </div>
+              </div>
+              <div class="payment-toggle-wrap">
+                <label class="switch" title="Toggle Bank Transfer">
+                  <input type="checkbox" id="bt_enabled">
+                  <span class="slider"></span>
+                </label>
+                <span class="payment-status-tag inactive" id="bt_status_tag">Disabled</span>
+              </div>
             </div>
-            <div class="panel-body" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Raast IBAN / ID</span>
-                <input type="text" id="rs_iban" placeholder="PK..." style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+            <div class="payment-card-body">
+              <div class="payment-field-group">
+                <label for="bt_bankName">Bank Name</label>
+                <input type="text" id="bt_bankName" placeholder="e.g. Meezan Bank Limited" autocomplete="off" />
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Account Title</span>
-                <input type="text" id="rs_accountTitle" placeholder="e.g. Restaurant Business Title" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="bt_accountTitle">Account Title</label>
+                <input type="text" id="bt_accountTitle" placeholder="e.g. Restaurant Operating Account" autocomplete="off" />
               </div>
-              <div class="field">
-                <span style="font-size:12px;font-weight:600;color:var(--ink-3);display:block;margin-bottom:4px;">Bank Name</span>
-                <input type="text" id="rs_bankName" placeholder="e.g. Official Raast Bank" style="width:100%;padding:8px;border-radius:6px;background:var(--surface-2);color:var(--ink-1);border:1px solid var(--line);" />
+              <div class="payment-field-group">
+                <label for="bt_iban">IBAN</label>
+                <input type="text" id="bt_iban" placeholder="PK00MEZN0000000000000000" autocomplete="off" />
+              </div>
+              <div class="payment-field-group">
+                <label for="bt_accountNumber">Account Number</label>
+                <input type="text" id="bt_accountNumber" placeholder="e.g. 0102030405" autocomplete="off" />
+              </div>
+              <div class="payment-hint-box">
+                <span>🔍</span>
+                <span>Requires admin or cashier approval via the <strong>Verify Deposit</strong> button in the Orders tab.</span>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Cash on Delivery (COD) -->
-          <div class="panel">
-            <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-                <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#22c55e;"></span>
-                Cash on Delivery (COD)
-              </h3>
-              <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                <input type="checkbox" id="cod_enabled"> Enable
-              </label>
+        <!-- Section 3: Cash & Offline -->
+        <div class="payment-section-title">
+          <span>💵 Cash &amp; Handover Options</span>
+          <span class="badge" style="background:rgba(22,163,74,0.15);color:#16A34A;border:1px solid rgba(22,163,74,0.3);">Doorstep &amp; Counter</span>
+        </div>
+
+        <div class="payment-grid">
+          <!-- Cash on Delivery -->
+          <div class="payment-card" id="card_cod">
+            <div class="payment-card-topbar cod"></div>
+            <div class="payment-card-head">
+              <div class="payment-brand">
+                <div class="payment-brand-icon cod">💵</div>
+                <div class="payment-brand-info">
+                  <h3>Cash on Delivery (COD)</h3>
+                  <p>Cash on Pickup / Doorstep</p>
+                </div>
+              </div>
+              <div class="payment-toggle-wrap">
+                <label class="switch" title="Toggle Cash on Delivery">
+                  <input type="checkbox" id="cod_enabled">
+                  <span class="slider"></span>
+                </label>
+                <span class="payment-status-tag inactive" id="cod_status_tag">Disabled</span>
+              </div>
             </div>
-            <div class="panel-body" style="padding:16px;">
-              <p style="font-size:13px;color:var(--ink-3);margin:0;">
-                Allows customers to pay in cash upon delivery or pickup. Payment is marked PAID by the delivery rider or counter staff upon handover.
+            <div class="payment-card-body">
+              <p style="font-size:13.5px;color:var(--ink-3);margin:0;line-height:1.6;">
+                Customers pay cash upon receipt of their food. Delivery riders or counter cashiers verify payment and complete the transaction.
               </p>
+              <div class="payment-hint-box" style="margin-top:10px;">
+                <span>✅</span>
+                <span>Active orders are marked <strong>PAID</strong> automatically when the delivery rider completes delivery with customer OTP.</span>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Webhook Reference Helper Card -->
+        <div class="webhook-helper-card">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🌐</span>
+            <div>
+              <strong style="font-size:14px;color:var(--ink);display:block;">Gateway Callback &amp; IPN Endpoints</strong>
+              <span style="font-size:12px;color:var(--text-muted);">Paste these callback URLs into your JazzCash or Easypaisa Merchant Portals:</span>
+            </div>
+          </div>
+          <div class="webhook-row">
+            <div><strong>JazzCash IPN Webhook:</strong> <code id="wh_jazzcash_url">https://admin-restaurant-six.vercel.app/api/payments/ipn/jazzcash</code></div>
+            <button type="button" class="btn-copy" onclick="copyWebhookText('https://admin-restaurant-six.vercel.app/api/payments/ipn/jazzcash', this)">Copy URL</button>
+          </div>
+          <div class="webhook-row">
+            <div><strong>Checkout Return URL:</strong> <code id="wh_return_url">https://admin-restaurant-six.vercel.app/customer</code></div>
+            <button type="button" class="btn-copy" onclick="copyWebhookText(window.location.origin + '/customer', this)">Copy URL</button>
           </div>
         </div>
       </div>
@@ -719,7 +837,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="admin.js?v=view-dashboard-v3"></script>
+<script src="admin.js?v=payments-revamp-v1"></script>
 
 <script>
 window.EB_CHATBOT_CONFIG = {

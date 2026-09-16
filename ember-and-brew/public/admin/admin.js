@@ -2129,6 +2129,93 @@
     });
   }
 
+  // Helper to dynamically toggle active class and status badges on payment cards
+  function updatePaymentCardUI(cardId, tagId, isEnabled) {
+    const card = document.getElementById(cardId);
+    const tag = document.getElementById(tagId);
+    if (card) {
+      card.classList.toggle('active', Boolean(isEnabled));
+    }
+    if (tag) {
+      tag.textContent = isEnabled ? 'Active' : 'Disabled';
+      tag.classList.toggle('active', Boolean(isEnabled));
+      tag.classList.toggle('inactive', !isEnabled);
+    }
+  }
+
+  // Register interactive toggle listeners for instant UI feedback
+  const paymentToggleBindings = [
+    { card: 'card_jazzcash', check: 'jc_enabled', tag: 'jc_status_tag' },
+    { card: 'card_easypaisa', check: 'ep_enabled', tag: 'ep_status_tag' },
+    { card: 'card_stripe', check: 'st_enabled', tag: 'st_status_tag' },
+    { card: 'card_raast', check: 'rs_enabled', tag: 'rs_status_tag' },
+    { card: 'card_bank', check: 'bt_enabled', tag: 'bt_status_tag' },
+    { card: 'card_cod', check: 'cod_enabled', tag: 'cod_status_tag' }
+  ];
+
+  paymentToggleBindings.forEach(({ card, check, tag }) => {
+    const el = document.getElementById(check);
+    if (el) {
+      el.addEventListener('change', () => {
+        updatePaymentCardUI(card, tag, el.checked);
+      });
+    }
+  });
+
+  // Global helper to show/hide password secrets
+  window.togglePassVisibility = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    if (btn) btn.textContent = isPass ? '🙈' : '👁';
+  };
+
+  // Global helper to copy webhook URLs to clipboard
+  window.copyWebhookText = function(textOrId, btn) {
+    let toCopy = textOrId;
+    const targetEl = document.getElementById(textOrId);
+    if (targetEl) {
+      toCopy = targetEl.textContent.trim();
+    }
+    if (!toCopy) return;
+
+    const showCopiedState = () => {
+      if (!btn) return;
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied! ✓';
+      btn.style.background = '#C4923A';
+      btn.style.color = '#FFFFFF';
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = '';
+        btn.style.color = '';
+      }, 2000);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(toCopy).then(showCopiedState).catch(() => {
+        fallbackCopy(toCopy, showCopiedState);
+      });
+    } else {
+      fallbackCopy(toCopy, showCopiedState);
+    }
+  };
+
+  function fallbackCopy(text, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      if (cb) cb();
+    } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
   async function loadPaymentSettings() {
     try {
       const res = await fetch('/api/payments/settings', { headers: authHeaders });
@@ -2147,32 +2234,47 @@
       const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = Boolean(val); };
 
       setChecked('jc_enabled', jc.enabled);
+      updatePaymentCardUI('card_jazzcash', 'jc_status_tag', jc.enabled);
       setVal('jc_mode', jc.mode || 'sandbox');
       setVal('jc_merchantId', jc.merchantId);
       setVal('jc_password', jc.isConfigured ? '********' : '');
       setVal('jc_integritySalt', jc.isConfigured ? '********' : '');
 
       setChecked('ep_enabled', ep.enabled);
+      updatePaymentCardUI('card_easypaisa', 'ep_status_tag', ep.enabled);
       setVal('ep_mode', ep.mode || 'sandbox');
       setVal('ep_storeId', ep.storeId);
       setVal('ep_hashKey', ep.isConfigured ? '********' : '');
 
       setChecked('st_enabled', st.enabled);
+      updatePaymentCardUI('card_stripe', 'st_status_tag', st.enabled);
       setVal('st_publishableKey', st.publishableKey);
       setVal('st_secretKey', st.isConfigured ? '********' : '');
 
-      setChecked('bt_enabled', bt.enabled !== false);
+      const isBt = bt.enabled !== false;
+      setChecked('bt_enabled', isBt);
+      updatePaymentCardUI('card_bank', 'bt_status_tag', isBt);
       setVal('bt_bankName', bt.bankName);
       setVal('bt_accountTitle', bt.accountTitle);
       setVal('bt_iban', bt.iban);
       setVal('bt_accountNumber', bt.accountNumber);
 
-      setChecked('rs_enabled', rs.enabled !== false);
+      const isRs = rs.enabled !== false;
+      setChecked('rs_enabled', isRs);
+      updatePaymentCardUI('card_raast', 'rs_status_tag', isRs);
       setVal('rs_iban', rs.iban);
       setVal('rs_accountTitle', rs.accountTitle);
       setVal('rs_bankName', rs.bankName);
 
-      setChecked('cod_enabled', cod.enabled !== false);
+      const isCod = cod.enabled !== false;
+      setChecked('cod_enabled', isCod);
+      updatePaymentCardUI('card_cod', 'cod_status_tag', isCod);
+
+      // Populate Webhook URLs dynamically with current host
+      const jcUrlEl = document.getElementById('wh_jazzcash_url');
+      if (jcUrlEl) jcUrlEl.textContent = `${window.location.origin}/api/payments/ipn/jazzcash`;
+      const retUrlEl = document.getElementById('wh_return_url');
+      if (retUrlEl) retUrlEl.textContent = `${window.location.origin}/customer`;
     } catch (err) {
       showToast('Error loading payment settings: ' + err.message, true);
     }
