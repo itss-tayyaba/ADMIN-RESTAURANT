@@ -115,7 +115,7 @@
         .url{ font-size:11px; color:#888; margin-top:10px; word-break:break-all; }
       </style></head>
       <body>
-        <h1>Ember &amp; Brew</h1>
+        <h1>${escapeHtml(tenantBrandName)}</h1>
         <p>Scan to view the menu &amp; order</p>
         <img src="${imgSrc}" alt="QR code for table ${escapeHtml(tableNumber)}" />
         <div class="table-name">${escapeHtml(tableNumber)}</div>
@@ -137,7 +137,7 @@
     modal.innerHTML = `
       <div class="qr-modal-card">
         <button class="qr-modal-close" id="tableQrModalClose" aria-label="Close">&times;</button>
-        <div class="qr-modal-brand">Ember &amp; Brew</div>
+        <div class="qr-modal-brand">${escapeHtml(tenantBrandName)}</div>
         <div class="qr-modal-sub">Scan to view the menu &amp; order</div>
         <div class="qr-modal-code" id="tableQrCode"></div>
         <div class="qr-modal-table">${escapeHtml(tableNumber)}</div>
@@ -678,7 +678,50 @@
     toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2800);
   }
 
-  function money(n) { return '$' + Number(n || 0).toFixed(2); }
+  let tenantCurrencySymbol = 'Rs';
+  let tenantBrandName = 'Ember & Brew';
+
+  function money(n) {
+    const num = Number(n || 0);
+    return `${tenantCurrencySymbol} ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  async function loadTenantBranding() {
+    try {
+      const res = await fetch('/api/tenants/me/profile', { headers: authHeaders });
+      if (res.status === 401) return;
+      const data = await safeJson(res);
+      if (data && data.tenant) {
+        const t = data.tenant;
+        if (t.currencySymbol) {
+          tenantCurrencySymbol = t.currencySymbol;
+        } else if (t.currency) {
+          tenantCurrencySymbol = t.currency;
+        }
+        if (t.name) {
+          tenantBrandName = t.name;
+          document.title = `${t.name} — Admin Dashboard`;
+          const brandEl = document.getElementById('sidebarBrandName');
+          if (brandEl) brandEl.textContent = t.name;
+        }
+        if (t.logo) {
+          const logoEl = document.getElementById('sidebarLogo');
+          if (logoEl) logoEl.src = t.logo;
+        }
+        if (t.theme && t.theme.primaryColor) {
+          document.documentElement.style.setProperty('--gold', t.theme.primaryColor);
+          document.documentElement.style.setProperty('--gold-deep', t.theme.primaryColor);
+        }
+        if (data.role === 'owner') {
+          els.userRole.textContent = `Owner (${t.name})`;
+        } else if (data.role === 'admin') {
+          els.userRole.textContent = `Admin (${t.name})`;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load tenant branding', e);
+    }
+  }
   function timeAgo(dateStr) {
     const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
     if (diff < 1) return 'just now';
@@ -849,7 +892,7 @@
     });
 
     const change = lastWeekRevenue > 0 ? ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 : (thisWeekRevenue > 0 ? 100 : 0);
-    els.weeklyRevenueAmount.textContent = thisWeekRevenue >= 1000 ? '$' + (thisWeekRevenue / 1000).toFixed(1) + 'K' : money(thisWeekRevenue);
+    els.weeklyRevenueAmount.textContent = thisWeekRevenue >= 1000 ? `${tenantCurrencySymbol} ${(thisWeekRevenue / 1000).toFixed(1)}K` : money(thisWeekRevenue);
     els.weeklyRevenueChange.textContent = (change >= 0 ? '+' : '') + change.toFixed(0) + '%';
     els.weeklyRevenueChange.classList.toggle('positive', change >= 0);
     els.weeklyRevenueChange.classList.toggle('negative', change < 0);
@@ -866,7 +909,7 @@
       const pct = (v) => thisWeekRevenue > 0 ? Math.min((v / thisWeekRevenue) * 100, 100) : 0;
       els.revenueMiniStats.innerHTML = `
         <div class="mini-stat">
-          <div class="mini-stat-head"><span class="mini-stat-icon revenue">$</span><span class="mini-stat-label">Revenue</span></div>
+          <div class="mini-stat-head"><span class="mini-stat-icon revenue">${escapeHtml(tenantCurrencySymbol)}</span><span class="mini-stat-label">Revenue</span></div>
           <div class="mini-stat-value">${money(thisWeekRevenue)}</div>
           <div class="mini-stat-track"><div class="mini-stat-fill revenue" data-width="100"></div></div>
         </div>
@@ -1057,7 +1100,7 @@
         <td>
           ${escapeHtml(o.customerName)}<br>
           <span class="cust">${escapeHtml(o.customerPhone || '')}</span>
-          ${o.customerPhone ? `<a href="https://wa.me/${String(o.customerPhone).replace(/\D/g, '').replace(/^0/, '92')}?text=${encodeURIComponent(`Hello ${o.customerName || 'Customer'}! Regarding your Ember & Brew order #${o.orderNumber} (Status: ${o.status})`)}" target="_blank" title="WhatsApp Customer (Free)" style="display:inline-flex;align-items:center;margin-left:4px;color:#25D366;text-decoration:none;font-size:12px;font-weight:600;">💬</a>` : ''}
+          ${o.customerPhone ? `<a href="https://wa.me/${String(o.customerPhone).replace(/\D/g, '').replace(/^0/, '92')}?text=${encodeURIComponent(`Hello ${o.customerName || 'Customer'}! Regarding your ${encodeURIComponent(tenantBrandName)} order #${o.orderNumber} (Status: ${o.status})`)}" target="_blank" title="WhatsApp Customer (Free)" style="display:inline-flex;align-items:center;margin-left:4px;color:#25D366;text-decoration:none;font-size:12px;font-weight:600;">💬</a>` : ''}
         </td>
         <td style="text-transform:capitalize;">${o.orderType || '—'}</td>
         <td class="cust">${renderRegionOrTableCell(o)}</td>
@@ -1830,8 +1873,11 @@
   }
 
   // ---------- Boot ----------
-  // Load a lightweight overview first to speed initial render (stats only).
-  loadOverviewLite();
+  async function boot() {
+    await loadTenantBranding();
+    loadOverviewLite();
+  }
+  boot();
   // Defer heavier badge/table requests slightly so the UI paints first
   setTimeout(() => { loadComplaintBadge(); updateReservationBadge(); }, 1200);
   // Poll less frequently to reduce repeated load on backend

@@ -7,6 +7,7 @@ const Branch = require("../models/Branch");
 const jwt = require("jsonwebtoken");
 const REGIONS = require("../data/regions");
 const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
+const { addTenantScope } = require("../utils/tenantScope");
 const { notifyCustomer } = require("../services/notificationService");
 
 // A rider can't hold more than this many active ("out-for-delivery") orders
@@ -177,6 +178,8 @@ router.get("/riders", adminAuth, async (req, res) => {
         const branchId = resolveBranchId(req.user, req.query);
         const filter = { role: "delivery" };
         if (branchId) filter.branchId = branchId;
+        const tenantId = req.user.role === 'superadmin' ? (req.query.tenantId || null) : req.user.tenantId;
+        if (tenantId) await addTenantScope(filter, tenantId);
 
         const riders = await AdminUser.find(filter)
             .select("name username region phone activeOrders active branchId createdAt")
@@ -313,6 +316,8 @@ router.put("/riders/:id/region", adminAuth, async (req, res) => {
         const branchIdFilter = resolveBranchId(req.user, req.query);
         const riderQuery = { _id: req.params.id, role: "delivery" };
         if (branchIdFilter) riderQuery.branchId = branchIdFilter;
+        const tenantId = req.user.role === 'superadmin' ? (req.query.tenantId || null) : req.user.tenantId;
+        if (tenantId) await addTenantScope(riderQuery, tenantId);
 
         const rider = await AdminUser.findOne(riderQuery);
 
@@ -363,6 +368,8 @@ router.put("/riders/:id/toggle", adminAuth, async (req, res) => {
         const branchIdFilter = resolveBranchId(req.user, req.query);
         const riderQuery = { _id: req.params.id, role: "delivery" };
         if (branchIdFilter) riderQuery.branchId = branchIdFilter;
+        const tenantId = req.user.role === 'superadmin' ? (req.query.tenantId || null) : req.user.tenantId;
+        if (tenantId) await addTenantScope(riderQuery, tenantId);
 
         const rider = await AdminUser.findOne(riderQuery);
 
@@ -710,6 +717,8 @@ router.put("/:id/auto-assign", adminAuth, async (req, res) => {
         const branchIdFilter = resolveBranchId(req.user, req.query);
         const orderQuery = { _id: req.params.id };
         if (branchIdFilter) orderQuery.branchId = branchIdFilter;
+        const tenantId = req.user.role === 'superadmin' ? (req.query.tenantId || null) : req.user.tenantId;
+        if (tenantId) await addTenantScope(orderQuery, tenantId);
         const order = await Order.findOne(orderQuery);
 
         if (!order) {
@@ -772,6 +781,8 @@ router.get("/admin/orders", adminAuth, async (req, res) => {
         const branchId = resolveBranchId(req.user, req.query);
         const filter = { status: { $in: ["ready", "out-for-delivery", "delivered"] } };
         if (branchId) filter.branchId = branchId;
+        const tenantId = req.user.role === 'superadmin' ? (req.query.tenantId || null) : req.user.tenantId;
+        if (tenantId) await addTenantScope(filter, tenantId);
 
         const orders = await Order.find(filter)
 

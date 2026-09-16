@@ -21,15 +21,18 @@ async function getDefaultTenantId() {
 
 // Resolves tenant from request (header, query, body, user JWT, or fallback)
 async function resolveTenant(req) {
-  // 1. Authenticated user's tenant if present
-  if (req.admin && req.admin.tenantId) {
+  // 1. Authenticated non-superadmin staff/user is strictly locked to their tenantId
+  if (req.admin && req.admin.tenantId && req.admin.role !== 'superadmin') {
     return req.admin.tenantId;
   }
-  if (req.user && req.user.tenantId) {
+  if (req.user && req.user.tenantId && req.user.role !== 'superadmin') {
     return req.user.tenantId;
   }
+  if (req.customer && req.customer.tenantId) {
+    return req.customer.tenantId;
+  }
 
-  // 2. Header
+  // 2. Superadmin or public requests can specify tenant via header, query, or body
   const headerTenant = req.headers['x-tenant-id'] || req.headers['x-tenant-slug'];
   if (headerTenant) {
     if (OBJECT_ID_RE.test(headerTenant)) return headerTenant;
@@ -37,7 +40,6 @@ async function resolveTenant(req) {
     if (found) return String(found._id);
   }
 
-  // 3. Query Param (?tenantId= or ?tenant=)
   const queryTenant = (req.query && (req.query.tenantId || req.query.tenant)) || (req.body && (req.body.tenantId || req.body.tenant));
   if (queryTenant) {
     if (OBJECT_ID_RE.test(queryTenant)) return queryTenant;
@@ -45,7 +47,7 @@ async function resolveTenant(req) {
     if (found) return String(found._id);
   }
 
-  // 4. Default Fallback (Ember & Brew)
+  // 3. Fallback (default primary tenant)
   return getDefaultTenantId();
 }
 
@@ -63,10 +65,25 @@ async function addTenantScope(query, tenantId) {
   return query;
 }
 
+// Backend enforcement helper: strictly applies tenant filter to a MongoDB query
+// For superadmins, accepts an optional query tenantId; for all other users,
+// unconditionally forces their authenticated tenantId.
+async function enforceTenantQuery(query, user, clientTenantId) {
+  if (!user) return query;
+  if (user.role === 'superadmin') {
+    if (clientTenantId) await addTenantScope(query, clientTenantId);
+    return query;
+  }
+  const tenantId = user.tenantId || (await getDefaultTenantId());
+  await addTenantScope(query, tenantId);
+  return query;
+}
+
 module.exports = {
   getDefaultTenant,
   getDefaultTenantId,
   resolveTenant,
   addTenantScope,
+  enforceTenantQuery,
   OBJECT_ID_RE
 };

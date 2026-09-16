@@ -4,6 +4,7 @@ const RestaurantTable = require('../models/RestaurantTable');
 const Reservation = require('../models/Reservation');
 const Branch = require('../models/Branch');
 const { isAdminRole, resolveBranchId, addBranchScope } = require('../utils/branchScope');
+const { addTenantScope } = require('../utils/tenantScope');
 const router = express.Router();
 
 // Must match the values the "Add table" dropdown and floor-plan filter tabs
@@ -32,7 +33,7 @@ function minutesFromTimeStr(timeStr) {
   return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
 }
 
-async function tablesWithLiveStatus(branchId) {
+async function tablesWithLiveStatus(branchId, tenantId) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const nowMinutes = (() => {
     const now = new Date();
@@ -41,6 +42,10 @@ async function tablesWithLiveStatus(branchId) {
 
   const tableQuery = {};
   const reservationQuery = { tableNumber: { $ne: '' }, date: todayStr, status: { $in: ['pending', 'confirmed'] } };
+  if (tenantId) {
+    await addTenantScope(tableQuery, tenantId);
+    await addTenantScope(reservationQuery, tenantId);
+  }
   await Promise.all([addBranchScope(tableQuery, branchId), addBranchScope(reservationQuery, branchId)]);
   const [tables, todaysActive] = await Promise.all([
     RestaurantTable.find(tableQuery).sort({ tableNumber: 1 }),
@@ -87,7 +92,11 @@ async function tablesWithLiveStatus(branchId) {
 }
 
 router.get('/', adminAuth, async (req, res) => {
-  try { res.json(await tablesWithLiveStatus(resolveBranchId(req.admin, req.query))); }
+  try {
+    const tenantId = req.admin.role === 'superadmin' ? (req.query.tenantId || null) : req.admin.tenantId;
+    const branchId = resolveBranchId(req.admin, req.query);
+    res.json(await tablesWithLiveStatus(branchId, tenantId));
+  }
   catch { res.status(500).json({ error: 'Failed to load tables.' }); }
 });
 
@@ -101,6 +110,9 @@ router.post('/', adminAuth, async (req, res) => {
     if (!branchId) return res.status(400).json({ error: 'Select a branch before adding a table.' });
     const branch = await Branch.findById(branchId).select('tenantId');
     if (!branch) return res.status(404).json({ error: 'Branch not found.' });
+    if (req.admin.role !== 'superadmin' && String(branch.tenantId) !== String(req.admin.tenantId)) {
+      return res.status(403).json({ error: 'Access denied to this branch.' });
+    }
     const table = await RestaurantTable.create({ tenantId: branch.tenantId, branchId, tableNumber, seats, area });
     res.status(201).json(table);
   } catch (err) {
@@ -113,6 +125,8 @@ router.put('/:id/status', adminAuth, async (req, res) => {
     const manualStatus = req.body.manualStatus;
     if (!['available', 'occupied', 'maintenance'].includes(manualStatus)) return res.status(400).json({ error: 'Invalid table status.' });
     const query = { _id: req.params.id };
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
     const table = await RestaurantTable.findOneAndUpdate(query, { manualStatus }, { new: true });
     if (!table) return res.status(404).json({ error: 'Table not found.' });
@@ -127,6 +141,8 @@ router.put('/:id', adminAuth, async (req, res) => {
     const area = req.body.area;
     if (!tableNumber || !Number.isInteger(seats) || seats < 1 || seats > 30 || !VALID_AREAS.includes(area)) return res.status(400).json({ error: 'Enter a table number, area, and seat count.' });
     const query = { _id: req.params.id };
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
     const table = await RestaurantTable.findOneAndUpdate(query, { tableNumber, seats, area }, { new: true, runValidators: true, context: 'query' });
     if (!table) return res.status(404).json({ error: 'Table not found.' });

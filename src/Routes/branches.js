@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
     }
 
     const isSuperAdmin = decoded && decoded.role === 'superadmin';
-    const isTenantAdmin = decoded && decoded.role === 'admin';
+    const isTenantAdmin = decoded && (decoded.role === 'admin' || decoded.role === 'owner');
 
     // 1. Superadmin listing with per-branch analytics
     if (isSuperAdmin) {

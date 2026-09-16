@@ -6,6 +6,7 @@ const AdminUser = require("../models/AdminUser");
 const jwt = require("jsonwebtoken");
 const { autoAssignOrder } = require("./delivery");
 const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
+const { addTenantScope } = require("../utils/tenantScope");
 const { notifyCustomer } = require("../services/notificationService");
 
 // =====================================
@@ -36,14 +37,14 @@ const kitchenAuth = async (req, res, next) => {
 
         // Read the current staff record rather than trusting a branchId in an
         // old JWT. A chef is never allowed to fall back to another branch.
-        const chef = await AdminUser.findOne({ _id: decoded.id, role: "chef", active: true }).select("branchId");
+        const chef = await AdminUser.findOne({ _id: decoded.id, role: "chef", active: true }).select("branchId tenantId");
         if (!chef?.branchId) {
             return res.status(403).json({
                 success: false,
                 message: "This kitchen account is not assigned to a branch. Ask a superadmin to assign it."
             });
         }
-        req.user = { ...decoded, branchId: String(chef.branchId) };
+        req.user = { ...decoded, branchId: String(chef.branchId), tenantId: chef.tenantId ? String(chef.tenantId) : decoded.tenantId };
 
         next();
 
@@ -124,6 +125,7 @@ router.get("/orders", kitchenAuth, async (req, res) => {
                 ]
             }
         };
+        if (req.user.tenantId) await addTenantScope(filter, req.user.tenantId);
         const orders = await Order.find(filter)
 
         .populate(
@@ -178,6 +180,7 @@ router.put("/:id/accept", kitchenAuth, async (req,res)=>{
 
 
         const orderFilter = { _id: req.params.id, branchId: req.user.branchId };
+        if (req.user.tenantId) await addTenantScope(orderFilter, req.user.tenantId);
         const order = await Order.findOne(orderFilter);
 
 
@@ -261,6 +264,7 @@ router.put("/:id/prepared", kitchenAuth, async(req,res)=>{
 
 
         const orderFilter = { _id: req.params.id, branchId: req.user.branchId };
+        if (req.user.tenantId) await addTenantScope(orderFilter, req.user.tenantId);
         const order = await Order.findOne(orderFilter);
 
 
@@ -367,6 +371,8 @@ router.get("/admin/orders", adminAuth, async (req, res) => {
 
         const branchId = resolveBranchId(req.user, req.query);
         const filter = branchId ? { branchId } : {};
+        const tenantId = req.user.role === 'superadmin' ? (req.query.tenantId || null) : req.user.tenantId;
+        if (tenantId) await addTenantScope(filter, tenantId);
 
         const orders = await Order.find(filter)
 

@@ -5,7 +5,7 @@ const Customer = require('../models/Customer');
 const Branch = require('../models/Branch');
 const { customerAuth } = require('./customerAuth');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
-const { resolveTenant } = require('../utils/tenantScope');
+const { resolveTenant, addTenantScope } = require('../utils/tenantScope');
 const { notifyReservation } = require('../services/notificationService');
 
 const router = express.Router();
@@ -225,6 +225,8 @@ router.get('/mine/list', customerAuth, async (req, res) => {
 router.get('/', adminAuth, async (req, res) => {
   try {
     const query = req.query.status ? { status: req.query.status } : {};
+    const tenantId = req.admin.role === 'superadmin' ? (req.query.tenantId || null) : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
     let reservations = await Reservation.find(query).sort({ date: 1, time: 1, createdAt: -1 });
 
@@ -254,6 +256,8 @@ router.put('/:id', adminAuth, async (req, res) => {
     if (status === 'confirmed' && !table) return res.status(400).json({ error: 'Assign a table before confirming this reservation.' });
 
     const query = { _id: req.params.id };
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     const branchId = resolveBranchId(req.admin, req.query);
     await addBranchScope(query, branchId);
     const previous = await Reservation.findOne(query);

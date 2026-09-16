@@ -108,6 +108,70 @@ router.get('/', optionalAdminAuth, async (req, res) => {
   }
 });
 
+// GET /api/tenants/me/profile — Get branding and profile of currently authenticated tenant admin/owner
+router.get('/me/profile', async (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    const token = header.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    let tenantId = decoded.tenantId;
+
+    // If superadmin is viewing a branch or passed tenantId
+    if (decoded.role === 'superadmin') {
+      if (req.query.tenantId) {
+        tenantId = req.query.tenantId;
+      } else if (req.query.branchId) {
+        const branch = await Branch.findById(req.query.branchId).select('tenantId').lean();
+        if (branch) tenantId = branch.tenantId;
+      }
+    }
+
+    // If still no tenantId and user has a branchId, find tenant via branch
+    if (!tenantId && decoded.branchId) {
+      const branch = await Branch.findById(decoded.branchId).select('tenantId').lean();
+      if (branch) tenantId = branch.tenantId;
+    }
+
+    if (!tenantId) {
+      if (decoded.role === 'superadmin') {
+        return res.json({
+          isSuperAdmin: true,
+          role: 'superadmin',
+          tenant: null
+        });
+      }
+      return res.status(404).json({ error: 'No tenant associated with this account' });
+    }
+
+    const tenant = await Tenant.findById(tenantId).lean();
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    const branches = await Branch.find({ tenantId: tenant._id, isActive: true })
+      .select('name code city currency currencySymbol timezone')
+      .lean();
+
+    res.json({
+      isSuperAdmin: decoded.role === 'superadmin',
+      role: decoded.role,
+      tenant,
+      branches
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch tenant profile' });
+  }
+});
+
 // GET /api/tenants/:slugOrId — Get single tenant details & its branches
 router.get('/:slugOrId', async (req, res) => {
   try {

@@ -5,7 +5,7 @@ const Customer = require('../models/Customer');
 const jwt = require('jsonwebtoken');
 const { customerAuth } = require('./customerAuth');
 const { isAdminRole, resolveBranchId, resolvePublicBranchId, addBranchScope } = require('../utils/branchScope');
-const { resolveTenant } = require('../utils/tenantScope');
+const { resolveTenant, addTenantScope } = require('../utils/tenantScope');
 
 // Middleware: verify admin JWT
 function adminAuth(req, res, next) {
@@ -75,6 +75,8 @@ router.get('/stats/summary', adminAuth, async (req, res) => {
   try {
     const query = {};
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     const all = await Complaint.find(query);
     res.json({
       total: all.length,
@@ -93,6 +95,8 @@ router.get('/', adminAuth, async (req, res) => {
     const { status } = req.query;
     const query = status ? { status } : {};
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     const complaints = await Complaint.find(query).sort({ createdAt: -1 });
     res.json(complaints);
   } catch (err) {
@@ -112,6 +116,8 @@ router.put('/:id/status', adminAuth, async (req, res) => {
 
     const query = { _id: req.params.id };
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     const complaint = await Complaint.findOneAndUpdate(query, { $set: update }, { new: true });
     if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
     res.json(complaint);
@@ -125,6 +131,8 @@ router.delete('/:id', adminAuth, async (req, res) => {
   try {
     const query = { _id: req.params.id };
     await addBranchScope(query, resolveBranchId(req.admin, req.query));
+    const tenantId = req.admin.role === 'superadmin' ? req.query.tenantId : req.admin.tenantId;
+    if (tenantId) await addTenantScope(query, tenantId);
     const complaint = await Complaint.findOneAndDelete(query);
     if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
     res.json({ success: true });
