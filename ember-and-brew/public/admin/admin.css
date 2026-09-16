@@ -794,3 +794,28 @@ tbody tr:hover{ background:rgba(196,146,58,0.05); }
   .modal{ padding:18px; border-radius:14px; }
   .role-picker{ flex-wrap:wrap; }
 }
+
+/* ------------ Admin View Dashboard Button ------------ */
+.btn-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 8px;
+  border: 1px solid rgba(196, 146, 58, 0.45);
+  background: rgba(196, 146, 58, 0.12);
+  color: #a87832;
+  cursor: pointer;
+  transition: all .2s ease;
+  white-space: nowrap;
+}
+.btn-preview:hover {
+  background: rgba(196, 146, 58, 0.24);
+  border-color: #C4923A;
+  color: #7a541c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(196, 146, 58, 0.2);
+}

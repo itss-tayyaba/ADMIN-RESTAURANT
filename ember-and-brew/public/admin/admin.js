@@ -395,6 +395,14 @@
     chefFormError: document.getElementById('chefFormError'),
     chefModalCancel: document.getElementById('chefModalCancel'),
 
+    dashboardViewerBackdrop: document.getElementById('dashboardViewerBackdrop'),
+    dashboardViewerIcon: document.getElementById('dashboardViewerIcon'),
+    dashboardViewerTitle: document.getElementById('dashboardViewerTitle'),
+    dashboardViewerSub: document.getElementById('dashboardViewerSub'),
+    dashboardViewerFrame: document.getElementById('dashboardViewerFrame'),
+    dashboardViewerNewTab: document.getElementById('dashboardViewerNewTab'),
+    dashboardViewerClose: document.getElementById('dashboardViewerClose'),
+
     toast: document.getElementById('toast')
   };
 
@@ -432,10 +440,31 @@
     }
   }
 
+  function openDashboardViewer({ type, title, subtitle, url }) {
+    if (!els.dashboardViewerBackdrop) return;
+    if (els.dashboardViewerIcon) els.dashboardViewerIcon.textContent = type === 'chef' ? '👨‍🍳' : '🛵';
+    if (els.dashboardViewerTitle) els.dashboardViewerTitle.textContent = title || 'Live Dashboard';
+    if (els.dashboardViewerSub) els.dashboardViewerSub.textContent = subtitle || 'Live preview mode';
+    if (els.dashboardViewerNewTab) els.dashboardViewerNewTab.href = url;
+    if (els.dashboardViewerFrame) els.dashboardViewerFrame.src = url;
+    els.dashboardViewerBackdrop.hidden = false;
+  }
+
+  function closeDashboardViewer() {
+    if (!els.dashboardViewerBackdrop) return;
+    els.dashboardViewerBackdrop.hidden = true;
+    if (els.dashboardViewerFrame) els.dashboardViewerFrame.src = 'about:blank';
+  }
+
+  els.dashboardViewerClose && els.dashboardViewerClose.addEventListener('click', closeDashboardViewer);
+  els.dashboardViewerBackdrop && els.dashboardViewerBackdrop.addEventListener('click', (e) => {
+    if (e.target === els.dashboardViewerBackdrop) closeDashboardViewer();
+  });
+
   function renderChefsTable() {
     els.chefsCountLabel.textContent = allChefs.length ? `${allChefs.length} chef${allChefs.length === 1 ? '' : 's'}` : 'No chefs yet';
     if (!allChefs.length) {
-      els.chefsBody.innerHTML = '<tr><td colspan="6" class="empty-state">No kitchen chefs yet. Add one to get started.</td></tr>';
+      els.chefsBody.innerHTML = '<tr><td colspan="7" class="empty-state">No kitchen chefs yet. Add one to get started.</td></tr>';
       return;
     }
     els.chefsBody.innerHTML = allChefs.map(c => `
@@ -444,10 +473,22 @@
         <td>${c.email ? escapeHtml(c.email) : '<span class="cust">Not set</span>'}</td>
         <td>${c.phone ? escapeHtml(c.phone) : '<span class="cust">Not set</span>'}</td>
         <td><span class="badge ${c.active ? 'delivered' : 'cancelled'}">${c.active ? 'active' : 'inactive'}</span></td>
-        <td style="display:flex;gap:8px;flex-wrap:wrap;"><button class="reply-save-btn edit-chef-btn" data-id="${c._id}">Edit Chef</button><button class="btn-ghost toggle-chef-btn" data-id="${c._id}" style="padding:6px 12px;font-size:12px;">${c.active ? 'Deactivate' : 'Activate'}</button></td>
+        <td style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="reply-save-btn edit-chef-btn" data-id="${c._id}">Edit Chef</button>
+          <button class="btn-ghost toggle-chef-btn" data-id="${c._id}" style="padding:6px 12px;font-size:12px;">${c.active ? 'Deactivate' : 'Activate'}</button>
+          <button class="btn-preview view-chef-btn" data-id="${c._id}" data-name="${escapeHtml(c.name || c.username)}" title="View Kitchen Display dashboard for this chef">👁 View Dashboard</button>
+        </td>
       </tr>`).join('');
     els.chefsBody.querySelectorAll('.edit-chef-btn').forEach(btn => btn.addEventListener('click', () => openChefModal(allChefs.find(c => c._id === btn.dataset.id))));
     els.chefsBody.querySelectorAll('.toggle-chef-btn').forEach(btn => btn.addEventListener('click', () => toggleChef(btn.dataset.id)));
+    els.chefsBody.querySelectorAll('.view-chef-btn').forEach(btn => btn.addEventListener('click', () => {
+      openDashboardViewer({
+        type: 'chef',
+        title: `Kitchen Dashboard — ${btn.dataset.name}`,
+        subtitle: `Live kitchen order queue and ticket board for chef ${btn.dataset.name}`,
+        url: `/kitchen?adminPreview=1&chefName=${encodeURIComponent(btn.dataset.name)}`
+      });
+    }));
   }
 
   function openChefModal(chef = null) {
@@ -574,7 +615,7 @@
       : 'No riders yet';
 
     if (!allRiders.length) {
-      els.ridersBody.innerHTML = '<tr><td colspan="6" class="empty-state">No delivery riders yet. Add one to get started.</td></tr>';
+      els.ridersBody.innerHTML = '<tr><td colspan="8" class="empty-state">No delivery riders yet. Add one to get started.</td></tr>';
       return;
     }
 
@@ -589,6 +630,7 @@
         <td style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="reply-save-btn change-region-btn" data-id="${r._id}" data-region="${escapeHtml(r.region || '')}" data-name="${escapeHtml(r.name || r.username)}" data-phone="${escapeHtml(r.phone || '')}">Edit Rider</button>
           <button class="btn-ghost toggle-rider-btn" data-id="${r._id}" style="padding:6px 12px;font-size:12px;">${r.active ? 'Deactivate' : 'Activate'}</button>
+          <button class="btn-preview view-rider-btn" data-id="${r._id}" data-name="${escapeHtml(r.name || r.username)}" data-region="${escapeHtml(r.region || '')}" title="View Delivery Dashboard for this rider">👁 View Dashboard</button>
         </td>
       </tr>
     `).join('');
@@ -599,6 +641,17 @@
 
     els.ridersBody.querySelectorAll('.toggle-rider-btn').forEach(btn => {
       btn.addEventListener('click', () => toggleRider(btn.dataset.id));
+    });
+
+    els.ridersBody.querySelectorAll('.view-rider-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openDashboardViewer({
+          type: 'rider',
+          title: `Rider Dashboard — ${btn.dataset.name}`,
+          subtitle: `Region: ${btn.dataset.region || 'Not assigned'} · Assigned orders & live delivery map`,
+          url: `/delivery?adminPreview=1&riderId=${encodeURIComponent(btn.dataset.id)}&riderName=${encodeURIComponent(btn.dataset.name)}`
+        });
+      });
     });
   }
 

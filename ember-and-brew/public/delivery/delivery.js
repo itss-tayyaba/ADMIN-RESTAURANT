@@ -60,10 +60,14 @@ const logoutBtn = document.getElementById("logoutBtn");
 // Check Login & Role
 // =====================================
 
+const adminPreview = new URLSearchParams(window.location.search).get('adminPreview') === '1';
+const previewRiderId = new URLSearchParams(window.location.search).get('riderId') || '';
+const previewRiderName = new URLSearchParams(window.location.search).get('riderName') || 'Rider';
+
 if (!token) {
     window.location.href = "/admin/login.html";
-} else if (!user || user.role !== "delivery") {
-    if (user && user.role === "admin") window.location.href = "/admin";
+} else if (!user || (user.role !== "delivery" && !(adminPreview && (user.role === "admin" || user.role === "superadmin")))) {
+    if (user && (user.role === "admin" || user.role === "superadmin")) window.location.href = "/admin";
     else if (user && user.role === "chef") window.location.href = "/kitchen";
     else window.location.href = "/admin/login.html";
 }
@@ -74,7 +78,23 @@ if (!token) {
 
 todayDate.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 
-if (user && user.name) {
+if (adminPreview) {
+    const firstName = previewRiderName.split(' ')[0];
+    riderFirstName.textContent = firstName;
+    riderNameLabel.textContent = previewRiderName;
+    riderAvatar.textContent = firstName.charAt(0).toUpperCase();
+
+    const banner = document.createElement('div');
+    banner.id = 'adminPreviewBanner';
+    const escapedName = previewRiderName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    banner.innerHTML = `
+        <span style="font-size:15px;">👁</span>
+        <span>Admin Preview — Delivery Portal (<strong>${escapedName}</strong>)</span>
+        <a href="/admin" style="margin-left:auto;background:rgba(255,255,255,0.15);color:#fff;padding:5px 14px;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,0.25);">← Back to Admin</a>
+    `;
+    banner.style.cssText = 'position:sticky;top:0;z-index:9999;background:linear-gradient(90deg,#1a1917,#0e2a3d);color:#F5F0E8;padding:10px 18px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;font-family:"DM Sans",sans-serif;border-bottom:2px solid #C4923A;';
+    document.body.insertBefore(banner, document.body.firstChild);
+} else if (user && user.name) {
     const firstName = user.name.split(' ')[0];
     riderFirstName.textContent = firstName;
     riderNameLabel.textContent = user.name;
@@ -541,39 +561,44 @@ async function loadMyProfile() {
 
     try {
 
-        const res = await fetch(`${API}/me`, { headers: { Authorization: 'Bearer ' + token } });
+        const profileUrl = `${API}/me${previewRiderId ? `?riderId=${encodeURIComponent(previewRiderId)}` : ''}`;
+        const res = await fetch(profileUrl, { headers: { Authorization: 'Bearer ' + token } });
 
-        if (res.status === 401 || res.status === 403) return; // loadOrders() will handle the redirect
+        if (res.status === 401 || res.status === 403) {
+            if (!adminPreview) {
+                localStorage.clear();
+                window.location.href = "/admin/login.html";
+            }
+            return;
+        }
 
         const data = await res.json();
 
-        if (!data.success) return;
+        if (!data.success || !data.rider) return;
 
         const region = data.rider.region;
-
-        if (data.rider.name) {
-            const firstName = data.rider.name.split(' ')[0];
-            riderFirstName.textContent = firstName;
-            riderNameLabel.textContent = data.rider.name;
-            riderAvatar.textContent = firstName.charAt(0).toUpperCase();
-        }
+        const displayName = data.rider.name || previewRiderName || 'Rider';
+        const firstName = displayName.split(' ')[0];
+        if (riderFirstName) riderFirstName.textContent = firstName;
+        if (riderNameLabel) riderNameLabel.textContent = displayName;
+        if (riderAvatar) riderAvatar.textContent = firstName.charAt(0).toUpperCase();
 
         if (!region) {
             riderRegionValue.textContent = "Not set";
-            riderRegionLabel.textContent = "⚠️ Ask admin to set your region";
+            riderRegionLabel.textContent = "⚠️ No region assigned";
             riderCapacityLabel.textContent = "No region assigned yet";
             return;
         }
 
         riderRegionValue.textContent = region;
         riderRegionLabel.textContent = `📍 ${region}`;
-        riderCapacityLabel.textContent = `${data.rider.activeOrders || 0}/${data.maxActiveOrders} active orders`;
+        riderCapacityLabel.textContent = `${data.rider.activeOrders || 0}/${data.maxActiveOrders || 5} active orders`;
 
     }
 
     catch (err) {
 
-        console.error(err);
+        console.error('Error loading rider profile:', err);
 
     }
 
@@ -601,37 +626,34 @@ async function loadOrders({ background = false } = {}) {
 
     try {
 
-        const res = await fetch(`${API}/orders`, { headers: { Authorization: 'Bearer ' + token } });
+        const ordersUrl = `${API}/orders${previewRiderId ? `?riderId=${encodeURIComponent(previewRiderId)}` : ''}`;
+        const res = await fetch(ordersUrl, { headers: { Authorization: 'Bearer ' + token } });
 
         if (res.status === 401 || res.status === 403) {
-
-            alert("Session expired.");
-
-            localStorage.clear();
-
-            window.location.href = "/admin/login.html";
-
+            if (!adminPreview) {
+                alert("Session expired.");
+                localStorage.clear();
+                window.location.href = "/admin/login.html";
+            } else {
+                console.warn("Admin preview orders not authorized");
+            }
             return;
-
         }
 
         const data = await res.json();
 
         if (!data.success) {
-
-            alert(data.message);
-
+            console.warn(data.message);
             return;
-
         }
 
-        renderOrders(data.orders);
+        renderOrders(data.orders || []);
 
     }
 
     catch (err) {
 
-        console.error(err);
+        console.error('Error loading orders:', err);
 
     } finally {
 

@@ -10,21 +10,14 @@ const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
 const { addTenantScope } = require("../utils/tenantScope");
 const { notifyCustomer } = require("../services/notificationService");
 
-// A rider can't hold more than this many active ("out-for-delivery") orders
-// at once. Once they hit this cap they're skipped by auto-assignment until
-// they mark something delivered.
 const MAX_ACTIVE_ORDERS = 5;
 
 // =====================================
-// DELIVERY BOY AUTH
+// DELIVERY BOY AUTH (Supports Admin Preview)
 // =====================================
-
 const deliveryAuth = async (req, res, next) => {
-
     try {
-
         const token = req.headers.authorization?.split(" ")[1];
-
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -34,15 +27,43 @@ const deliveryAuth = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (decoded.role !== "delivery") {
+        if (decoded.role !== "delivery" && !isAdminRole(decoded.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Delivery access only."
             });
         }
 
-        // Enforce the rider's live database assignment. Do not allow an old
-        // token without a branch to access a different branch's workload.
+        if (isAdminRole(decoded.role)) {
+            const branchId = resolveBranchId(decoded, req.query);
+            let rider = null;
+            const riderId = req.query.riderId || req.body?.riderId;
+            if (riderId) {
+                rider = await AdminUser.findOne({ _id: riderId, role: "delivery" }).select("name username region phone activeOrders active branchId tenantId");
+            }
+            if (!rider && branchId) {
+                rider = await AdminUser.findOne({ role: "delivery", branchId, active: true }).select("name username region phone activeOrders active branchId tenantId");
+            }
+            if (rider) {
+                req.user = {
+                    ...decoded,
+                    id: String(rider._id),
+                    riderId: String(rider._id),
+                    branchId: String(rider.branchId),
+                    tenantId: rider.tenantId ? String(rider.tenantId) : decoded.tenantId,
+                    isAdminPreview: true
+                };
+            } else {
+                req.user = {
+                    ...decoded,
+                    branchId: branchId ? String(branchId) : (decoded.branchId ? String(decoded.branchId) : null),
+                    tenantId: decoded.tenantId ? String(decoded.tenantId) : null,
+                    isAdminPreview: true
+                };
+            }
+            return next();
+        }
+
         const rider = await AdminUser.findOne({ _id: decoded.id, role: "delivery", active: true }).select("branchId");
         if (!rider?.branchId) {
             return res.status(403).json({
@@ -51,31 +72,22 @@ const deliveryAuth = async (req, res, next) => {
             });
         }
         req.user = { ...decoded, branchId: String(rider.branchId) };
-
         next();
 
     } catch (err) {
-
         return res.status(401).json({
             success: false,
             message: "Invalid token"
         });
-
     }
-
 };
-
 
 // =====================================
 // ADMIN AUTH
 // =====================================
-
 const adminAuth = (req, res, next) => {
-
     try {
-
         const token = req.headers.authorization?.split(" ")[1];
-
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -84,7 +96,6 @@ const adminAuth = (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
         if (!isAdminRole(decoded.role)) {
             return res.status(403).json({
                 success: false,
@@ -93,35 +104,20 @@ const adminAuth = (req, res, next) => {
         }
 
         req.user = decoded;
-
         next();
-
     } catch (err) {
-
         return res.status(401).json({
             success: false,
             message: "Invalid token"
         });
-
     }
-
 };
-
 
 // =====================================
 // AUTO-ASSIGN ALGORITHM
-//
-// 1. Order comes in for a region (set at checkout).
-// 2. Find delivery boys fixed to that region (region is set by admin only).
-// 3. Remove riders who already have MAX_ACTIVE_ORDERS active orders.
-// 4. Of what's left, pick the rider with the fewest active orders.
-// 5. Assign the order to them and bump their active order count.
 // =====================================
-
 async function findBestRiderForRegion(region, branchId) {
-
     if (!region) return null;
-
     return AdminUser.findOne({
         role: "delivery",
         active: true,
@@ -129,11 +125,9 @@ async function findBestRiderForRegion(region, branchId) {
         branchId,
         activeOrders: { $lt: MAX_ACTIVE_ORDERS }
     }).sort({ activeOrders: 1, createdAt: 1 });
-
 }
 
 async function autoAssignOrder(order, io) {
-
     if (!order || order.orderType !== "delivery" || !order.region) return null;
     if (order.deliveryBoy) return null; // already assigned
 
@@ -592,6 +586,9 @@ router.get("/orders", deliveryAuth, async (req, res) => {
 
 // Updated only by the assigned rider while they have an active delivery.
 router.put("/location", deliveryAuth, async (req, res) => {
+    if (req.user.isAdminPreview) {
+        return res.status(403).json({ success: false, message: "Read-only in admin preview mode." });
+    }
     try {
         const { latitude, longitude } = req.body || {};
         if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
@@ -610,7 +607,9 @@ router.put("/location", deliveryAuth, async (req, res) => {
 });
 
 router.put("/:id/delivered", deliveryAuth, async (req, res) => {
-
+    if (req.user.isAdminPreview) {
+        return res.status(403).json({ success: false, message: "Read-only in admin preview mode." });
+    }
     try {
 
         const otp = String(req.body?.otp || '').trim();

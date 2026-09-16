@@ -28,11 +28,22 @@ const kitchenAuth = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (decoded.role !== "chef") {
+        if (decoded.role !== "chef" && !isAdminRole(decoded.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Chef access only."
             });
+        }
+
+        if (isAdminRole(decoded.role)) {
+            const branchId = resolveBranchId(decoded, req.query);
+            req.user = {
+                ...decoded,
+                branchId: branchId ? String(branchId) : (decoded.branchId ? String(decoded.branchId) : null),
+                tenantId: decoded.tenantId ? String(decoded.tenantId) : null,
+                isAdminPreview: true
+            };
+            return next();
         }
 
         // Read the current staff record rather than trusting a branchId in an
@@ -45,7 +56,6 @@ const kitchenAuth = async (req, res, next) => {
             });
         }
         req.user = { ...decoded, branchId: String(chef.branchId), tenantId: chef.tenantId ? String(chef.tenantId) : decoded.tenantId };
-
         next();
 
     } catch (err) {
@@ -59,46 +69,33 @@ const kitchenAuth = async (req, res, next) => {
 
 };
 
-
 // =====================================
 // ADMIN AUTH
 // =====================================
-
 const adminAuth = (req, res, next) => {
-
     try {
-
         const token = req.headers.authorization?.split(" ")[1];
-
         if (!token) {
             return res.status(401).json({
                 success: false,
                 message: "No token provided"
             });
         }
-
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
         if (!isAdminRole(decoded.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Admin access only."
             });
         }
-
         req.user = decoded;
-
         next();
-
     } catch (err) {
-
         return res.status(401).json({
             success: false,
             message: "Invalid token"
         });
-
     }
-
 };
 
 // =====================================

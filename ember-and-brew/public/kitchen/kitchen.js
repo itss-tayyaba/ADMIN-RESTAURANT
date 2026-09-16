@@ -12,13 +12,17 @@ const user = JSON.parse(localStorage.getItem("eb_admin_user") || "null");
 // Check Login & Role
 // =====================================
 
+const adminPreview = new URLSearchParams(window.location.search).get('adminPreview') === '1';
+const previewChefName = new URLSearchParams(window.location.search).get('chefName') || 'Kitchen';
+
 if (!token) {
   window.location.href = "/admin/login.html";
-} else if (!user || user.role !== "chef") {
+} else if (!user || (user.role !== "chef" && !(adminPreview && user.role === "admin"))) {
   if (user && user.role === "admin") window.location.href = "/admin";
   else if (user && user.role === "delivery") window.location.href = "/delivery";
   else window.location.href = "/admin/login.html";
 }
+
 
 // =====================================
 // Elements
@@ -55,6 +59,30 @@ let itemChecks = {};
 let dismissedIds = new Set(JSON.parse(localStorage.getItem('eb_kitchen_dismissed') || '[]'));
 
 $('#btn-sound').classList.toggle('active', soundOn);
+
+// =====================================
+// Admin Preview Mode Setup
+// =====================================
+if (adminPreview) {
+  // Inject sticky admin preview banner
+  const banner = document.createElement('div');
+  banner.id = 'adminPreviewBanner';
+  banner.innerHTML = `
+    <span style="font-size:15px;">👁</span>
+    <span>Admin Preview — Kitchen Display (<strong>${escapeHtmlSimple(previewChefName)}</strong>)</span>
+    <a href="/admin" style="margin-left:auto;background:rgba(255,255,255,0.15);color:#fff;padding:5px 14px;border-radius:8px;text-decoration:none;font-size:12.5px;font-weight:700;border:1px solid rgba(255,255,255,0.25);">← Back to Admin</a>
+  `;
+  banner.style.cssText = 'position:sticky;top:0;z-index:9999;background:linear-gradient(90deg,#1a1917,#3d2a0e);color:#F5F0E8;padding:10px 18px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;font-family:"DM Sans",sans-serif;border-bottom:2px solid #C4923A;';
+  document.body.insertBefore(banner, document.body.firstChild);
+
+  // Mark app-shell so CSS can hide action buttons
+  document.querySelector('.app-shell') && document.querySelector('.app-shell').setAttribute('data-admin-preview', '1');
+}
+
+function escapeHtmlSimple(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 
 // =====================================
 // Helpers
@@ -170,6 +198,10 @@ async function loadOrders(silent) {
     const res = await fetch(`${API}/orders`, { headers: { Authorization: 'Bearer ' + token } });
 
     if (res.status === 401 || res.status === 403) {
+      if (adminPreview) {
+        console.warn("Kitchen preview authorization failed");
+        return;
+      }
       alert("Session expired.");
       localStorage.clear();
       window.location.href = "/admin/login.html";
@@ -400,23 +432,31 @@ function buildCard(o) {
     btn.className = 'btn-action primary';
     btn.innerHTML = busy ? `<i class="fa-solid fa-spinner spin"></i> Starting…` : `<i class="fa-solid fa-fire"></i> Start Preparing`;
     btn.disabled = busy;
-    btn.addEventListener('click', () => acceptOrder(o._id));
+    if (!adminPreview) btn.addEventListener('click', () => acceptOrder(o._id));
   } else if (o.status === 'preparing') {
     const allDone = (o.items || []).length > 0 && doneSet.size >= (o.items || []).length;
     btn.className = 'btn-action ready-action';
     btn.innerHTML = busy ? `<i class="fa-solid fa-spinner spin"></i> Updating…` : `<i class="fa-solid fa-check"></i> Ready For Service`;
     btn.disabled = busy || !allDone;
     if (!allDone && !busy) btn.title = 'Check off every item first';
-    btn.addEventListener('click', () => readyOrder(o._id));
+    if (!adminPreview) btn.addEventListener('click', () => readyOrder(o._id));
   } else if (o.status === 'ready') {
     btn.className = 'btn-action bump';
     btn.innerHTML = `<i class="fa-solid fa-check-double"></i> BUMP — Served`;
-    btn.addEventListener('click', () => bumpOrder(o._id));
+    if (!adminPreview) btn.addEventListener('click', () => bumpOrder(o._id));
   } else {
     btn.className = 'btn-action waiting';
     btn.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Awaiting Admin Approval`;
     btn.disabled = true;
   }
+
+  if (adminPreview) {
+    btn.disabled = true;
+    btn.title = 'Read-only — admin preview mode';
+    btn.style.opacity = '0.55';
+    btn.style.cursor = 'not-allowed';
+  }
+
   foot.appendChild(btn);
   card.appendChild(foot);
 
