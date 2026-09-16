@@ -24,3 +24,7 @@ Thumbs.db
 
 # Vercel
 .vercel/
+
+# Scratch
+scratch/
+

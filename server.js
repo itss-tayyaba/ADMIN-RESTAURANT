@@ -1,5 +1,7 @@
-const dns = require("dns");
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
+if (process.env.USE_CUSTOM_DNS === "true") {
+  const dns = require("dns");
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+}
 
 require("dotenv").config();
 
@@ -75,6 +77,7 @@ const chatbotRoutes = require("./src/Routes/chatbot");
 const branchesRoutes = require("./src/Routes/branches");
 const notificationRoutes = require("./src/Routes/notifications");
 const tenantRoutes = require("./src/Routes/tenants");
+const paymentRoutes = require("./src/Routes/payments");
 
 app.use(cors());
 app.use(express.json());
@@ -127,6 +130,7 @@ app.use("/api/delivery", deliveryRoutes);
 app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/branches", branchesRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Dashboards
 app.get("/admin/login", (req, res) => {
@@ -154,6 +158,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"]
   }
 });
+app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);

@@ -37,25 +37,37 @@ const orderSchema = new mongoose.Schema({
   deliveryAddress: { type: String, default: '' },
   paymentStatus: {
     type: String,
-    enum: ['unpaid', 'pending', 'paid', 'failed'],
-    default: 'unpaid'
+    enum: [
+      'PENDING', 'PROCESSING', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED', 'REFUNDED',
+      'pending', 'processing', 'paid', 'failed', 'cancelled', 'expired', 'refunded', 'unpaid'
+    ],
+    default: 'PENDING',
+    index: true,
+    set: (v) => (v ? String(v).toUpperCase() : 'PENDING')
   },
   paymentMethod: {
     type: String,
     enum: ['cash', 'card', 'jazzcash', 'easypaisa', 'sadapay', 'nayapay', 'raast', 'bank-transfer', 'apple-pay', 'google-pay'],
-    default: 'cash'
+    default: 'cash',
+    index: true
   },
-  transactionId: { type: String, default: '' },
+  transactionId: { type: String, default: '', index: true },
   cardDetails: {
     brand: { type: String, default: '' },
     last4: { type: String, default: '' },
     cardholderName: { type: String, default: '' }
   },
   paymentDetails: {
+    provider: { type: String, default: '' },
     accountNumber: { type: String, default: '' },
     senderName: { type: String, default: '' },
     referenceId: { type: String, default: '' },
-    paidAt: { type: Date }
+    amountPaid: { type: Number, default: 0 },
+    currency: { type: String, default: 'PKR' },
+    paidAt: { type: Date },
+    verifiedBy: { type: String, default: '' },
+    verifiedAt: { type: Date },
+    rawResponse: { type: mongoose.Schema.Types.Mixed, default: null }
   },
   deliveryLocation: {
     type: {

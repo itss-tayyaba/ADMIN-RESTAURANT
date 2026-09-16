@@ -39,7 +39,8 @@ router.post('/', async (req, res) => {
   try {
     const {
       items, orderType, deliveryAddress, deliveryLocation, region, notes,
-      guestName, guestPhone, guestEmail, pushToken, tableNumber, branchId
+      guestName, guestPhone, guestEmail, pushToken, tableNumber, branchId,
+      paymentMethod, paymentDetails
     } = req.body;
 
     if (!items || !items.length) {
@@ -74,6 +75,8 @@ router.post('/', async (req, res) => {
     const orderNumber = generateOrderNumber();
     const otp = orderType === 'delivery' ? generateOtp() : undefined;
 
+    const safeMethod = paymentMethod || 'cash';
+
     const order = new Order({
       orderNumber,
       tenantId,
@@ -94,12 +97,29 @@ router.post('/', async (req, res) => {
       deliveryLocation: deliveryLocation || null,
       region: region || '',
       notes: notes || '',
+      paymentMethod: safeMethod,
+      paymentStatus: 'PENDING',
+      paymentDetails: {
+        provider: safeMethod,
+        senderName: paymentDetails?.senderName || '',
+        referenceId: paymentDetails?.referenceId || paymentDetails?.transactionId || '',
+        accountNumber: paymentDetails?.accountNumber || '',
+        amountPaid: 0,
+        currency: 'PKR',
+        paidAt: null
+      },
       otp,
       status: 'pending_admin',
       statusLog: [{ status: 'pending_admin', time: new Date() }]
     });
 
     await order.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      if (tenantId) io.to(`tenant:${tenantId}`).emit('order:new', order);
+      if (resolvedBranch?._id) io.to(`branch:${resolvedBranch._id}`).emit('order:new', order);
+    }
     res.status(201).json(order);
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to place order' });

@@ -121,6 +121,44 @@ const tenantSchema = new mongoose.Schema({
   subscriptionNotes: {
     type: String,
     default: ''
+  },
+  paymentSettings: {
+    jazzcash: {
+      enabled: { type: Boolean, default: false },
+      mode: { type: String, enum: ['sandbox', 'live'], default: 'sandbox' },
+      merchantId: { type: String, default: '' },
+      password: { type: String, default: '' },
+      integritySalt: { type: String, default: '' }
+    },
+    easypaisa: {
+      enabled: { type: Boolean, default: false },
+      mode: { type: String, enum: ['sandbox', 'live'], default: 'sandbox' },
+      storeId: { type: String, default: '' },
+      hashKey: { type: String, default: '' }
+    },
+    stripe: {
+      enabled: { type: Boolean, default: false },
+      secretKey: { type: String, default: '' },
+      publishableKey: { type: String, default: '' }
+    },
+    bankTransfer: {
+      enabled: { type: Boolean, default: true },
+      bankName: { type: String, default: '' },
+      accountTitle: { type: String, default: '' },
+      iban: { type: String, default: '' },
+      accountNumber: { type: String, default: '' },
+      instructions: { type: String, default: '' }
+    },
+    raast: {
+      enabled: { type: Boolean, default: true },
+      iban: { type: String, default: '' },
+      accountTitle: { type: String, default: '' },
+      bankName: { type: String, default: '' },
+      instructions: { type: String, default: '' }
+    },
+    cashOnDelivery: {
+      enabled: { type: Boolean, default: true }
+    }
   }
 }, { timestamps: true });
 

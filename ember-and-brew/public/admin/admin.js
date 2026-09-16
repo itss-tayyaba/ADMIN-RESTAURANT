@@ -277,7 +277,8 @@
       reservations: document.getElementById('view-reservations'),
       floorplans: document.getElementById('view-floorplans'),
       complaints: document.getElementById('view-complaints'),
-      riders: document.getElementById('view-riders')
+      riders: document.getElementById('view-riders'),
+      payments: document.getElementById('view-payments')
     },
     pageTitle: document.getElementById('pageTitle'),
     todayDate: document.getElementById('todayDate'),
@@ -636,7 +637,7 @@
     currentView = name;
     Object.entries(els.views).forEach(([key, el]) => { el.hidden = key !== name; });
     els.navItems.forEach(btn => btn.classList.toggle('active', btn.dataset.view === name));
-    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', floorplans: 'Floor Plans', complaints: 'Complaints', riders: 'Delivery Riders' };
+    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', floorplans: 'Floor Plans', complaints: 'Complaints', riders: 'Delivery Riders', payments: 'Payment Settings' };
     els.pageTitle.textContent = titles[name] || 'Overview';
     if (name === 'orders') { loadRiders(); loadOrders(); }
     if (name === 'overview') loadOverview();
@@ -645,6 +646,7 @@
     if (name === 'floorplans') { loadTables(); loadReservations(); }
     if (name === 'complaints') loadComplaints();
     if (name === 'riders') refreshRidersView();
+    if (name === 'payments') loadPaymentSettings();
   }
   els.navItems.forEach(btn => btn.addEventListener('click', () => { switchView(btn.dataset.view); closeSidebar(); }));
   document.querySelectorAll('[data-goto]').forEach(btn => {
@@ -1094,6 +1096,21 @@
             </svg>
           </button>`
         : '';
+      const payStatus = (o.paymentStatus || 'PENDING').toUpperCase();
+      const isPaid = payStatus === 'PAID';
+      const isFailed = payStatus === 'FAILED';
+      const isProcessing = payStatus === 'PROCESSING';
+      const isCod = o.paymentMethod === 'cash';
+
+      const payBg = isPaid ? 'rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)'
+        : isFailed ? 'rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3)'
+        : isProcessing ? 'rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3)'
+        : 'rgba(212,168,83,0.15);color:#D4A853;border:1px solid rgba(212,168,83,0.3)';
+
+      const verifyBtn = (!isPaid && !isCod)
+        ? `<button class="verify-payment-btn" data-order-id="${o._id}" style="display:inline-block;margin-top:4px;padding:2px 6px;font-size:10px;border-radius:4px;background:#38bdf8;color:#0f172a;border:none;cursor:pointer;font-weight:700;">🔍 Verify Deposit</button>`
+        : '';
+
       return `
       <tr>
         <td><span class="order-id">${o.orderNumber}</span><br><span class="cust">${timeAgo(o.createdAt)}</span></td>
@@ -1107,9 +1124,11 @@
         <td class="cust">${o.items.map(i => `${i.qty}× ${escapeHtml(i.name)}`).join(', ')}</td>
         <td>
           ${money(o.total)}<br>
-          <span style="display:inline-block;margin-top:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;background:${o.paymentStatus === 'paid' ? 'rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3)' : 'rgba(212,168,83,0.15);color:#D4A853;border:1px solid rgba(212,168,83,0.3)'}">
-            ${escapeHtml(o.paymentMethod || 'cash')} · ${o.paymentStatus === 'paid' ? 'PAID' : 'COD'}
+          <span style="display:inline-block;margin-top:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;background:${payBg}">
+            ${escapeHtml(o.paymentMethod || 'cash')} · ${payStatus}
           </span>
+          ${verifyBtn}
+          ${o.paymentDetails?.verifiedBy ? `<span style="font-size:9px;color:var(--ink-3);display:block;margin-top:2px;">by ${escapeHtml(o.paymentDetails.verifiedBy)}</span>` : ''}
         </td>
         <td><span class="badge ${o.status}">${o.status.replace('-', ' ')}</span></td>
         <td>${renderDeliveryCell(o)}</td>
@@ -1117,6 +1136,13 @@
       </tr>
     `;
     }).join('');
+
+    els.ordersBody.querySelectorAll('.verify-payment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const order = orders.find(o => String(o._id) === btn.dataset.orderId);
+        if (order) openPaymentVerifyModal(order);
+      });
+    });
 
     els.ordersBody.querySelectorAll('.order-qr-btn').forEach(btn => {
       btn.addEventListener('click', () => showTableQrModal(btn.dataset.qrTable));
@@ -1865,6 +1891,203 @@
     currentComplaintFilter = btn.dataset.status;
     loadComplaints();
   });
+
+  // ---------- Payment Verification Modal & Settings ----------
+  let currentVerifyingOrder = null;
+
+  function openPaymentVerifyModal(order) {
+    currentVerifyingOrder = order;
+    const modal = document.getElementById('paymentVerifyModalBackdrop');
+    const details = document.getElementById('verifyModalDetails');
+    const notes = document.getElementById('verifyNotes');
+    if (!modal || !details) return;
+
+    if (notes) notes.value = '';
+    const pd = order.paymentDetails || {};
+    details.innerHTML = `
+      <div style="display:flex;justify-content:space-between;"><strong>Order Number:</strong> <span>${escapeHtml(order.orderNumber)}</span></div>
+      <div style="display:flex;justify-content:space-between;"><strong>Total Amount:</strong> <span style="font-weight:bold;color:#4ade80;">${money(order.total)}</span></div>
+      <div style="display:flex;justify-content:space-between;"><strong>Payment Method:</strong> <span style="text-transform:uppercase;font-weight:600;">${escapeHtml(order.paymentMethod || 'manual')}</span></div>
+      <div style="display:flex;justify-content:space-between;"><strong>Current Status:</strong> <span style="font-weight:bold;">${escapeHtml((order.paymentStatus || 'PENDING').toUpperCase())}</span></div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:6px 0;" />
+      <div style="display:flex;justify-content:space-between;"><strong>Customer / Sender:</strong> <span style="color:#38bdf8;">${escapeHtml(pd.senderName || order.customerName || '—')}</span></div>
+      <div style="display:flex;justify-content:space-between;"><strong>Deposit Ref / TID:</strong> <span style="font-family:monospace;font-weight:bold;color:#facc15;">${escapeHtml(pd.referenceId || order.transactionId || 'None')}</span></div>
+      ${pd.accountNumber ? `<div style="display:flex;justify-content:space-between;"><strong>Sender Account:</strong> <span>${escapeHtml(pd.accountNumber)}</span></div>` : ''}
+      <div style="font-size:11px;color:var(--ink-3);margin-top:8px;background:rgba(255,255,255,0.03);padding:8px;border-radius:6px;">
+        💡 Verify this reference ID against your bank statement / SMS before approving. Clicking Approve will mark this order as PAID.
+      </div>
+    `;
+
+    modal.hidden = false;
+  }
+
+  const verifyCancelBtn = document.getElementById('verifyCancelBtn');
+  const verifyApproveBtn = document.getElementById('verifyApproveBtn');
+  const verifyRejectBtn = document.getElementById('verifyRejectBtn');
+  const verifyModal = document.getElementById('paymentVerifyModalBackdrop');
+
+  if (verifyCancelBtn && verifyModal) {
+    verifyCancelBtn.addEventListener('click', () => { verifyModal.hidden = true; });
+  }
+
+  if (verifyApproveBtn) {
+    verifyApproveBtn.addEventListener('click', async () => {
+      if (!currentVerifyingOrder) return;
+      const notes = document.getElementById('verifyNotes')?.value || '';
+      verifyApproveBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/payments/orders/${currentVerifyingOrder._id}/verify-manual`, {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ approved: true, reason: notes })
+        });
+        if (handleAuthFailure(res)) return;
+        if (!res.ok) throw new Error('Verification request failed');
+        showToast(`Order #${currentVerifyingOrder.orderNumber} payment approved & marked PAID!`);
+        if (verifyModal) verifyModal.hidden = true;
+        loadOrders();
+      } catch (err) {
+        showToast(err.message || 'Could not verify payment', true);
+      } finally {
+        verifyApproveBtn.disabled = false;
+      }
+    });
+  }
+
+  if (verifyRejectBtn) {
+    verifyRejectBtn.addEventListener('click', async () => {
+      if (!currentVerifyingOrder) return;
+      const notes = document.getElementById('verifyNotes')?.value || '';
+      verifyRejectBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/payments/orders/${currentVerifyingOrder._id}/verify-manual`, {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify({ approved: false, reason: notes })
+        });
+        if (handleAuthFailure(res)) return;
+        if (!res.ok) throw new Error('Rejection request failed');
+        showToast(`Order #${currentVerifyingOrder.orderNumber} payment marked FAILED`, true);
+        if (verifyModal) verifyModal.hidden = true;
+        loadOrders();
+      } catch (err) {
+        showToast(err.message || 'Could not reject payment', true);
+      } finally {
+        verifyRejectBtn.disabled = false;
+      }
+    });
+  }
+
+  async function loadPaymentSettings() {
+    try {
+      const res = await fetch('/api/payments/settings', { headers: authHeaders });
+      if (handleAuthFailure(res)) return;
+      if (!res.ok) throw new Error('Failed to fetch payment settings');
+      const data = await res.json();
+
+      const jc = data.jazzcash || {};
+      const ep = data.easypaisa || {};
+      const st = data.stripe || {};
+      const bt = data.bankTransfer || {};
+      const rs = data.raast || {};
+      const cod = data.cashOnDelivery || {};
+
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+      const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = Boolean(val); };
+
+      setChecked('jc_enabled', jc.enabled);
+      setVal('jc_mode', jc.mode || 'sandbox');
+      setVal('jc_merchantId', jc.merchantId);
+      setVal('jc_password', jc.isConfigured ? '********' : '');
+      setVal('jc_integritySalt', jc.isConfigured ? '********' : '');
+
+      setChecked('ep_enabled', ep.enabled);
+      setVal('ep_mode', ep.mode || 'sandbox');
+      setVal('ep_storeId', ep.storeId);
+      setVal('ep_hashKey', ep.isConfigured ? '********' : '');
+
+      setChecked('st_enabled', st.enabled);
+      setVal('st_publishableKey', st.publishableKey);
+      setVal('st_secretKey', st.isConfigured ? '********' : '');
+
+      setChecked('bt_enabled', bt.enabled !== false);
+      setVal('bt_bankName', bt.bankName);
+      setVal('bt_accountTitle', bt.accountTitle);
+      setVal('bt_iban', bt.iban);
+      setVal('bt_accountNumber', bt.accountNumber);
+
+      setChecked('rs_enabled', rs.enabled !== false);
+      setVal('rs_iban', rs.iban);
+      setVal('rs_accountTitle', rs.accountTitle);
+      setVal('rs_bankName', rs.bankName);
+
+      setChecked('cod_enabled', cod.enabled !== false);
+    } catch (err) {
+      showToast('Error loading payment settings: ' + err.message, true);
+    }
+  }
+
+  const savePaymentSettingsBtn = document.getElementById('savePaymentSettingsBtn');
+  if (savePaymentSettingsBtn) {
+    savePaymentSettingsBtn.addEventListener('click', async () => {
+      savePaymentSettingsBtn.disabled = true;
+      savePaymentSettingsBtn.textContent = 'Saving…';
+      try {
+        const payload = {
+          jazzcash: {
+            enabled: document.getElementById('jc_enabled')?.checked,
+            mode: document.getElementById('jc_mode')?.value,
+            merchantId: document.getElementById('jc_merchantId')?.value,
+            password: document.getElementById('jc_password')?.value,
+            integritySalt: document.getElementById('jc_integritySalt')?.value
+          },
+          easypaisa: {
+            enabled: document.getElementById('ep_enabled')?.checked,
+            mode: document.getElementById('ep_mode')?.value,
+            storeId: document.getElementById('ep_storeId')?.value,
+            hashKey: document.getElementById('ep_hashKey')?.value
+          },
+          stripe: {
+            enabled: document.getElementById('st_enabled')?.checked,
+            publishableKey: document.getElementById('st_publishableKey')?.value,
+            secretKey: document.getElementById('st_secretKey')?.value
+          },
+          bankTransfer: {
+            enabled: document.getElementById('bt_enabled')?.checked,
+            bankName: document.getElementById('bt_bankName')?.value,
+            accountTitle: document.getElementById('bt_accountTitle')?.value,
+            iban: document.getElementById('bt_iban')?.value,
+            accountNumber: document.getElementById('bt_accountNumber')?.value
+          },
+          raast: {
+            enabled: document.getElementById('rs_enabled')?.checked,
+            iban: document.getElementById('rs_iban')?.value,
+            accountTitle: document.getElementById('rs_accountTitle')?.value,
+            bankName: document.getElementById('rs_bankName')?.value
+          },
+          cashOnDelivery: {
+            enabled: document.getElementById('cod_enabled')?.checked
+          }
+        };
+
+        const res = await fetch('/api/payments/settings', {
+          method: 'PUT',
+          headers: authHeaders,
+          body: JSON.stringify(payload)
+        });
+        if (handleAuthFailure(res)) return;
+        if (!res.ok) throw new Error('Failed to update payment settings');
+
+        showToast('Payment settings saved successfully!');
+        loadPaymentSettings();
+      } catch (err) {
+        showToast('Could not save payment settings: ' + err.message, true);
+      } finally {
+        savePaymentSettingsBtn.disabled = false;
+        savePaymentSettingsBtn.textContent = '💾 Save Payment Settings';
+      }
+    });
+  }
 
   function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, m => ({
