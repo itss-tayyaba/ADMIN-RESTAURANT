@@ -341,6 +341,7 @@
         '<div class="panel-head">' +
           '<h3>TENANTS</h3>' +
           '<div class="panel-head-actions">' +
+            '<button class="btn-primary-action" id="openCreateBranchFromTenantsBtn" style="background:linear-gradient(135deg,var(--ember),var(--ember-light));margin-right:8px;"><i class="fa-solid fa-code-branch"></i> Add Branch</button>' +
             '<button class="btn-primary-action" id="openCreateTenantBtn"><i class="fa-solid fa-plus"></i> Add Restaurant</button>' +
           '</div>' +
         '</div>' +
@@ -363,6 +364,12 @@
 
     // Hook + Add Restaurant button
     document.getElementById('openCreateTenantBtn').addEventListener('click', openCreateTenantModalHandler);
+
+    // Hook + Add Branch button from Tenants panel
+    const openBranchFromTenantsBtn = document.getElementById('openCreateBranchFromTenantsBtn');
+    if (openBranchFromTenantsBtn) {
+      openBranchFromTenantsBtn.addEventListener('click', () => openCreateBranchModalHandler());
+    }
 
     // Hook Add Branch quick buttons per tenant
     content.querySelectorAll('.add-branch-tenant-btn').forEach(btn => {
@@ -427,7 +434,10 @@
       '<div class="panel">' +
         '<div class="panel-head">' +
           '<h3>Restaurant Brands Directory</h3>' +
-          '<button class="btn-primary-action" id="dashAddTenantBtn"><i class="fa-solid fa-plus"></i> Add Restaurant</button>' +
+          '<div class="panel-head-actions">' +
+            '<button class="btn-primary-action" id="dashAddBranchBtn" style="background:linear-gradient(135deg,var(--ember),var(--ember-light));margin-right:8px;"><i class="fa-solid fa-code-branch"></i> Add Branch</button>' +
+            '<button class="btn-primary-action" id="dashAddTenantBtn"><i class="fa-solid fa-plus"></i> Add Restaurant</button>' +
+          '</div>' +
         '</div>' +
         '<div class="table-scroll">' +
           '<table class="data-table">' +
@@ -438,6 +448,10 @@
       '</div>';
 
     document.getElementById('dashAddTenantBtn').addEventListener('click', openCreateTenantModalHandler);
+    const dashBranchBtn = document.getElementById('dashAddBranchBtn');
+    if (dashBranchBtn) {
+      dashBranchBtn.addEventListener('click', () => openCreateBranchModalHandler());
+    }
   }
 
   // ================================================================

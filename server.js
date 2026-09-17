@@ -88,7 +88,12 @@ app.use(express.static(path.join(__dirname, "ember-and-brew", "public")));
 app.use("/admin", express.static(path.join(__dirname, "ember-and-brew", "public", "admin")));
 app.use("/kitchen", express.static(path.join(__dirname, "ember-and-brew", "public", "kitchen")));
 app.use("/delivery", express.static(path.join(__dirname, "ember-and-brew", "public", "delivery")));
-app.use("/superadmin", express.static(path.join(__dirname, "ember-and-brew", "public", "superadmin")));
+app.use("/superadmin", (req, res, next) => {
+  res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+}, express.static(path.join(__dirname, "ember-and-brew", "public", "superadmin")));
 
 // Multi-tenant customer routes
 app.get("/r/:tenantSlug", (req, res) => {
