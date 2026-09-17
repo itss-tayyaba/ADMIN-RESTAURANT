@@ -68,6 +68,42 @@
   const chipExtend365 = document.getElementById('chipExtend365');
   const planSelectGrid = document.getElementById('planSelectGrid');
 
+  // Create Branch Modal Elements
+  const createBranchModal = document.getElementById('createBranchModal');
+  const createBranchForm = document.getElementById('createBranchForm');
+  const branchTenantId = document.getElementById('branchTenantId');
+  const branchName = document.getElementById('branchName');
+  const branchCode = document.getElementById('branchCode');
+  const branchCity = document.getElementById('branchCity');
+  const branchCountry = document.getElementById('branchCountry');
+  const branchCurrency = document.getElementById('branchCurrency');
+  const branchCurrencySymbol = document.getElementById('branchCurrencySymbol');
+  const branchTimezone = document.getElementById('branchTimezone');
+  const branchTaxRate = document.getElementById('branchTaxRate');
+  const branchAddress = document.getElementById('branchAddress');
+  const branchPhone = document.getElementById('branchPhone');
+  const branchDeliveryZones = document.getElementById('branchDeliveryZones');
+  const branchDeliveryRadiusKm = document.getElementById('branchDeliveryRadiusKm');
+  const createBranchError = document.getElementById('createBranchError');
+  const submitCreateBranchBtn = document.getElementById('submitCreateBranchBtn');
+  const closeCreateBranchModal = document.getElementById('closeCreateBranchModal');
+  const cancelCreateBranchBtn = document.getElementById('cancelCreateBranchBtn');
+
+  // Country Defaults Mapping
+  const COUNTRY_DEFAULTS = {
+    'Pakistan': { countryCode: 'PK', currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi', taxRate: 0.08 },
+    'Australia': { countryCode: 'AU', currency: 'AUD', symbol: 'A$', tz: 'Australia/Sydney', taxRate: 0.10 },
+    'United Kingdom': { countryCode: 'GB', currency: 'GBP', symbol: '£', tz: 'Europe/London', taxRate: 0.20 },
+    'United States': { countryCode: 'US', currency: 'USD', symbol: '$', tz: 'America/New_York', taxRate: 0.08 },
+    'United Arab Emirates': { countryCode: 'AE', currency: 'AED', symbol: 'AED', tz: 'Asia/Dubai', taxRate: 0.05 },
+    'Canada': { countryCode: 'CA', currency: 'CAD', symbol: 'C$', tz: 'America/Toronto', taxRate: 0.13 },
+    'Germany': { countryCode: 'DE', currency: 'EUR', symbol: '€', tz: 'Europe/Berlin', taxRate: 0.19 },
+    'Saudi Arabia': { countryCode: 'SA', currency: 'SAR', symbol: 'SAR', tz: 'Asia/Riyadh', taxRate: 0.15 },
+    'Qatar': { countryCode: 'QA', currency: 'QAR', symbol: 'QAR', tz: 'Asia/Qatar', taxRate: 0.00 },
+    'Singapore': { countryCode: 'SG', currency: 'SGD', symbol: 'S$', tz: 'Asia/Singapore', taxRate: 0.09 }
+  };
+  const countryDefaults = COUNTRY_DEFAULTS;
+
   // Subscription filters state
   let subPlanFilter = 'all';
   let subStatusFilter = 'all';
@@ -189,20 +225,6 @@
     return '<span class="badge ' + esc(p) + '">' + esc(p) + '</span>';
   }
 
-  // Country defaults mapping
-  const countryDefaults = {
-    'Pakistan': { currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi' },
-    'Australia': { currency: 'AUD', symbol: 'A$', tz: 'Australia/Sydney' },
-    'United Kingdom': { currency: 'GBP', symbol: '£', tz: 'Europe/London' },
-    'United States': { currency: 'USD', symbol: '$', tz: 'America/New_York' },
-    'United Arab Emirates': { currency: 'AED', symbol: 'AED', tz: 'Asia/Dubai' },
-    'Canada': { currency: 'CAD', symbol: 'C$', tz: 'America/Toronto' },
-    'Germany': { currency: 'EUR', symbol: '€', tz: 'Europe/Berlin' },
-    'Saudi Arabia': { currency: 'SAR', symbol: 'SAR', tz: 'Asia/Riyadh' },
-    'Qatar': { currency: 'QAR', symbol: 'QAR', tz: 'Asia/Qatar' },
-    'Singapore': { currency: 'SGD', symbol: 'S$', tz: 'Asia/Singapore' }
-  };
-
   // Sidebar navigation click
   document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -306,6 +328,7 @@
             '<td>' +
               '<div class="table-actions">' +
                 '<a href="/r/' + encodeURIComponent(t.slug) + '" target="_blank" class="btn-action-icon" title="Open Storefront"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>' +
+                '<button class="btn-action-icon add-branch-tenant-btn" data-id="' + t._id + '" title="Add Branch to ' + esc(t.name) + '"><i class="fa-solid fa-code-branch"></i></button>' +
                 '<button class="btn-action-icon edit-tenant-btn" data-id="' + t._id + '" title="Manage Tenant"><i class="fa-solid fa-pen-to-square"></i></button>' +
               '</div>' +
             '</td>' +
@@ -340,6 +363,13 @@
 
     // Hook + Add Restaurant button
     document.getElementById('openCreateTenantBtn').addEventListener('click', openCreateTenantModalHandler);
+
+    // Hook Add Branch quick buttons per tenant
+    content.querySelectorAll('.add-branch-tenant-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openCreateBranchModalHandler(btn.dataset.id);
+      });
+    });
 
     // Hook edit buttons
     content.querySelectorAll('.edit-tenant-btn').forEach(btn => {
@@ -457,6 +487,9 @@
     content.innerHTML = '<div class="panel">' +
       '<div class="panel-head">' +
         '<h3>Branches Directory (' + list.length + ')</h3>' +
+        '<div class="panel-head-actions">' +
+          '<button class="btn-primary-action" id="openCreateBranchBtn"><i class="fa-solid fa-plus"></i> Add Branch</button>' +
+        '</div>' +
       '</div>' +
       '<div class="table-scroll">' +
         '<table class="data-table">' +
@@ -465,6 +498,11 @@
         '</table>' +
       '</div>' +
     '</div>';
+
+    const addBranchBtn = document.getElementById('openCreateBranchBtn');
+    if (addBranchBtn) {
+      addBranchBtn.addEventListener('click', () => openCreateBranchModalHandler());
+    }
   }
 
   // ================================================================
@@ -1247,6 +1285,134 @@
       } catch (err) {
         errEl.textContent = err.message;
         errEl.hidden = false;
+      }
+    });
+  }
+
+  // ================================================================
+  // CREATE BRANCH MODAL WORKFLOW
+  // ================================================================
+  async function openCreateBranchModalHandler(preselectedTenantId) {
+    if (!createBranchModal) return;
+    createBranchForm.reset();
+    createBranchError.hidden = true;
+    createBranchError.textContent = '';
+
+    // Ensure cachedTenants is loaded
+    if (!cachedTenants || cachedTenants.length === 0) {
+      try {
+        const data = await api('/api/tenants');
+        cachedTenants = data.tenants || [];
+      } catch (_) {}
+    }
+
+    if (branchTenantId) {
+      branchTenantId.innerHTML = cachedTenants.map(t => {
+        const isSelected = preselectedTenantId
+          ? (t._id === preselectedTenantId)
+          : (t.slug === 'ember-and-brew');
+        return '<option value="' + t._id + '"' + (isSelected ? ' selected' : '') + '>' + esc(t.name) + ' (/r/' + esc(t.slug) + ')</option>';
+      }).join('');
+    }
+
+    // Set defaults
+    if (branchCountry) branchCountry.value = 'Pakistan';
+    const def = COUNTRY_DEFAULTS['Pakistan'] || { currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi', taxRate: 0.08 };
+    if (branchCurrency) branchCurrency.value = def.currency;
+    if (branchCurrencySymbol) branchCurrencySymbol.value = def.symbol;
+    if (branchTimezone) branchTimezone.value = def.tz;
+    if (branchTaxRate) branchTaxRate.value = def.taxRate;
+    if (branchDeliveryRadiusKm) branchDeliveryRadiusKm.value = 5;
+
+    createBranchModal.classList.remove('hidden');
+    if (branchName) branchName.focus();
+  }
+
+  function closeCreateBranchModalHandler() {
+    if (createBranchModal) createBranchModal.classList.add('hidden');
+  }
+
+  if (closeCreateBranchModal) closeCreateBranchModal.addEventListener('click', closeCreateBranchModalHandler);
+  if (cancelCreateBranchBtn) cancelCreateBranchBtn.addEventListener('click', closeCreateBranchModalHandler);
+
+  // Auto-generate branch code from branch name
+  if (branchName && branchCode) {
+    branchName.addEventListener('input', () => {
+      const raw = branchName.value;
+      branchCode.value = raw
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    });
+  }
+
+  // Country change auto-sets currency, symbol, tax rate, and timezone
+  if (branchCountry) {
+    branchCountry.addEventListener('change', () => {
+      const selected = branchCountry.value;
+      const def = COUNTRY_DEFAULTS[selected] || { currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi', taxRate: 0.08, countryCode: 'PK' };
+      if (branchCurrency) branchCurrency.value = def.currency;
+      if (branchCurrencySymbol) branchCurrencySymbol.value = def.symbol;
+      if (branchTimezone) branchTimezone.value = def.tz;
+      if (branchTaxRate) branchTaxRate.value = def.taxRate;
+    });
+  }
+
+  // Handle Create Branch Form Submit
+  if (createBranchForm) {
+    createBranchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      createBranchError.hidden = true;
+      createBranchError.textContent = '';
+
+      const origText = submitCreateBranchBtn.innerHTML;
+      submitCreateBranchBtn.disabled = true;
+      submitCreateBranchBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Branch…';
+
+      const selectedCountry = branchCountry.value;
+      const def = COUNTRY_DEFAULTS[selectedCountry] || { countryCode: 'PK' };
+      const zonesRaw = branchDeliveryZones ? branchDeliveryZones.value : '';
+      const deliveryZones = zonesRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+      try {
+        const payload = {
+          tenantId: branchTenantId.value,
+          name: branchName.value.trim(),
+          code: branchCode.value.trim().toLowerCase(),
+          city: branchCity.value.trim(),
+          country: selectedCountry,
+          countryCode: def.countryCode || 'PK',
+          currency: branchCurrency.value.trim().toUpperCase(),
+          currencySymbol: branchCurrencySymbol.value.trim(),
+          timezone: branchTimezone.value.trim(),
+          taxRate: parseFloat(branchTaxRate.value) || 0,
+          address: branchAddress ? branchAddress.value.trim() : '',
+          phone: branchPhone ? branchPhone.value.trim() : '',
+          deliveryZones,
+          deliveryRadiusKm: parseFloat(branchDeliveryRadiusKm ? branchDeliveryRadiusKm.value : 5) || 5,
+          paymentMethods: ['Cash on delivery', 'Card']
+        };
+
+        const res = await api('/api/branches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        closeCreateBranchModalHandler();
+        showToast('Branch "' + (res.name || payload.name) + '" created successfully!');
+
+        // Refresh views
+        if (currentView === 'branches') renderBranches();
+        else if (currentView === 'tenants') renderTenants();
+        else renderCurrentView();
+      } catch (err) {
+        createBranchError.textContent = err.message;
+        createBranchError.hidden = false;
+      } finally {
+        submitCreateBranchBtn.disabled = false;
+        submitCreateBranchBtn.innerHTML = origText;
       }
     });
   }

@@ -418,6 +418,116 @@
   </div>
 </div>
 
+<!-- MODAL 5: Create New Branch -->
+<div class="modal-overlay hidden" id="createBranchModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <h2><i class="fa-solid fa-code-branch" style="color:var(--gold);"></i> Add New Branch</h2>
+        <p class="modal-subtitle">Add a physical restaurant location with dedicated currency, menu, and delivery zone.</p>
+      </div>
+      <button class="modal-close-btn" id="closeCreateBranchModal">&times;</button>
+    </div>
+
+    <form id="createBranchForm" class="modal-form">
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Restaurant Brand *</span>
+          <select id="branchTenantId" name="tenantId" required>
+            <!-- Populated dynamically -->
+          </select>
+        </label>
+        <label class="form-label">
+          <span>Branch Name *</span>
+          <input type="text" id="branchName" name="name" placeholder="e.g. Ember &amp; Brew Islamabad" required autocomplete="off">
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Branch Code / URL Slug *</span>
+          <input type="text" id="branchCode" name="code" placeholder="e.g. islamabad-f7" required autocomplete="off">
+          <small class="field-hint">Used in URLs: <code>/order/your-branch-code</code></small>
+        </label>
+        <label class="form-label">
+          <span>City *</span>
+          <input type="text" id="branchCity" name="city" placeholder="e.g. Islamabad" required>
+        </label>
+      </div>
+
+      <div class="form-row-3">
+        <label class="form-label">
+          <span>Country *</span>
+          <select id="branchCountry" name="country" required>
+            <option value="Pakistan" selected>Pakistan</option>
+            <option value="Australia">Australia</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="United States">United States</option>
+            <option value="United Arab Emirates">United Arab Emirates</option>
+            <option value="Canada">Canada</option>
+            <option value="Germany">Germany</option>
+            <option value="Saudi Arabia">Saudi Arabia</option>
+            <option value="Qatar">Qatar</option>
+            <option value="Singapore">Singapore</option>
+          </select>
+        </label>
+
+        <label class="form-label">
+          <span>Currency (ISO) *</span>
+          <input type="text" id="branchCurrency" name="currency" value="PKR" required>
+        </label>
+
+        <label class="form-label">
+          <span>Currency Symbol *</span>
+          <input type="text" id="branchCurrencySymbol" name="currencySymbol" value="Rs" required>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Timezone *</span>
+          <input type="text" id="branchTimezone" name="timezone" value="Asia/Karachi" required>
+        </label>
+        <label class="form-label">
+          <span>Tax Rate (e.g. 0.08 for 8%)</span>
+          <input type="number" id="branchTaxRate" name="taxRate" step="0.01" min="0" max="1" value="0.08" required>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Physical Address</span>
+          <input type="text" id="branchAddress" name="address" placeholder="e.g. F-7 Markaz, Jinnah Super, Islamabad">
+        </label>
+        <label class="form-label">
+          <span>Branch Phone</span>
+          <input type="text" id="branchPhone" name="phone" placeholder="e.g. +92 320 1234567">
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Delivery Zones (Comma-separated)</span>
+          <input type="text" id="branchDeliveryZones" name="deliveryZones" placeholder="e.g. F-6, F-7, F-8, Blue Area">
+        </label>
+        <label class="form-label">
+          <span>Delivery Radius (KM)</span>
+          <input type="number" id="branchDeliveryRadiusKm" name="deliveryRadiusKm" value="5" min="1" max="100">
+        </label>
+      </div>
+
+      <p class="modal-error" id="createBranchError" hidden></p>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="cancelCreateBranchBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitCreateBranchBtn">
+          <i class="fa-solid fa-plus"></i> Add Branch
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Toast Feedback Notification -->
 <div id="toastNotification" class="toast hidden"></div>
 
