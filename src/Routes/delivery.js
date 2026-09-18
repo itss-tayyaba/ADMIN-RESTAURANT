@@ -4,6 +4,7 @@ const router = express.Router();
 const Order = require("../models/Order");
 const AdminUser = require("../models/AdminUser");
 const Branch = require("../models/Branch");
+const Payment = require("../models/Payment");
 const jwt = require("jsonwebtoken");
 const REGIONS = require("../data/regions");
 const { isAdminRole, resolveBranchId } = require("../utils/branchScope");
@@ -654,6 +655,48 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
         order.deliveredAt = new Date();
         order.otpVerified = true;
         order.riderLocation = undefined;
+
+        // Cash on Delivery: valid customer OTP confirms delivery handoff and cash collection
+        const isCod = ['cash', 'cod'].includes(order.paymentMethod);
+        if (isCod && order.paymentStatus !== 'PAID') {
+            order.paymentStatus = 'PAID';
+            order.paymentDetails = {
+                ...(order.paymentDetails || {}),
+                provider: 'cash',
+                amountPaid: order.total,
+                paidAt: new Date(),
+                verifiedBy: req.user.name || req.user.username || 'Delivery Rider',
+                verifiedAt: new Date(),
+                notes: 'Cash on Delivery collected and verified via customer OTP handoff'
+            };
+
+            const tenantId = order.tenantId?._id || order.tenantId;
+            const branchId = order.branchId?._id || order.branchId;
+            await Payment.findOneAndUpdate(
+                { orderId: order._id },
+                {
+                    $set: {
+                        restaurantId: tenantId,
+                        tenantId,
+                        branchId,
+                        orderId: order._id,
+                        orderNumber: order.orderNumber,
+                        customerName: order.customerName || '',
+                        customerPhone: order.customerPhone || '',
+                        paymentMethod: 'cod',
+                        provider: 'cash',
+                        amount: order.total,
+                        currency: (order.paymentDetails?.currency || 'PKR').toUpperCase(),
+                        status: 'PAID',
+                        paidAt: new Date(),
+                        verifiedBy: req.user.name || req.user.username || 'Delivery Rider',
+                        verifiedAt: new Date(),
+                        notes: 'Cash collected upon delivery OTP confirmation'
+                    }
+                },
+                { upsert: true, new: true }
+            ).catch(err => console.error('COD payment update error:', err.message));
+        }
 
         order.statusLog.push({
             status: "delivered",

@@ -306,6 +306,7 @@
     else if (currentView === 'credentials') renderCredentials();
     else if (currentView === 'orders') renderOrders();
     else if (currentView === 'subscriptions') renderSubscriptions();
+    else if (currentView === 'payments') renderPayments();
     else if (currentView === 'settings') renderSettings();
   }
 
@@ -1966,3 +1967,230 @@
   // Initial render
   renderTenants();
 })();
+
+
+  // ================================================================
+  // 7. PAYMENTS & REVENUE LEDGER (Cross-Tenant Platform Overview)
+  // ================================================================
+  let saPaymentsPage = 1;
+  let saPaymentsTenant = 'all';
+  let saPaymentsMethod = 'all';
+  let saPaymentsStatus = 'all';
+  let saPaymentsSearch = '';
+  let saPaymentsSearchTimer = null;
+
+  async function renderPayments() {
+    pageTitle.textContent = 'Payments & Ledger';
+    breadcrumb.textContent = 'Platform Revenue Stream, Multi-Tenant Gateway Ledgers & Settlements';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading platform payment transactions…</div>';
+
+    try {
+      if (!cachedTenants || cachedTenants.length === 0) {
+        const tData = await api('/api/tenants');
+        cachedTenants = tData.tenants || [];
+      }
+
+      const queryParams = new URLSearchParams({
+        page: saPaymentsPage,
+        limit: 25,
+        tenantId: saPaymentsTenant === 'all' ? '' : saPaymentsTenant,
+        method: saPaymentsMethod,
+        status: saPaymentsStatus,
+        search: saPaymentsSearch || currentSearchTerm || ''
+      });
+
+      const data = await api('/api/payments/superadmin/overview?' + queryParams.toString());
+      const txs = data.transactions || [];
+      const stats = data.stats || {};
+      const byProvider = data.byProvider || [];
+      const pagination = data.pagination || {};
+
+      // 1. KPI Stats Cards
+      const statsHtml = '<div class="stat-grid" style="margin-bottom:24px;">' +
+        statCard('Total Platform Volume', money(stats.totalRevenue, 'PKR '), 'gold', stats.paidCount + ' completed transactions') +
+        statCard('Verified Paid Orders', stats.paidCount, 'sage', 'Processed & confirmed') +
+        statCard('Pending / In Handoff', stats.pendingCount, 'blue', 'Awaiting OTP / webhook callback') +
+        statCard('Failed / Cancelled', stats.failedCount, stats.failedCount > 0 ? 'danger' : '', 'Gateway declines & timeouts') +
+        statCard('Refunds Issued', stats.refundCount, stats.refundCount > 0 ? 'ember' : '', money(stats.refundAmount, 'PKR ') + ' refunded') +
+      '</div>';
+
+      // 2. Gateway Provider Distribution Chips
+      const providerChipsHtml = byProvider.length ? (
+        '<div style="background:var(--paper-2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:12.5px;">' +
+          '<span style="font-weight:700;color:var(--ink);display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-chart-pie" style="color:var(--gold);"></i> Volume by Gateway:</span>' +
+          byProvider.map(p => {
+            const m = (p._id || 'other').toLowerCase();
+            const icon = m === 'stripe' ? '💳 Stripe' : m === 'jazzcash' ? '📱 JazzCash' : m === 'easypaisa' ? '🟢 Easypaisa' : m === 'raast' ? '⚡ Raast' : m === 'cod' ? '💵 COD' : '🏦 ' + p._id;
+            return '<span style="background:var(--paper);border:1px solid var(--border);padding:4px 10px;border-radius:14px;font-weight:600;display:inline-flex;gap:6px;align-items:center;">' +
+              icon + ': <strong>' + money(p.totalAmount, 'Rs ') + '</strong> (' + p.count + ')' +
+            '</span>';
+          }).join('') +
+        '</div>'
+      ) : '';
+
+      // 3. Filter Controls
+      const tenantOptions = '<option value="all"' + (saPaymentsTenant === 'all' ? ' selected' : '') + '>All Restaurant Brands</option>' +
+        cachedTenants.map(t => '<option value="' + t._id + '"' + (saPaymentsTenant === t._id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
+
+      const filtersHtml = '<div style="background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">' +
+        '<div style="flex:1;min-width:200px;">' +
+          '<label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Filter Restaurant</label>' +
+          '<select id="saPayTenantSelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--paper-2);color:var(--text);font-size:12.5px;">' +
+            tenantOptions +
+          '</select>' +
+        '</div>' +
+        '<div style="flex:1;min-width:160px;">' +
+          '<label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Payment Gateway</label>' +
+          '<select id="saPayMethodSelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--paper-2);color:var(--text);font-size:12.5px;">' +
+            '<option value="all"' + (saPaymentsMethod === 'all' ? ' selected' : '') + '>All Gateways</option>' +
+            '<option value="stripe"' + (saPaymentsMethod === 'stripe' ? ' selected' : '') + '>Stripe</option>' +
+            '<option value="jazzcash"' + (saPaymentsMethod === 'jazzcash' ? ' selected' : '') + '>JazzCash</option>' +
+            '<option value="easypaisa"' + (saPaymentsMethod === 'easypaisa' ? ' selected' : '') + '>Easypaisa</option>' +
+            '<option value="raast"' + (saPaymentsMethod === 'raast' ? ' selected' : '') + '>Raast</option>' +
+            '<option value="bankTransfer"' + (saPaymentsMethod === 'bankTransfer' ? ' selected' : '') + '>Bank Transfer</option>' +
+            '<option value="cod"' + (saPaymentsMethod === 'cod' ? ' selected' : '') + '>Cash on Delivery</option>' +
+          '</select>' +
+        '</div>' +
+        '<div style="flex:1;min-width:140px;">' +
+          '<label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Payment Status</label>' +
+          '<select id="saPayStatusSelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--paper-2);color:var(--text);font-size:12.5px;">' +
+            '<option value="all"' + (saPaymentsStatus === 'all' ? ' selected' : '') + '>All Statuses</option>' +
+            '<option value="PAID"' + (saPaymentsStatus === 'PAID' ? ' selected' : '') + '>PAID</option>' +
+            '<option value="PROCESSING"' + (saPaymentsStatus === 'PROCESSING' ? ' selected' : '') + '>PROCESSING</option>' +
+            '<option value="PENDING"' + (saPaymentsStatus === 'PENDING' ? ' selected' : '') + '>PENDING</option>' +
+            '<option value="FAILED"' + (saPaymentsStatus === 'FAILED' ? ' selected' : '') + '>FAILED</option>' +
+            '<option value="REFUNDED"' + (saPaymentsStatus === 'REFUNDED' ? ' selected' : '') + '>REFUNDED</option>' +
+          '</select>' +
+        '</div>' +
+        '<div style="flex:2;min-width:220px;">' +
+          '<label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Search Transactions</label>' +
+          '<input type="text" id="saPaySearchInput" placeholder="Order #, Tx ID, customer…" value="' + esc(saPaymentsSearch) + '" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--paper-2);color:var(--text);font-size:12.5px;" />' +
+        '</div>' +
+      '</div>';
+
+      // 4. Transactions Table Rows
+      const rowsHtml = txs.length ? txs.map(t => {
+        const tenantName = t.tenantId?.name || 'Unknown Restaurant';
+        const branchName = t.branchId?.name ? ' (' + t.branchId.name + ')' : '';
+        const dt = formatDateTime(t.createdAt);
+        const sym = t.branchId?.currencySymbol || (t.currency === 'PKR' ? 'Rs ' : (t.currency || 'PKR') + ' ');
+
+        let methodBadge = esc(t.paymentMethod || 'other');
+        const m = (t.paymentMethod || '').toLowerCase();
+        if (m === 'stripe' || m === 'card') methodBadge = '<span style="color:#1a73e8;font-weight:600;">💳 Stripe</span>';
+        else if (m === 'jazzcash') methodBadge = '<span style="color:#d93025;font-weight:600;">📱 JazzCash</span>';
+        else if (m === 'easypaisa') methodBadge = '<span style="color:#1e8e3e;font-weight:600;">🟢 Easypaisa</span>';
+        else if (m === 'raast') methodBadge = '<span style="color:#f9ab00;font-weight:600;">⚡ Raast</span>';
+        else if (m === 'cod' || m === 'cash') methodBadge = '<span style="color:#e37400;font-weight:600;">💵 COD</span>';
+
+        let statusBadge = esc(t.status || 'PENDING');
+        const s = (t.status || '').toUpperCase();
+        if (s === 'PAID') statusBadge = '<span class="status-badge active" style="font-weight:700;">PAID</span>';
+        else if (s === 'PROCESSING' || s === 'PENDING') statusBadge = '<span class="status-badge trial" style="font-weight:700;">' + s + '</span>';
+        else if (s === 'REFUNDED') statusBadge = '<span class="status-badge" style="background:#F3E8FF;color:#6B21A8;border:1px solid #E9D5FF;font-weight:700;">REFUNDED</span>';
+        else statusBadge = '<span class="status-badge suspended" style="font-weight:700;">' + s + '</span>';
+
+        return '<tr>' +
+          '<td><strong>#' + esc(t.orderNumber) + '</strong><br/><span style="font-size:11px;color:var(--text-muted);">' + dt + '</span></td>' +
+          '<td><strong>' + esc(tenantName) + '</strong><br/><span style="font-size:11.5px;color:var(--text-muted);">' + esc(branchName) + '</span></td>' +
+          '<td>' + esc(t.customerName || 'Guest') + '<br/><span style="font-size:11px;color:var(--text-muted);">' + esc(t.customerPhone || t.customerEmail || '—') + '</span></td>' +
+          '<td>' + methodBadge + '</td>' +
+          '<td><strong>' + sym + Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</strong>' +
+            (t.refundAmount ? '<br/><span style="font-size:11px;color:#c5221f;">↩ Ref: ' + sym + Number(t.refundAmount).toFixed(2) + '</span>' : '') +
+          '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '<td><span style="font-family:monospace;font-size:11.5px;color:var(--text);">' + esc(t.transactionId || '—') + '</span></td>' +
+          '<td>' +
+            '<button class="action-btn sa-pay-view-btn" data-tx="' + encodeURIComponent(JSON.stringify(t)) + '" title="View raw payload & logs"><i class="fa-solid fa-circle-info"></i> Details</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="8" class="empty-state" style="padding:40px;text-align:center;">No payment transactions match the selected filters.</td></tr>';
+
+      // 5. Pagination Bar
+      const paginationHtml = '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:12.5px;color:var(--text-muted);">' +
+        '<div>Showing Page <strong>' + (pagination.page || 1) + '</strong> of <strong>' + (pagination.pages || 1) + '</strong> (' + (pagination.total || 0) + ' total transactions)</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button id="saPayPrevBtn" class="btn-ghost" style="padding:6px 14px;"' + ((pagination.page || 1) <= 1 ? ' disabled' : '') + '>Previous</button>' +
+          '<button id="saPayNextBtn" class="btn-ghost" style="padding:6px 14px;"' + ((pagination.page || 1) >= (pagination.pages || 1) ? ' disabled' : '') + '>Next</button>' +
+        '</div>' +
+      '</div>';
+
+      content.innerHTML = statsHtml + providerChipsHtml + filtersHtml +
+        '<div class="panel">' +
+          '<div class="panel-head">' +
+            '<h3>Multi-Tenant Payment Ledger (' + (pagination.total || txs.length) + ' Records)</h3>' +
+          '</div>' +
+          '<div class="table-scroll">' +
+            '<table class="data-table">' +
+              '<thead><tr><th>Order &amp; Time</th><th>Restaurant / Branch</th><th>Customer</th><th>Gateway</th><th>Amount</th><th>Status</th><th>Transaction ID</th><th>Action</th></tr></thead>' +
+              '<tbody>' + rowsHtml + '</tbody>' +
+            '</table>' +
+          '</div>' +
+          paginationHtml +
+        '</div>';
+
+      // Wire up filter events
+      document.getElementById('saPayTenantSelect')?.addEventListener('change', (e) => {
+        saPaymentsTenant = e.target.value;
+        saPaymentsPage = 1;
+        renderPayments();
+      });
+
+      document.getElementById('saPayMethodSelect')?.addEventListener('change', (e) => {
+        saPaymentsMethod = e.target.value;
+        saPaymentsPage = 1;
+        renderPayments();
+      });
+
+      document.getElementById('saPayStatusSelect')?.addEventListener('change', (e) => {
+        saPaymentsStatus = e.target.value;
+        saPaymentsPage = 1;
+        renderPayments();
+      });
+
+      document.getElementById('saPaySearchInput')?.addEventListener('input', (e) => {
+        clearTimeout(saPaymentsSearchTimer);
+        saPaymentsSearchTimer = setTimeout(() => {
+          saPaymentsSearch = e.target.value.trim();
+          saPaymentsPage = 1;
+          renderPayments();
+        }, 350);
+      });
+
+      document.getElementById('saPayPrevBtn')?.addEventListener('click', () => {
+        if (saPaymentsPage > 1) {
+          saPaymentsPage--;
+          renderPayments();
+        }
+      });
+
+      document.getElementById('saPayNextBtn')?.addEventListener('click', () => {
+        saPaymentsPage++;
+        renderPayments();
+      });
+
+      // Wire up Details buttons
+      document.querySelectorAll('.sa-pay-view-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          try {
+            const txObj = JSON.parse(decodeURIComponent(btn.dataset.tx));
+            alert('Transaction #' + txObj.orderNumber + '\n\n' +
+              'Gateway: ' + (txObj.paymentMethod || '').toUpperCase() + '\n' +
+              'Status: ' + txObj.status + '\n' +
+              'Amount: ' + (txObj.currency || 'PKR') + ' ' + txObj.amount + '\n' +
+              'Tx ID: ' + (txObj.transactionId || 'N/A') + '\n' +
+              'Customer: ' + (txObj.customerName || 'N/A') + ' (' + (txObj.customerPhone || txObj.customerEmail || 'N/A') + ')\n' +
+              'Created: ' + new Date(txObj.createdAt).toLocaleString() + '\n' +
+              'Paid At: ' + (txObj.paidAt ? new Date(txObj.paidAt).toLocaleString() : 'Not Paid') + '\n' +
+              'Notes: ' + (txObj.notes || 'None')
+            );
+          } catch (_) {}
+        });
+      });
+
+    } catch (err) {
+      console.error('renderPayments error:', err);
+      content.innerHTML = '<div class="error-state">Failed to load platform payment ledger: ' + esc(err.message) + '</div>';
+    }
+  }

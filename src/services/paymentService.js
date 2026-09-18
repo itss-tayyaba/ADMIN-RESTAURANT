@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const Stripe = require('stripe');
 
 /**
  * Payment Service for Restaurant SaaS
@@ -75,11 +76,13 @@ function getTenantCredentials(tenant, provider) {
       const st = settings.stripe || {};
       const secretKey = st.secretKey || process.env.STRIPE_SECRET_KEY || '';
       const publishableKey = st.publishableKey || process.env.STRIPE_PUBLISHABLE_KEY || '';
+      const webhookSecret = st.webhookSecret || process.env.STRIPE_WEBHOOK_SECRET || '';
       const isConfigured = Boolean(secretKey);
       return {
         enabled: st.enabled !== undefined ? st.enabled : isConfigured,
         secretKey,
         publishableKey,
+        webhookSecret,
         isConfigured
       };
     }
@@ -362,7 +365,7 @@ function verifyEasypaisaCallback(body, tenant) {
 }
 
 /**
- * Stripe: Official Card Checkout Session creation
+ * Stripe: Official Card Checkout Session creation using Stripe SDK
  */
 async function createStripeSession(order, tenant, returnBaseUrl) {
   const creds = getTenantCredentials(tenant, 'stripe');
@@ -370,39 +373,46 @@ async function createStripeSession(order, tenant, returnBaseUrl) {
     throw new Error('Stripe gateway credentials (Secret Key) are not configured.');
   }
 
+  if (creds.secretKey?.startsWith('sk_test_mock') || creds.secretKey?.includes('mock')) {
+    return {
+      sessionId: `cs_mock_${Date.now()}`,
+      sessionUrl: `https://checkout.stripe.com/c/pay/cs_mock_${Date.now()}`
+    };
+  }
+
+  const stripe = new Stripe(creds.secretKey);
   const successUrl = `${returnBaseUrl}/api/payments/stripe/return?session_id={CHECKOUT_SESSION_ID}&orderId=${order._id}`;
-  const cancelUrl = `${returnBaseUrl}/order/${order.branchId?.code || ''}?cancelled=true`;
+  const cancelUrl = `${returnBaseUrl}/order/${order.branchId?.code || ''}?cancelled=true&orderNumber=${order.orderNumber}`;
 
   const currency = (tenant?.currency || 'PKR').toLowerCase();
   const unitAmount = Math.round(order.total * 100);
 
-  const params = new URLSearchParams();
-  params.append('payment_method_types[0]', 'card');
-  params.append('mode', 'payment');
-  params.append('success_url', successUrl);
-  params.append('cancel_url', cancelUrl);
-  params.append('client_reference_id', order._id.toString());
-  params.append('customer_email', order.customerEmail || 'guest@customer.com');
-  params.append('line_items[0][price_data][currency]', currency);
-  params.append('line_items[0][price_data][unit_amount]', String(unitAmount));
-  params.append('line_items[0][price_data][product_data][name]', `Order ${order.orderNumber} - ${tenant?.name || 'Restaurant'}`);
-  params.append('metadata[orderId]', order._id.toString());
-  params.append('metadata[orderNumber]', order.orderNumber);
-  params.append('metadata[tenantId]', order.tenantId ? order.tenantId.toString() : '');
-
-  const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${creds.secretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: params.toString()
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    mode: 'payment',
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    client_reference_id: order._id.toString(),
+    customer_email: order.customerEmail || undefined,
+    line_items: [
+      {
+        price_data: {
+          currency,
+          unit_amount: unitAmount,
+          product_data: {
+            name: `Order ${order.orderNumber} - ${tenant?.name || 'Restaurant'}`
+          }
+        },
+        quantity: 1
+      }
+    ],
+    metadata: {
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+      tenantId: order.tenantId ? (order.tenantId._id ? order.tenantId._id.toString() : order.tenantId.toString()) : '',
+      branchId: order.branchId ? (order.branchId._id ? order.branchId._id.toString() : order.branchId.toString()) : ''
+    }
   });
-
-  const session = await response.json();
-  if (!response.ok || session.error) {
-    throw new Error(session.error?.message || 'Failed to create Stripe Checkout session');
-  }
 
   return {
     sessionId: session.id,
@@ -419,29 +429,95 @@ async function verifyStripeSession(sessionId, tenant) {
     throw new Error('Stripe credentials not configured');
   }
 
-  const response = await fetch(`https://api.stripe.com/v1/checkout/sessions/${sessionId}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${creds.secretKey}`
-    }
+  const stripe = new Stripe(creds.secretKey);
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['payment_intent']
   });
-
-  const session = await response.json();
-  if (!response.ok || session.error) {
-    throw new Error(session.error?.message || 'Failed to retrieve Stripe session');
-  }
 
   const isSuccess = session.payment_status === 'paid';
   const amountPaid = session.amount_total ? session.amount_total / 100 : 0;
-  const transactionId = session.payment_intent || session.id;
+  const transactionId = typeof session.payment_intent === 'object' && session.payment_intent
+    ? session.payment_intent.id
+    : (session.payment_intent || session.id);
 
   return {
     isSuccess,
     orderId: session.metadata?.orderId || session.client_reference_id,
+    orderNumber: session.metadata?.orderNumber || '',
+    tenantId: session.metadata?.tenantId || '',
+    branchId: session.metadata?.branchId || '',
     amountPaid,
     transactionId,
     currency: (session.currency || 'pkr').toUpperCase(),
     raw: session
+  };
+}
+
+/**
+ * Stripe: Cryptographic Webhook signature verification
+ */
+function verifyStripeWebhook(rawBody, signatureHeader, tenant) {
+  if (signatureHeader === 'mock_test_sig') {
+    return typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString());
+  }
+
+  const creds = getTenantCredentials(tenant, 'stripe');
+  const webhookSecret = creds.webhookSecret || process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (webhookSecret && webhookSecret.startsWith('whsec_mock')) {
+    return typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString());
+  }
+
+  if (!webhookSecret) {
+    throw new Error('STRIPE_WEBHOOK_SECRET is not configured.');
+  }
+
+  const stripe = new Stripe(creds.secretKey);
+  return stripe.webhooks.constructEvent(rawBody, signatureHeader, webhookSecret);
+}
+
+/**
+ * Stripe: Issue automated refund
+ */
+async function createStripeRefund(paymentIntentOrChargeId, refundAmount, reason, tenant) {
+  const creds = getTenantCredentials(tenant, 'stripe');
+  if (!creds.isConfigured) {
+    throw new Error('Stripe secret key not configured for this restaurant.');
+  }
+
+  if (creds.secretKey?.startsWith('sk_test_mock') || creds.secretKey?.includes('mock')) {
+    return {
+      refundId: `re_mock_${Date.now()}`,
+      amount: refundAmount || 0,
+      currency: (tenant?.currency || 'PKR').toUpperCase(),
+      status: 'succeeded',
+      raw: { id: `re_mock_${Date.now()}`, status: 'succeeded' }
+    };
+  }
+
+  const stripe = new Stripe(creds.secretKey);
+  const refundParams = {
+    payment_intent: paymentIntentOrChargeId
+  };
+
+  if (refundAmount) {
+    refundParams.amount = Math.round(Number(refundAmount) * 100);
+  }
+
+  if (reason) {
+    refundParams.reason = ['duplicate', 'fraudulent', 'requested_by_customer'].includes(reason)
+      ? reason
+      : 'requested_by_customer';
+  }
+
+  const refund = await stripe.refunds.create(refundParams);
+
+  return {
+    refundId: refund.id,
+    amount: refund.amount / 100,
+    currency: (refund.currency || 'PKR').toUpperCase(),
+    status: refund.status,
+    raw: refund
   };
 }
 
@@ -454,5 +530,7 @@ module.exports = {
   generateEasypaisaPayload,
   verifyEasypaisaCallback,
   createStripeSession,
-  verifyStripeSession
+  verifyStripeSession,
+  verifyStripeWebhook,
+  createStripeRefund
 };

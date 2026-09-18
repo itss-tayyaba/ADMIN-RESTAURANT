@@ -787,7 +787,7 @@
     currentView = name;
     Object.entries(els.views).forEach(([key, el]) => { el.hidden = key !== name; });
     els.navItems.forEach(btn => btn.classList.toggle('active', btn.dataset.view === name));
-    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', floorplans: 'Floor Plans', complaints: 'Complaints', chefs: 'Kitchen Chefs', riders: 'Delivery Riders', payments: 'Payment Settings' };
+    const titles = { overview: 'Overview', orders: 'Orders', menu: 'Menu Items', reservations: 'Reservations', floorplans: 'Floor Plans', complaints: 'Complaints', chefs: 'Kitchen Chefs', riders: 'Delivery Riders', payments: 'Payments & Revenue' };
     els.pageTitle.textContent = titles[name] || 'Overview';
     if (name === 'orders') { loadRiders(); loadOrders(); }
     if (name === 'overview') loadOverview();
@@ -797,7 +797,7 @@
     if (name === 'complaints') loadComplaints();
     if (name === 'riders') refreshRidersView();
     if (name === 'chefs') refreshChefsView();
-    if (name === 'payments') loadPaymentSettings();
+    if (name === 'payments') initPaymentsView();
   }
   els.navItems.forEach(btn => btn.addEventListener('click', () => { switchView(btn.dataset.view); closeSidebar(); }));
   document.querySelectorAll('[data-goto]').forEach(btn => {
@@ -2352,6 +2352,519 @@
     return String(str ?? '').replace(/[&<>"']/g, m => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[m]));
+  }
+
+
+  // ================================================================
+  // ---------- Production Payment Transactions Controller ----------
+  // ================================================================
+  let activePaymentSubTab = 'transactions';
+  let currentPaymentPage = 1;
+  let currentPaymentMethodFilter = 'all';
+  let currentPaymentStatusFilter = 'all';
+  let currentPaymentSearch = '';
+  let paymentSearchDebounceTimer = null;
+  let activeRefundPayment = null;
+  let cachedPaymentTransactions = [];
+  let paymentsInitialized = false;
+
+  function initPaymentsView() {
+    if (!paymentsInitialized) {
+      setupPaymentsUIListeners();
+      paymentsInitialized = true;
+    }
+
+    if (activePaymentSubTab === 'transactions') {
+      loadPaymentTransactions(currentPaymentPage);
+    } else {
+      loadPaymentSettings();
+    }
+  }
+
+  function setupPaymentsUIListeners() {
+    // Sub-tab toggling
+    const subTabTx = document.getElementById('paySubTabTransactions');
+    const subTabGw = document.getElementById('paySubTabGateways');
+    const viewTx = document.getElementById('paySubViewTransactions');
+    const viewGw = document.getElementById('paySubViewGateways');
+    const gwActionWrap = document.getElementById('payGatewaysActionWrap');
+
+    function switchSubTab(tab) {
+      activePaymentSubTab = tab;
+      if (tab === 'transactions') {
+        if (subTabTx) {
+          subTabTx.classList.add('active');
+          subTabTx.style.background = 'var(--ink)';
+          subTabTx.style.color = '#fff';
+        }
+        if (subTabGw) {
+          subTabGw.classList.remove('active');
+          subTabGw.style.background = 'var(--paper-2)';
+          subTabGw.style.color = 'var(--text)';
+        }
+        if (viewTx) viewTx.style.display = 'block';
+        if (viewGw) viewGw.style.display = 'none';
+        if (gwActionWrap) gwActionWrap.style.display = 'none';
+        loadPaymentTransactions(1);
+      } else {
+        if (subTabGw) {
+          subTabGw.classList.add('active');
+          subTabGw.style.background = 'var(--ink)';
+          subTabGw.style.color = '#fff';
+        }
+        if (subTabTx) {
+          subTabTx.classList.remove('active');
+          subTabTx.style.background = 'var(--paper-2)';
+          subTabTx.style.color = 'var(--text)';
+        }
+        if (viewTx) viewTx.style.display = 'none';
+        if (viewGw) viewGw.style.display = 'block';
+        if (gwActionWrap) gwActionWrap.style.display = 'flex';
+        loadPaymentSettings();
+      }
+    }
+
+    if (subTabTx) subTabTx.addEventListener('click', () => switchSubTab('transactions'));
+    if (subTabGw) subTabGw.addEventListener('click', () => switchSubTab('gateways'));
+
+    // Method filter pills
+    document.querySelectorAll('.pay-filter-pill[data-pay-method]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.pay-filter-pill[data-pay-method]').forEach(b => {
+          b.classList.toggle('active', b === btn);
+          b.style.background = b === btn ? 'var(--ink)' : 'var(--paper-2)';
+          b.style.color = b === btn ? '#fff' : 'var(--text)';
+        });
+        currentPaymentMethodFilter = btn.dataset.payMethod || 'all';
+        loadPaymentTransactions(1);
+      });
+    });
+
+    // Status filter pills
+    document.querySelectorAll('.pay-status-pill[data-pay-status]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.pay-status-pill[data-pay-status]').forEach(b => {
+          b.classList.toggle('active', b === btn);
+          b.style.background = b === btn ? 'var(--ink)' : 'var(--paper-2)';
+          b.style.color = b === btn ? '#fff' : 'var(--text)';
+        });
+        currentPaymentStatusFilter = btn.dataset.payStatus || 'all';
+        loadPaymentTransactions(1);
+      });
+    });
+
+    // Search input with debounce
+    const paySearchInput = document.getElementById('paySearchInput');
+    if (paySearchInput) {
+      paySearchInput.addEventListener('input', (e) => {
+        clearTimeout(paymentSearchDebounceTimer);
+        paymentSearchDebounceTimer = setTimeout(() => {
+          currentPaymentSearch = e.target.value.trim();
+          loadPaymentTransactions(1);
+        }, 320);
+      });
+    }
+
+    // Pagination
+    const prevBtn = document.getElementById('payPrevPageBtn');
+    const nextBtn = document.getElementById('payNextPageBtn');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        if (currentPaymentPage > 1) {
+          loadPaymentTransactions(currentPaymentPage - 1);
+        }
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        loadPaymentTransactions(currentPaymentPage + 1);
+      });
+    }
+
+    // Refund modal listeners
+    const refundModal = document.getElementById('refundModalBackdrop');
+    const cancelRefundBtn = document.getElementById('cancelRefundBtn');
+    const confirmRefundBtn = document.getElementById('confirmRefundBtn');
+
+    if (cancelRefundBtn && refundModal) {
+      cancelRefundBtn.addEventListener('click', () => {
+        refundModal.hidden = true;
+        activeRefundPayment = null;
+      });
+    }
+
+    if (confirmRefundBtn) {
+      confirmRefundBtn.addEventListener('click', async () => {
+        if (!activeRefundPayment) return;
+        const refundAmtInput = document.getElementById('refundAmountInput');
+        const reasonSelect = document.getElementById('refundReasonSelect');
+        const reasonNotes = document.getElementById('refundReasonNotes');
+
+        const refundAmount = refundAmtInput ? parseFloat(refundAmtInput.value) : activeRefundPayment.amount;
+        if (isNaN(refundAmount) || refundAmount <= 0) {
+          showToast('Please enter a valid refund amount greater than 0', true);
+          return;
+        }
+        if (refundAmount > activeRefundPayment.amount) {
+          showToast('Refund amount cannot exceed the original transaction amount', true);
+          return;
+        }
+
+        const reason = (reasonSelect ? reasonSelect.value : 'Customer requested refund') +
+          (reasonNotes && reasonNotes.value.trim() ? ' - ' + reasonNotes.value.trim() : '');
+
+        confirmRefundBtn.disabled = true;
+        confirmRefundBtn.textContent = 'Processing Refund…';
+
+        try {
+          const res = await fetch(`/api/payments/${activeRefundPayment._id}/refund`, {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ refundAmount, reason })
+          });
+
+          if (handleAuthFailure(res)) return;
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || 'Refund failed');
+          }
+
+          showToast(data.message || 'Refund successfully executed!');
+          if (refundModal) refundModal.hidden = true;
+          activeRefundPayment = null;
+          loadPaymentTransactions(currentPaymentPage);
+        } catch (err) {
+          showToast('Refund error: ' + err.message, true);
+        } finally {
+          confirmRefundBtn.disabled = false;
+          confirmRefundBtn.textContent = 'Confirm Refund';
+        }
+      });
+    }
+
+    // Transaction Details modal close
+    const detailsModal = document.getElementById('payDetailsModalBackdrop');
+    const closePayDetailsBtn = document.getElementById('closePayDetailsBtn');
+    if (closePayDetailsBtn && detailsModal) {
+      closePayDetailsBtn.addEventListener('click', () => {
+        detailsModal.hidden = true;
+      });
+    }
+  }
+
+  async function loadPaymentTransactions(page = 1) {
+    const tbody = document.getElementById('payTransactionsTbody');
+    if (!tbody) return;
+
+    currentPaymentPage = page;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading transactions…</td></tr>';
+
+    try {
+      const qParams = new URLSearchParams({
+        page: currentPaymentPage,
+        limit: 15,
+        method: currentPaymentMethodFilter,
+        status: currentPaymentStatusFilter,
+        search: currentPaymentSearch
+      });
+
+      const res = await fetch(`/api/payments/admin/transactions?${qParams.toString()}`, {
+        headers: authHeaders
+      });
+
+      if (handleAuthFailure(res)) return;
+      if (!res.ok) throw new Error('Failed to load payment transactions');
+
+      const data = await res.json();
+      cachedPaymentTransactions = data.transactions || [];
+      const stats = data.stats || {};
+      const pagination = data.pagination || {};
+
+      // 1. Render Stats
+      const statRevEl = document.getElementById('payStatRevenue');
+      const statRevSub = document.getElementById('payStatRevenueSub');
+      const statPaid = document.getElementById('payStatPaid');
+      const statPending = document.getElementById('payStatPending');
+      const statFailed = document.getElementById('payStatFailed');
+      const statRefunds = document.getElementById('payStatRefunds');
+
+      if (statRevEl) statRevEl.textContent = money(stats.totalRevenue);
+      if (statRevSub) statRevSub.textContent = `${stats.paidCount || 0} completed orders`;
+      if (statPaid) statPaid.textContent = stats.paidCount || 0;
+      if (statPending) statPending.textContent = stats.pendingCount || 0;
+      if (statFailed) statFailed.textContent = stats.failedCount || 0;
+      if (statRefunds) {
+        statRefunds.textContent = `${stats.refundCount || 0} (${money(stats.refundAmount || 0)})`;
+      }
+
+      // 2. Render Table
+      if (cachedPaymentTransactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">No payment transactions found matching the selected criteria.</td></tr>';
+      } else {
+        tbody.innerHTML = cachedPaymentTransactions.map(tx => {
+          const dtStr = new Date(tx.createdAt).toLocaleDateString(undefined, {
+            month: 'short', day: 'numeric', year: 'numeric'
+          }) + ' ' + new Date(tx.createdAt).toLocaleTimeString(undefined, {
+            hour: '2-digit', minute: '2-digit'
+          });
+
+          const methodBadge = getPaymentMethodBadge(tx.paymentMethod, tx.provider);
+          const statusBadge = getPaymentStatusBadge(tx.status);
+          const customerName = tx.customerName || tx.orderId?.customerName || 'Guest Customer';
+          const contact = tx.customerPhone || tx.customerEmail || '';
+
+          const currency = tx.currency || 'PKR';
+          const sym = tx.branchId?.currencySymbol || (currency === 'PKR' ? 'Rs ' : currency + ' ');
+          const formattedAmt = sym + Number(tx.amount || 0).toLocaleString(undefined, {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+          });
+
+          const refundNote = tx.refundAmount
+            ? `<div style="font-size:11px;color:#c5221f;font-weight:600;margin-top:2px;">↩ Refunded: ${sym}${Number(tx.refundAmount).toLocaleString(undefined, {minimumFractionDigits:2})}</div>`
+            : '';
+
+          return `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:12px 14px;font-size:13px;">
+                <div style="font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;">
+                  <span>#${escapeHtml(tx.orderNumber)}</span>
+                </div>
+                <div style="font-family:monospace;font-size:11px;color:var(--text-muted);margin-top:2px;" title="Transaction / Reference ID">
+                  ${escapeHtml(tx.transactionId || '—')}
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${dtStr}</div>
+              </td>
+              <td style="padding:12px 14px;font-size:13px;">
+                <div style="font-weight:600;color:var(--ink);">${escapeHtml(customerName)}</div>
+                ${contact ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(contact)}</div>` : ''}
+              </td>
+              <td style="padding:12px 14px;font-size:13px;">
+                ${methodBadge}
+              </td>
+              <td style="padding:12px 14px;font-size:13.5px;font-weight:700;color:var(--ink);">
+                ${formattedAmt}
+                ${refundNote}
+              </td>
+              <td style="padding:12px 14px;font-size:13px;">
+                ${statusBadge}
+              </td>
+              <td style="padding:12px 14px;font-size:13px;text-align:right;">
+                <div style="display:inline-flex;gap:6px;align-items:center;justify-content:flex-end;">
+                  <button type="button" class="btn-ghost btn-sm pay-btn-details" data-id="${tx._id}" style="padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--paper);cursor:pointer;">
+                    Details
+                  </button>
+                  ${tx.status === 'PAID' ? `
+                    <button type="button" class="btn-ghost btn-sm pay-btn-refund" data-id="${tx._id}" style="padding:5px 10px;font-size:12px;border:1px solid rgba(179,57,39,0.3);color:#B33927;border-radius:6px;background:rgba(179,57,39,0.05);cursor:pointer;">
+                      Refund
+                    </button>
+                  ` : ''}
+                  ${(tx.status === 'PENDING' && (tx.paymentMethod === 'raast' || tx.paymentMethod === 'bankTransfer')) ? `
+                    <button type="button" class="btn-primary btn-sm pay-btn-verify" data-id="${tx._id}" style="padding:5px 10px;font-size:12px;border-radius:6px;cursor:pointer;">
+                      Verify
+                    </button>
+                  ` : ''}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Wire up row action handlers
+        tbody.querySelectorAll('.pay-btn-details').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tx = cachedPaymentTransactions.find(t => t._id === btn.dataset.id);
+            if (tx) showPaymentDetailsModal(tx);
+          });
+        });
+
+        tbody.querySelectorAll('.pay-btn-refund').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tx = cachedPaymentTransactions.find(t => t._id === btn.dataset.id);
+            if (tx) openRefundModal(tx);
+          });
+        });
+
+        tbody.querySelectorAll('.pay-btn-verify').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tx = cachedPaymentTransactions.find(t => t._id === btn.dataset.id);
+            if (tx && tx.orderId) {
+              currentVerifyingOrder = typeof tx.orderId === 'object' ? tx.orderId : { _id: tx.orderId, orderNumber: tx.orderNumber };
+              openPaymentVerifyModal(currentVerifyingOrder);
+            }
+          });
+        });
+      }
+
+      // 3. Update Pagination
+      const pageInfo = document.getElementById('payPageInfo');
+      const prevBtn = document.getElementById('payPrevPageBtn');
+      const nextBtn = document.getElementById('payNextPageBtn');
+
+      if (pageInfo) {
+        pageInfo.textContent = `Page ${pagination.page || 1} of ${pagination.pages || 1} (${pagination.total || 0} total)`;
+      }
+      if (prevBtn) prevBtn.disabled = (pagination.page || 1) <= 1;
+      if (nextBtn) nextBtn.disabled = (pagination.page || 1) >= (pagination.pages || 1);
+
+    } catch (err) {
+      console.error('loadPaymentTransactions error:', err);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:#c5221f;font-size:13px;">Error loading transactions: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function getPaymentMethodBadge(method, provider) {
+    const m = (method || '').toLowerCase();
+    const p = (provider || '').toLowerCase();
+
+    if (m === 'stripe' || m === 'card' || p.includes('stripe')) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#EBF3FE;color:#185ABC;border:1px solid #C2D7FA;">💳 Stripe</span>';
+    }
+    if (m === 'jazzcash' || p.includes('jazzcash')) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#FDE8E8;color:#C81E1E;border:1px solid #F8B4B4;">📱 JazzCash</span>';
+    }
+    if (m === 'easypaisa' || p.includes('easypaisa')) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#DEF7EC;color:#03543F;border:1px solid #BCF0DA;">🟢 Easypaisa</span>';
+    }
+    if (m === 'raast' || p.includes('raast')) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#FEF08A;color:#854D0E;border:1px solid #FDE047;">⚡ Raast</span>';
+    }
+    if (m === 'banktransfer' || m === 'bank') {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#F3F4F6;color:#374151;border:1px solid #E5E7EB;">🏦 Bank Transfer</span>';
+    }
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;">💵 COD</span>';
+  }
+
+  function getPaymentStatusBadge(status) {
+    const s = (status || '').toUpperCase();
+    if (s === 'PAID') {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#DEF7EC;color:#03543F;border:1px solid #BCF0DA;">● PAID</span>';
+    }
+    if (s === 'PROCESSING') {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#FEF08A;color:#854D0E;border:1px solid #FDE047;">● PROCESSING</span>';
+    }
+    if (s === 'PENDING') {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;">● PENDING</span>';
+    }
+    if (s === 'REFUNDED') {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#F3E8FF;color:#6B21A8;border:1px solid #E9D5FF;">● REFUNDED</span>';
+    }
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#FDE8E8;color:#9B1C1C;border:1px solid #F8B4B4;">● FAILED</span>';
+  }
+
+  function openRefundModal(tx) {
+    activeRefundPayment = tx;
+    const modal = document.getElementById('refundModalBackdrop');
+    const detailsWrap = document.getElementById('refundModalDetails');
+    const amtInput = document.getElementById('refundAmountInput');
+    const reasonNotes = document.getElementById('refundReasonNotes');
+
+    if (!modal) return;
+
+    if (detailsWrap) {
+      const sym = tx.currency === 'PKR' ? 'Rs ' : (tx.currency || 'PKR') + ' ';
+      detailsWrap.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text-muted);">Order:</span>
+          <strong>#${escapeHtml(tx.orderNumber)}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text-muted);">Customer:</span>
+          <span>${escapeHtml(tx.customerName || 'Guest')}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text-muted);">Original Paid Amount:</span>
+          <strong style="color:var(--ink);">${sym}${Number(tx.amount).toFixed(2)}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text-muted);">Payment Gateway:</span>
+          <span>${escapeHtml((tx.paymentMethod || '').toUpperCase())} (${escapeHtml(tx.transactionId || 'N/A')})</span>
+        </div>
+      `;
+    }
+
+    if (amtInput) {
+      amtInput.value = tx.amount;
+      amtInput.max = tx.amount;
+    }
+    if (reasonNotes) reasonNotes.value = '';
+
+    modal.hidden = false;
+  }
+
+  function showPaymentDetailsModal(tx) {
+    const modal = document.getElementById('payDetailsModalBackdrop');
+    const body = document.getElementById('payDetailsModalBody');
+    if (!modal || !body) return;
+
+    const sym = tx.currency === 'PKR' ? 'Rs ' : (tx.currency || 'PKR') + ' ';
+    const dt = new Date(tx.createdAt).toLocaleString();
+    const paidDt = tx.paidAt ? new Date(tx.paidAt).toLocaleString() : 'Not paid yet';
+
+    body.innerHTML = `
+      <div style="background:var(--paper-2);border-radius:8px;padding:12px;border:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12.5px;">
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Order Number</div>
+          <div style="font-weight:700;color:var(--ink);">#${escapeHtml(tx.orderNumber)}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Status</div>
+          <div>${getPaymentStatusBadge(tx.status)}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Amount</div>
+          <div style="font-weight:700;font-size:14px;color:var(--ink);">${sym}${Number(tx.amount).toFixed(2)}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Method / Provider</div>
+          <div>${getPaymentMethodBadge(tx.paymentMethod, tx.provider)}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Transaction / Ref ID</div>
+          <div style="font-family:monospace;word-break:break-all;">${escapeHtml(tx.transactionId || '—')}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Customer</div>
+          <div style="font-weight:600;">${escapeHtml(tx.customerName || 'Guest')}</div>
+          <div style="font-size:11px;color:var(--text-muted);">${escapeHtml(tx.customerEmail || tx.customerPhone || 'No contact')}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Created At</div>
+          <div>${dt}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:11px;">Paid At</div>
+          <div>${paidDt}</div>
+        </div>
+        ${tx.verifiedBy ? `
+          <div style="grid-column:1 / -1;">
+            <div style="color:var(--text-muted);font-size:11px;">Verified / Processed By</div>
+            <div style="font-weight:600;">${escapeHtml(tx.verifiedBy)}</div>
+          </div>
+        ` : ''}
+        ${tx.notes ? `
+          <div style="grid-column:1 / -1;">
+            <div style="color:var(--text-muted);font-size:11px;">Notes</div>
+            <div style="font-size:12px;color:var(--ink);">${escapeHtml(tx.notes)}</div>
+          </div>
+        ` : ''}
+        ${tx.refundAmount ? `
+          <div style="grid-column:1 / -1;background:rgba(197,34,31,0.08);padding:8px 10px;border-radius:6px;border:1px solid rgba(197,34,31,0.2);">
+            <div style="font-weight:700;color:#c5221f;font-size:12px;">Refund Details</div>
+            <div style="font-size:12px;color:var(--text);margin-top:2px;">Amount: <strong>${sym}${Number(tx.refundAmount).toFixed(2)}</strong></div>
+            <div style="font-size:11.5px;color:var(--text-muted);">Reason: ${escapeHtml(tx.refundReason || 'N/A')}</div>
+            <div style="font-size:11px;color:var(--text-muted);font-family:monospace;">Refund ID: ${escapeHtml(tx.refundId || 'N/A')}</div>
+          </div>
+        ` : ''}
+      </div>
+      ${tx.gatewayResponse ? `
+        <div style="margin-top:8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Gateway Response Payload</div>
+          <pre style="margin:0;padding:10px;background:#18181b;color:#e4e4e7;border-radius:6px;font-size:11px;max-height:140px;overflow:auto;font-family:monospace;">${escapeHtml(JSON.stringify(tx.gatewayResponse, null, 2))}</pre>
+        </div>
+      ` : ''}
+    `;
+
+    modal.hidden = false;
   }
 
   // ---------- Boot ----------

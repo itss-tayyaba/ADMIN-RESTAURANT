@@ -81,7 +81,11 @@ const paymentRoutes = require("./src/Routes/payments");
 const credentialsRoutes = require("./src/Routes/credentials");
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // Static files

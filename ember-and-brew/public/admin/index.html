@@ -334,17 +334,122 @@
 
       <!-- PAYMENTS VIEW -->
       <div class="view" id="view-payments" hidden>
-        <div class="view-head" style="margin-bottom:20px;">
+        <div class="view-head" style="margin-bottom:18px;">
           <div>
-            <p style="margin:0; font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--ink);">Payment Settings &amp; Gateways</p>
-            <p style="margin:4px 0 0; font-size:13px; color:var(--text-muted);">Configure official payment gateway credentials, instant transfers, and cash-on-delivery options.</p>
+            <p style="margin:0; font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--ink);">Payments &amp; Revenue Management</p>
+            <p style="margin:4px 0 0; font-size:13px; color:var(--text-muted);">Real-time payment transactions ledger, verified handoffs, automated refunds, and gateway credentials.</p>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;">
+          <div id="payGatewaysActionWrap" style="display:none;gap:10px;align-items:center;">
             <button class="btn-primary" id="savePaymentSettingsBtn" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;font-size:13.5px;font-weight:700;box-shadow:0 6px 18px rgba(196,146,58,0.35);">
               <span>💾</span> Save Payment Settings
             </button>
           </div>
         </div>
+
+        <!-- Payment Subtabs Navigation -->
+        <div class="payment-subtabs-bar" style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;">
+          <button type="button" class="btn-subtab active" id="paySubTabTransactions" style="display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;border:1px solid var(--border);background:var(--ink);color:#fff;cursor:pointer;">
+            <span>📊</span> Transactions &amp; Revenue
+          </button>
+          <button type="button" class="btn-subtab" id="paySubTabGateways" style="display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--paper-2);color:var(--text);cursor:pointer;">
+            <span>⚙️</span> Gateway Credentials
+          </button>
+        </div>
+
+        <!-- 1. TRANSACTIONS & REVENUE SUB-VIEW -->
+        <div id="paySubViewTransactions">
+          <div class="stat-grid" style="margin-bottom:22px;">
+            <div class="stat-card gold">
+              <div class="label">Total Revenue</div>
+              <div class="value" id="payStatRevenue">Rs 0.00</div>
+              <div class="sub" id="payStatRevenueSub">Paid orders</div>
+            </div>
+            <div class="stat-card sage">
+              <div class="label">Paid Payments</div>
+              <div class="value" id="payStatPaid">0</div>
+              <div class="sub">Completed &amp; verified</div>
+            </div>
+            <div class="stat-card ember">
+              <div class="label">Pending Payments</div>
+              <div class="value" id="payStatPending">0</div>
+              <div class="sub">Awaiting confirmation</div>
+            </div>
+            <div class="stat-card" style="background:#FFF5F3;border:1px solid #F5C2B8;">
+              <div class="label" style="color:#B33927;">Failed Payments</div>
+              <div class="value" id="payStatFailed" style="color:#B33927;">0</div>
+              <div class="sub">Declined / Expired</div>
+            </div>
+            <div class="stat-card" style="background:#F0F4FA;border:1px solid #D2E0F2;">
+              <div class="label" style="color:#2E62A6;">Refunds</div>
+              <div class="value" id="payStatRefunds" style="color:#2E62A6;">Rs 0.00</div>
+              <div class="sub" id="payStatRefundCount">0 refunded</div>
+            </div>
+          </div>
+
+          <!-- Filter Toolbar -->
+          <div class="panel" style="margin-bottom:24px;">
+            <div class="panel-head" style="flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-right:4px;">Method:</span>
+                <button type="button" class="pay-filter-pill active" data-pay-method="all">All</button>
+                <button type="button" class="pay-filter-pill" data-pay-method="stripe">Stripe</button>
+                <button type="button" class="pay-filter-pill" data-pay-method="jazzcash">JazzCash</button>
+                <button type="button" class="pay-filter-pill" data-pay-method="easypaisa">Easypaisa</button>
+                <button type="button" class="pay-filter-pill" data-pay-method="raast">Raast</button>
+                <button type="button" class="pay-filter-pill" data-pay-method="cod">COD</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-right:4px;">Status:</span>
+                <button type="button" class="pay-status-pill active" data-pay-status="all">All</button>
+                <button type="button" class="pay-status-pill" data-pay-status="PAID">Paid</button>
+                <button type="button" class="pay-status-pill" data-pay-status="PENDING">Pending</button>
+                <button type="button" class="pay-status-pill" data-pay-status="FAILED">Failed</button>
+                <button type="button" class="pay-status-pill" data-pay-status="REFUNDED">Refunded</button>
+              </div>
+            </div>
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+              <div style="position:relative;flex:1;min-width:240px;">
+                <input type="text" id="paySearchInput" placeholder="Search by Order #, Transaction ID, customer name or phone…" style="width:100%;padding:9px 12px 9px 34px;border-radius:8px;border:1px solid var(--border);background:var(--paper);font-size:13px;color:var(--text);" />
+                <span style="position:absolute;left:11px;top:9px;color:var(--text-muted);">🔍</span>
+              </div>
+              <button type="button" class="btn-ghost" id="payRefreshBtn" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:12.5px;font-weight:600;">
+                <span>🔄</span> Refresh
+              </button>
+            </div>
+
+            <!-- Table -->
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Transaction ID</th>
+                    <th>Date &amp; Time</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="payTransactionsTableBody">
+                  <tr><td colspan="8" class="empty-state">Loading payment transactions…</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;" id="payPaginationWrap">
+              <span style="font-size:12.5px;color:var(--text-muted);" id="payPaginationInfo">Showing 0 transactions</span>
+              <div style="display:flex;gap:8px;">
+                <button type="button" class="btn-ghost" id="payPrevPageBtn" disabled style="padding:6px 14px;font-size:12px;">Previous</button>
+                <button type="button" class="btn-ghost" id="payNextPageBtn" disabled style="padding:6px 14px;font-size:12px;">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. GATEWAY SETTINGS SUB-VIEW -->
+        <div id="paySubViewGateways" hidden>
 
         <!-- Section 1: Digital Gateways -->
         <div class="payment-section-title">
@@ -635,7 +740,8 @@
             <button type="button" class="btn-copy" onclick="copyWebhookText(window.location.origin + '/customer', this)">Copy URL</button>
           </div>
         </div>
-      </div>
+        </div> <!-- End of #paySubViewGateways -->
+      </div> <!-- End of #view-payments -->
 
     </section>
   </div>
@@ -834,10 +940,61 @@
   </div>
 </div>
 
+
+<!-- Refund Payment Modal -->
+<div class="modal-backdrop" id="refundModalBackdrop" hidden>
+  <div class="modal" style="max-width:500px;">
+    <h3 style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:'Playfair Display',serif;">
+      <span style="color:var(--ember);">↩️</span> Issue Payment Refund
+    </h3>
+    <div id="refundModalDetails" style="background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;display:flex;flex-direction:column;gap:8px;font-size:13px;">
+      <!-- Populated via JS -->
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">Refund Amount</label>
+      <input type="number" id="refundAmountInput" step="0.01" style="width:100%;padding:9px;border-radius:6px;border:1px solid var(--border);background:var(--paper);color:var(--text);font-size:13px;" />
+      <small style="color:var(--text-muted);font-size:11px;">Default is full order amount.</small>
+    </div>
+    <div class="field" style="margin-bottom:18px;">
+      <label style="font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:4px;">Reason for Refund</label>
+      <select id="refundReasonSelect" style="width:100%;padding:9px;border-radius:6px;border:1px solid var(--border);background:var(--paper);color:var(--text);font-size:13px;margin-bottom:8px;">
+        <option value="Customer requested refund">Customer requested refund</option>
+        <option value="Order cancelled by customer">Order cancelled by customer</option>
+        <option value="Item unavailable / out of stock">Item unavailable / out of stock</option>
+        <option value="Food quality issue">Food quality issue</option>
+        <option value="duplicate">Duplicate transaction</option>
+        <option value="Other reason">Other reason</option>
+      </select>
+      <input type="text" id="refundReasonNotes" placeholder="Additional notes…" style="width:100%;padding:9px;border-radius:6px;border:1px solid var(--border);background:var(--paper);color:var(--text);font-size:13px;" />
+    </div>
+    <div class="modal-actions" style="display:flex;gap:10px;justify-content:flex-end;">
+      <button type="button" class="btn-ghost" id="cancelRefundBtn">Cancel</button>
+      <button type="button" class="btn-primary" id="confirmRefundBtn" style="background:#B33927;border-color:#B33927;color:#fff;">
+        Confirm Refund
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Transaction Details Modal -->
+<div class="modal-backdrop" id="payDetailsModalBackdrop" hidden>
+  <div class="modal" style="max-width:540px;">
+    <h3 style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:'Playfair Display',serif;">
+      <span>🧾</span> Transaction Details
+    </h3>
+    <div id="payDetailsModalBody" style="max-height:65vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;font-size:13px;">
+      <!-- Populated via JS -->
+    </div>
+    <div class="modal-actions" style="display:flex;justify-content:flex-end;margin-top:16px;">
+      <button type="button" class="btn-ghost" id="closePayDetailsBtn">Close</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="admin.js?v=payments-revamp-v1"></script>
+<script src="admin.js?v=20240918_payments_v2"></script>
 
 <script>
 window.EB_CHATBOT_CONFIG = {
