@@ -89,6 +89,45 @@
   const closeCreateBranchModal = document.getElementById('closeCreateBranchModal');
   const cancelCreateBranchBtn = document.getElementById('cancelCreateBranchBtn');
 
+  // Reset Password Modal Elements
+  const resetPasswordModal = document.getElementById('resetPasswordModal');
+  const resetPwdHeading = document.getElementById('resetPwdHeading');
+  const resetPwdSub = document.getElementById('resetPwdSub');
+  const resetPwdConfirmState = document.getElementById('resetPwdConfirmState');
+  const resetPwdDisplayState = document.getElementById('resetPwdDisplayState');
+  const resetTargetUsername = document.getElementById('resetTargetUsername');
+  const resetTargetRole = document.getElementById('resetTargetRole');
+  const resetTargetTenant = document.getElementById('resetTargetTenant');
+  const resetTargetBranch = document.getElementById('resetTargetBranch');
+  const resetTargetUserId = document.getElementById('resetTargetUserId');
+  const resetPwdError = document.getElementById('resetPwdError');
+  const cancelResetPwdBtn = document.getElementById('cancelResetPwdBtn');
+  const confirmResetPwdBtn = document.getElementById('confirmResetPwdBtn');
+  const dispResetUsername = document.getElementById('dispResetUsername');
+  const dispResetTempPwd = document.getElementById('dispResetTempPwd');
+  const copyResetTempPwdBtn = document.getElementById('copyResetTempPwdBtn');
+  const closeResetDisplayBtn = document.getElementById('closeResetDisplayBtn');
+
+  // Create Admin Modal Elements
+  const createAdminModal = document.getElementById('createAdminModal');
+  const closeCreateAdminModal = document.getElementById('closeCreateAdminModal');
+  const cancelCreateAdminBtn = document.getElementById('cancelCreateAdminBtn');
+  const createAdminForm = document.getElementById('createAdminForm');
+  const newAdminTenantSelect = document.getElementById('newAdminTenantSelect');
+  const newAdminBranchSelect = document.getElementById('newAdminBranchSelect');
+  const newAdminUsername = document.getElementById('newAdminUsername');
+  const newAdminRole = document.getElementById('newAdminRole');
+  const newAdminName = document.getElementById('newAdminName');
+  const newAdminEmail = document.getElementById('newAdminEmail');
+  const createAdminError = document.getElementById('createAdminError');
+  const submitCreateAdminBtn = document.getElementById('submitCreateAdminBtn');
+
+  // Audit Logs Modal Elements
+  const auditLogsModal = document.getElementById('auditLogsModal');
+  const closeAuditLogsModal = document.getElementById('closeAuditLogsModal');
+  const dismissAuditLogsBtn = document.getElementById('dismissAuditLogsBtn');
+  const auditLogsBody = document.getElementById('auditLogsBody');
+
   // Country Defaults Mapping
   const COUNTRY_DEFAULTS = {
     'Pakistan': { countryCode: 'PK', currency: 'PKR', symbol: 'Rs', tz: 'Asia/Karachi', taxRate: 0.08 },
@@ -160,6 +199,8 @@
   let cachedTenants = [];
   let cachedBranches = [];
   let cachedUsers = [];
+  let cachedCredentials = [];
+  let credFilter = 'all';
   let cachedOrders = [];
   let currentSearchTerm = '';
   let activeCredentialsText = '';
@@ -178,6 +219,18 @@
   // Utilities
   const money = (n, symbol) => (symbol || 'Rs ') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function formatDateTime(dt) {
+    if (!dt) return '—';
+    try {
+      const d = new Date(dt);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) +
+        ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '—';
+    }
+  }
 
   function showToast(msg) {
     if (!toastNotification) return;
@@ -250,6 +303,7 @@
     else if (currentView === 'dashboard') renderDashboard();
     else if (currentView === 'branches') renderBranches();
     else if (currentView === 'users') renderUsers();
+    else if (currentView === 'credentials') renderCredentials();
     else if (currentView === 'orders') renderOrders();
     else if (currentView === 'subscriptions') renderSubscriptions();
     else if (currentView === 'settings') renderSettings();
@@ -573,6 +627,261 @@
         '</table>' +
       '</div>' +
     '</div>';
+  }
+
+  // ================================================================
+  // 4b. CREDENTIALS & ACCESS MANAGEMENT VIEW
+  // ================================================================
+  async function renderCredentials() {
+    pageTitle.textContent = 'Credentials & Access Management';
+    breadcrumb.textContent = 'Multi-Tenant Staff & Branch Credentials';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading credentials…</div>';
+
+    try {
+      const data = await api('/api/credentials');
+      cachedCredentials = data.credentials || [];
+    } catch (err) {
+      content.innerHTML = '<div class="error-state">' + esc(err.message) + '</div>';
+      return;
+    }
+
+    const total = cachedCredentials.length;
+    const activeCount = cachedCredentials.filter(c => c.active && c.accountStatus === 'active').length;
+    const suspendedCount = cachedCredentials.filter(c => !c.active || c.accountStatus !== 'active').length;
+    const tempCount = cachedCredentials.filter(c => Boolean(c.passwordSecurity?.mustChangePassword)).length;
+    const expiredCount = cachedCredentials.filter(c => Boolean(c.trial?.isExpired)).length;
+
+    // Filter by tab
+    let list = cachedCredentials;
+    if (credFilter === 'active') {
+      list = list.filter(c => c.active && c.accountStatus === 'active');
+    } else if (credFilter === 'suspended') {
+      list = list.filter(c => !c.active || c.accountStatus !== 'active');
+    } else if (credFilter === 'temporary') {
+      list = list.filter(c => Boolean(c.passwordSecurity?.mustChangePassword));
+    } else if (credFilter === 'expired') {
+      list = list.filter(c => Boolean(c.trial?.isExpired));
+    }
+
+    // Filter by search query
+    if (currentSearchTerm) {
+      list = list.filter(c =>
+        (c.username || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.email || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.role || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.tenant?.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.tenant?.slug || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.branch?.name || '').toLowerCase().includes(currentSearchTerm) ||
+        (c.branch?.code || '').toLowerCase().includes(currentSearchTerm)
+      );
+    }
+
+    const statsHtml = '<div class="stat-grid">' +
+      statCard('Total Staff Accounts', total, 'gold', 'All branch & tenant accounts') +
+      statCard('Active Logins', activeCount, 'sage', 'Operational credentials') +
+      statCard('Suspended Accounts', suspendedCount, 'ember', 'Logins disabled') +
+      statCard('Temporary Passwords', tempCount, 'blue', 'Must change on login') +
+      statCard('Expired Trials', expiredCount, 'danger', 'Tenants needing upgrade') +
+      '</div>';
+
+    const filterTabsHtml = '<div class="cred-filter-tabs">' +
+      '<button class="cred-filter-tab ' + (credFilter === 'all' ? 'active' : '') + '" data-tab="all">' +
+        'All <span class="badge-count">' + total + '</span>' +
+      '</button>' +
+      '<button class="cred-filter-tab ' + (credFilter === 'active' ? 'active' : '') + '" data-tab="active">' +
+        '<i class="fa-solid fa-circle-check" style="color:var(--sage);font-size:11px;"></i> Active <span class="badge-count">' + activeCount + '</span>' +
+      '</button>' +
+      '<button class="cred-filter-tab ' + (credFilter === 'suspended' ? 'active' : '') + '" data-tab="suspended">' +
+        '<i class="fa-solid fa-ban" style="color:var(--danger);font-size:11px;"></i> Suspended <span class="badge-count">' + suspendedCount + '</span>' +
+      '</button>' +
+      '<button class="cred-filter-tab ' + (credFilter === 'temporary' ? 'active' : '') + '" data-tab="temporary">' +
+        '<i class="fa-solid fa-key" style="color:var(--gold);font-size:11px;"></i> Temporary Passwords <span class="badge-count">' + tempCount + '</span>' +
+      '</button>' +
+      '<button class="cred-filter-tab ' + (credFilter === 'expired' ? 'active' : '') + '" data-tab="expired">' +
+        '<i class="fa-solid fa-clock" style="color:var(--danger);font-size:11px;"></i> Expired Trials <span class="badge-count">' + expiredCount + '</span>' +
+      '</button>' +
+    '</div>';
+
+    const rowsHtml = list.length
+      ? list.map(c => {
+          const tenantDisplay = c.tenant
+            ? '<div class="restaurant-meta"><strong>' + esc(c.tenant.name) + '</strong><br><small><a href="/r/' + encodeURIComponent(c.tenant.slug) + '" target="_blank" style="color:var(--gold);text-decoration:none;">/r/' + esc(c.tenant.slug) + '</a></small></div>'
+            : '<span style="color:var(--text-dim);">Global Platform</span>';
+
+          const branchDisplay = c.branch
+            ? '<strong>' + esc(c.branch.name) + '</strong><br><span class="branch-code-pill">' + esc(c.branch.code) + '</span>'
+            : '<em style="color:var(--text-dim);">All Branches</em>';
+
+          const accountDisplay = '<strong>' + esc(c.username) + '</strong>' +
+            (c.name && c.name !== c.username ? ' <small style="color:var(--text-muted);">(' + esc(c.name) + ')</small>' : '') +
+            '<br><small style="color:var(--text-muted);">' + esc(c.email || 'No email') + '</small>' +
+            '<div style="margin-top:4px;">' + roleBadge(c.role) + '</div>';
+
+          const isAccountActive = c.active && c.accountStatus === 'active';
+          const accountStatusBadge = isAccountActive
+            ? '<span class="badge active"><i class="fa-solid fa-check"></i> Active</span>'
+            : '<span class="badge suspended"><i class="fa-solid fa-ban"></i> Suspended</span>';
+
+          let trialBadge = '';
+          if (c.trial?.isExpired) {
+            trialBadge = '<span class="renew-pill danger"><i class="fa-solid fa-clock"></i> Expired</span>';
+          } else if (c.trial?.status === 'in_trial') {
+            const left = c.trial.daysLeft != null ? c.trial.daysLeft + 'd left' : 'Active';
+            trialBadge = '<span class="renew-pill warning"><i class="fa-solid fa-stopwatch"></i> Trial (' + left + ')</span>';
+          } else if (c.trial?.status === 'active_paid') {
+            trialBadge = '<span class="renew-pill ok"><i class="fa-solid fa-circle-check"></i> Paid (' + esc(c.trial.plan) + ')</span>';
+          } else {
+            trialBadge = '<span class="renew-pill ok"><i class="fa-solid fa-shield"></i> Active</span>';
+          }
+
+          const mustChange = Boolean(c.passwordSecurity?.mustChangePassword);
+          const pwdBadge = mustChange
+            ? '<span class="badge temporary" title="Must change password upon login"><i class="fa-solid fa-triangle-exclamation"></i> Temporary</span>'
+            : '<span class="badge changed" title="Permanent password set"><i class="fa-solid fa-lock"></i> Changed</span>';
+
+          const lastPwdHtml = '<div><strong>' + formatDateTime(c.passwordSecurity?.lastPasswordChange) + '</strong>' +
+            '<span class="changed-by-tag">by ' + esc(c.passwordSecurity?.passwordChangedBy || (mustChange ? 'Superadmin' : 'Branch Admin')) + '</span></div>';
+
+          const resetBtn = '<button type="button" class="btn-action-pill reset-pwd-btn" ' +
+            'data-id="' + c._id + '" ' +
+            'data-username="' + esc(c.username) + '" ' +
+            'data-role="' + esc(c.role) + '" ' +
+            'data-tenant="' + esc(c.tenant?.name || 'Platform') + '" ' +
+            'data-branch="' + esc(c.branch?.name || 'All Branches') + '" ' +
+            'title="Generate new temporary password">' +
+            '<i class="fa-solid fa-key"></i> Reset' +
+            '</button>';
+
+          const toggleBtn = isAccountActive
+            ? '<button type="button" class="btn-action-pill btn-danger-pill toggle-status-btn" ' +
+                'data-id="' + c._id + '" ' +
+                'data-action="suspend" ' +
+                'data-username="' + esc(c.username) + '" ' +
+                'title="Suspend account access">' +
+                '<i class="fa-solid fa-ban"></i> Suspend' +
+              '</button>'
+            : '<button type="button" class="btn-action-pill btn-success-pill toggle-status-btn" ' +
+                'data-id="' + c._id + '" ' +
+                'data-action="reactivate" ' +
+                'data-username="' + esc(c.username) + '" ' +
+                'title="Reactivate account access">' +
+                '<i class="fa-solid fa-check"></i> Reactivate' +
+              '</button>';
+
+          return '<tr>' +
+            '<td>' + tenantDisplay + '</td>' +
+            '<td>' + branchDisplay + '</td>' +
+            '<td>' + accountDisplay + '</td>' +
+            '<td>' + accountStatusBadge + '</td>' +
+            '<td>' + trialBadge + '</td>' +
+            '<td>' + pwdBadge + '</td>' +
+            '<td>' + lastPwdHtml + '</td>' +
+            '<td><div class="table-actions" style="gap:6px;">' + resetBtn + toggleBtn + '</div></td>' +
+          '</tr>';
+        }).join('')
+      : '<tr><td colspan="8" class="empty-state">No credentials found for this filter.</td></tr>';
+
+    content.innerHTML = statsHtml +
+      filterTabsHtml +
+      '<div class="panel">' +
+        '<div class="panel-head">' +
+          '<h3>Credentials &amp; Access Control (' + list.length + ')</h3>' +
+          '<div class="panel-head-actions">' +
+            '<button class="btn-primary-action" id="openAuditLogsBtn" style="background:linear-gradient(135deg,#38342F,#1D1B18);margin-right:8px;"><i class="fa-solid fa-shield-halved"></i> Audit Trail</button>' +
+            '<button class="btn-primary-action" id="openCreateAdminBtn"><i class="fa-solid fa-user-plus"></i> Add Branch Admin</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="table-scroll">' +
+          '<table class="data-table">' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Restaurant</th>' +
+                '<th>Branch</th>' +
+                '<th>Admin Account</th>' +
+                '<th>Account Status</th>' +
+                '<th>Trial Status</th>' +
+                '<th>Password Status</th>' +
+                '<th>Last Password Change</th>' +
+                '<th>Actions</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rowsHtml + '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>';
+
+    // Hook up filter tab clicks
+    content.querySelectorAll('.cred-filter-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        credFilter = btn.dataset.tab;
+        renderCredentials();
+      });
+    });
+
+    // Hook up Reset Password buttons
+    content.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        resetTargetUserId.value = btn.dataset.id;
+        resetTargetUsername.textContent = btn.dataset.username;
+        resetTargetRole.textContent = btn.dataset.role;
+        resetTargetTenant.textContent = btn.dataset.tenant;
+        resetTargetBranch.textContent = btn.dataset.branch;
+
+        resetPwdHeading.textContent = 'Reset Admin Password';
+        resetPwdSub.textContent = 'Generate a new secure temporary password for this account.';
+        resetPwdConfirmState.classList.remove('hidden');
+        resetPwdDisplayState.classList.add('hidden');
+        resetPwdError.hidden = true;
+        resetPwdError.textContent = '';
+
+        resetPasswordModal.classList.remove('hidden');
+      });
+    });
+
+    // Hook up Suspend / Reactivate buttons
+    content.querySelectorAll('.toggle-status-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const uId = btn.dataset.id;
+        const act = btn.dataset.action;
+        const uName = btn.dataset.username;
+
+        const verb = act === 'suspend' ? 'suspend' : 'reactivate';
+        const msg = 'Are you sure you want to ' + verb + ' the account for "@' + uName + '"?\n\n' +
+          (act === 'suspend' ? 'The user will not be able to log in. No restaurant or branch data will be deleted.' : 'The user will regain login access.');
+
+        if (!confirm(msg)) return;
+
+        try {
+          const res = await api('/api/credentials/toggle-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: uId, action: act, scope: 'user' })
+          });
+          showToast(res.message || ('Account ' + verb + 'ed successfully!'));
+          renderCredentials();
+        } catch (err) {
+          showToast('Error: ' + err.message);
+        }
+      });
+    });
+
+    // Hook up Add Branch Admin opener
+    const openCreateAdminBtn = document.getElementById('openCreateAdminBtn');
+    if (openCreateAdminBtn) {
+      openCreateAdminBtn.addEventListener('click', () => {
+        openCreateAdminModalHandler();
+      });
+    }
+
+    // Hook up Audit Trail opener
+    const openAuditLogsBtn = document.getElementById('openAuditLogsBtn');
+    if (openAuditLogsBtn) {
+      openAuditLogsBtn.addEventListener('click', () => {
+        openAuditLogsModalHandler();
+      });
+    }
   }
 
   // ================================================================
@@ -1429,6 +1738,229 @@
         submitCreateBranchBtn.innerHTML = origText;
       }
     });
+  }
+
+  // ================================================================
+  // RESET PASSWORD MODAL WORKFLOW
+  // ================================================================
+  function closeResetPasswordModalHandler() {
+    if (resetPasswordModal) resetPasswordModal.classList.add('hidden');
+  }
+
+  if (cancelResetPwdBtn) cancelResetPwdBtn.addEventListener('click', closeResetPasswordModalHandler);
+  if (closeResetDisplayBtn) {
+    closeResetDisplayBtn.addEventListener('click', () => {
+      closeResetPasswordModalHandler();
+      if (currentView === 'credentials') renderCredentials();
+    });
+  }
+
+  if (copyResetTempPwdBtn) {
+    copyResetTempPwdBtn.addEventListener('click', async () => {
+      const pwd = dispResetTempPwd.textContent;
+      if (!pwd || pwd === '—') return;
+      try {
+        await navigator.clipboard.writeText(pwd);
+        showToast('Temporary password copied to clipboard!');
+      } catch (_) {
+        showToast('Password: ' + pwd);
+      }
+    });
+  }
+
+  if (confirmResetPwdBtn) {
+    confirmResetPwdBtn.addEventListener('click', async () => {
+      const uId = resetTargetUserId.value;
+      if (!uId) return;
+
+      const origText = confirmResetPwdBtn.innerHTML;
+      confirmResetPwdBtn.disabled = true;
+      confirmResetPwdBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating…';
+      resetPwdError.hidden = true;
+      resetPwdError.textContent = '';
+
+      try {
+        const res = await api('/api/credentials/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: uId })
+        });
+
+        // Switch to display state
+        resetPwdConfirmState.classList.add('hidden');
+        resetPwdDisplayState.classList.remove('hidden');
+        dispResetUsername.textContent = res.username || resetTargetUsername.textContent;
+        dispResetTempPwd.textContent = res.tempPassword;
+
+        showToast('Temporary password generated successfully!');
+      } catch (err) {
+        resetPwdError.textContent = err.message;
+        resetPwdError.hidden = false;
+      } finally {
+        confirmResetPwdBtn.disabled = false;
+        confirmResetPwdBtn.innerHTML = origText;
+      }
+    });
+  }
+
+  // ================================================================
+  // CREATE BRANCH ADMIN MODAL WORKFLOW
+  // ================================================================
+  async function openCreateAdminModalHandler() {
+    if (!createAdminModal) return;
+    createAdminForm.reset();
+    createAdminError.hidden = true;
+    createAdminError.textContent = '';
+
+    await populateAdminTenantSelect();
+    createAdminModal.classList.remove('hidden');
+    if (newAdminUsername) newAdminUsername.focus();
+  }
+
+  function closeCreateAdminModalHandler() {
+    if (createAdminModal) createAdminModal.classList.add('hidden');
+  }
+
+  if (closeCreateAdminModal) closeCreateAdminModal.addEventListener('click', closeCreateAdminModalHandler);
+  if (cancelCreateAdminBtn) cancelCreateAdminBtn.addEventListener('click', closeCreateAdminModalHandler);
+
+  async function populateAdminTenantSelect() {
+    if (!cachedTenants || !cachedTenants.length) {
+      try {
+        const data = await api('/api/tenants');
+        cachedTenants = data.tenants || [];
+      } catch (_) {}
+    }
+
+    if (newAdminTenantSelect) {
+      newAdminTenantSelect.innerHTML = '<option value="">-- Select Restaurant Tenant --</option>' +
+        cachedTenants.map(t => '<option value="' + t._id + '">' + esc(t.name) + ' (/r/' + esc(t.slug) + ')</option>').join('');
+    }
+    if (newAdminBranchSelect) {
+      newAdminBranchSelect.innerHTML = '<option value="">-- All / Primary Branch --</option>';
+    }
+  }
+
+  if (newAdminTenantSelect) {
+    newAdminTenantSelect.addEventListener('change', async () => {
+      const tId = newAdminTenantSelect.value;
+      if (!tId) {
+        newAdminBranchSelect.innerHTML = '<option value="">-- All / Primary Branch --</option>';
+        return;
+      }
+      newAdminBranchSelect.innerHTML = '<option value="">Loading branches…</option>';
+      try {
+        const data = await api('/api/branches?tenantId=' + encodeURIComponent(tId));
+        const branches = data.branches || [];
+        if (!branches.length) {
+          newAdminBranchSelect.innerHTML = '<option value="">-- Primary / Single Branch --</option>';
+        } else {
+          newAdminBranchSelect.innerHTML = '<option value="">-- All Branches / Global --</option>' +
+            branches.map(b => '<option value="' + b._id + '">' + esc(b.name) + ' (' + esc(b.code) + ')' + '</option>').join('');
+        }
+      } catch (_) {
+        newAdminBranchSelect.innerHTML = '<option value="">-- All / Primary Branch --</option>';
+      }
+    });
+  }
+
+  if (createAdminForm) {
+    createAdminForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      createAdminError.hidden = true;
+      createAdminError.textContent = '';
+
+      const origText = submitCreateAdminBtn.innerHTML;
+      submitCreateAdminBtn.disabled = true;
+      submitCreateAdminBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating Account…';
+
+      try {
+        const payload = {
+          tenantId: newAdminTenantSelect.value,
+          branchId: newAdminBranchSelect.value || null,
+          username: newAdminUsername.value.trim(),
+          name: newAdminName.value.trim(),
+          email: newAdminEmail.value.trim(),
+          role: newAdminRole.value
+        };
+
+        const res = await api('/api/credentials/create-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        closeCreateAdminModalHandler();
+
+        // Show the temporary password using the reset display modal
+        resetPwdHeading.textContent = 'Admin Account Created!';
+        resetPwdSub.textContent = 'A secure temporary password has been generated for @' + esc(res.user.username) + '.';
+        resetPwdConfirmState.classList.add('hidden');
+        resetPwdDisplayState.classList.remove('hidden');
+        dispResetUsername.textContent = res.user.username;
+        dispResetTempPwd.textContent = res.tempPassword;
+        resetPasswordModal.classList.remove('hidden');
+
+        showToast('Admin account "@' + res.user.username + '" created successfully!');
+      } catch (err) {
+        createAdminError.textContent = err.message;
+        createAdminError.hidden = false;
+      } finally {
+        submitCreateAdminBtn.disabled = false;
+        submitCreateAdminBtn.innerHTML = origText;
+      }
+    });
+  }
+
+  // ================================================================
+  // AUDIT LOGS MODAL WORKFLOW
+  // ================================================================
+  function openAuditLogsModalHandler() {
+    if (!auditLogsModal) return;
+    auditLogsModal.classList.remove('hidden');
+    loadAuditLogs();
+  }
+
+  function closeAuditLogsModalHandler() {
+    if (auditLogsModal) auditLogsModal.classList.add('hidden');
+  }
+
+  if (closeAuditLogsModal) closeAuditLogsModal.addEventListener('click', closeAuditLogsModalHandler);
+  if (dismissAuditLogsBtn) dismissAuditLogsBtn.addEventListener('click', closeAuditLogsModalHandler);
+
+  async function loadAuditLogs() {
+    if (!auditLogsBody) return;
+    auditLogsBody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i> Loading security audit trail…</td></tr>';
+
+    try {
+      const data = await api('/api/credentials/audit-logs');
+      const logs = data.auditLogs || [];
+
+      if (!logs.length) {
+        auditLogsBody.innerHTML = '<tr><td colspan="6" class="empty-state">No audit trail records logged yet.</td></tr>';
+        return;
+      }
+
+      auditLogsBody.innerHTML = logs.map(l => {
+        const actionTag = (l.action || 'default').toLowerCase();
+        const actionLabel = (l.action || '').replace(/_/g, ' ');
+
+        const restaurantBranch = [l.tenantName, l.branchName].filter(Boolean).join(' / ') || 'Platform Root';
+        const actor = esc(l.performedBy || 'Superadmin') +
+          '<br><small style="color:var(--text-muted);">' + esc(l.performedByRole || 'superadmin') + '</small>';
+
+        return '<tr>' +
+          '<td><small style="white-space:nowrap;color:var(--text-muted);">' + formatDateTime(l.createdAt) + '</small></td>' +
+          '<td><span class="audit-badge ' + esc(actionTag) + '">' + esc(actionLabel) + '</span></td>' +
+          '<td><code>@' + esc(l.targetUsername || '—') + '</code></td>' +
+          '<td><strong>' + esc(restaurantBranch) + '</strong></td>' +
+          '<td>' + actor + '</td>' +
+          '<td><small style="line-height:1.4;display:block;">' + esc(l.details || '—') + '</small></td>' +
+        '</tr>';
+      }).join('');
+    } catch (err) {
+      auditLogsBody.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> ' + esc(err.message) + '</td></tr>';
+    }
   }
 
   // Initial render

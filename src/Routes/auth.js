@@ -62,6 +62,13 @@ router.post('/login', async (req, res) => {
       if (!accountTenant || !['active', 'trial'].includes(accountTenant.status)) {
         return res.status(403).json({ error: 'This restaurant account is suspended.' });
       }
+
+      if (user.branchId) {
+        const accountBranch = await Branch.findById(user.branchId).select('isActive');
+        if (accountBranch && accountBranch.isActive === false) {
+          return res.status(403).json({ error: 'This branch location is currently suspended.' });
+        }
+      }
     }
 
     const token = jwt.sign(
@@ -79,14 +86,101 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       user: {
+        id: user._id,
         username: user.username,
         role: user.role,
         tenantId: user.tenantId || null,
-        branchId: user.branchId || null
+        branchId: user.branchId || null,
+        mustChangePassword: Boolean(user.mustChangePassword)
       }
     });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// POST /api/auth/change-password — User updates their temporary password
+router.post('/change-password', async (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const user = await AdminUser.findById(decoded.id)
+      .populate('tenantId', 'name')
+      .populate('branchId', 'name');
+
+    if (!user) {
+      return res.status(404).json({ error: 'User account not found' });
+    }
+
+    const { newPassword, confirmPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'New passwords do not match' });
+    }
+
+    user.password = newPassword; // Mongoose pre-save hook handles bcrypt hashing
+    user.mustChangePassword = false;
+    user.passwordStatus = 'changed';
+    user.lastPasswordChange = new Date();
+    user.passwordChangedBy = user.role === 'owner' ? 'Branch Owner' : 'Branch Admin';
+    await user.save();
+
+    // Security Audit Log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      action: 'password_changed',
+      targetUserId: user._id,
+      targetUsername: user.username,
+      tenantId: user.tenantId?._id || null,
+      tenantName: user.tenantId?.name || '',
+      branchId: user.branchId?._id || null,
+      branchName: user.branchId?.name || '',
+      details: `Password changed by ${user.username} (${user.role}).`,
+      performedBy: user.role === 'owner' ? 'Branch Owner' : 'Branch Admin',
+      performedByRole: user.role,
+      ip: req.ip || ''
+    }).catch(err => console.error('Audit log error:', err.message));
+
+    // Refreshed token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+        tenantId: user.tenantId || null,
+        branchId: user.branchId || null
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        role: user.role,
+        tenantId: user.tenantId || null,
+        branchId: user.branchId || null,
+        mustChangePassword: false
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to change password' });
   }
 });
 

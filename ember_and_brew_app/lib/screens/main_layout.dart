@@ -45,6 +45,7 @@ class _MainLayoutState extends State<MainLayout> {
               child: ClipOval(
                 child: Image.asset(
                   'assets/images/app-logo.png',
+                  package: 'ember_and_brew_app',
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Icon(Icons.coffee, size: 16, color: AppTheme.gold),
                 ),

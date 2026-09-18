@@ -56,6 +56,23 @@ const adminUserSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0
+  },
+  mustChangePassword: {
+    type: Boolean,
+    default: false
+  },
+  passwordStatus: {
+    type: String,
+    enum: ['temporary', 'changed', 'active'],
+    default: 'active'
+  },
+  lastPasswordChange: {
+    type: Date,
+    default: null
+  },
+  passwordChangedBy: {
+    type: String,
+    default: ''
   }
 }, { timestamps: true });
 

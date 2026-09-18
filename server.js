@@ -78,6 +78,7 @@ const branchesRoutes = require("./src/Routes/branches");
 const notificationRoutes = require("./src/Routes/notifications");
 const tenantRoutes = require("./src/Routes/tenants");
 const paymentRoutes = require("./src/Routes/payments");
+const credentialsRoutes = require("./src/Routes/credentials");
 
 app.use(cors());
 app.use(express.json());
@@ -136,6 +137,7 @@ app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/branches", branchesRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/credentials", credentialsRoutes);
 
 // Dashboards
 app.get("/admin/login", (req, res) => {

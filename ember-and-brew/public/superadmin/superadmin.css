@@ -935,6 +935,161 @@ table.data-table tr:last-child td { border-bottom: none; }
   color: var(--gold-deep);
 }
 
+/* ==========================================================================
+   Credentials & Security Access Management Styles
+   ========================================================================== */
+.cred-filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.cred-filter-tab {
+  background: var(--paper-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.16s ease;
+}
+
+.cred-filter-tab:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+.cred-filter-tab.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+.cred-filter-tab .badge-count {
+  background: rgba(0,0,0,0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.cred-filter-tab.active .badge-count {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+}
+
+/* Badges for password security & status */
+.badge.temporary {
+  background: #FFF8E6;
+  border: 1px solid #F5D399;
+  color: #975A16;
+  font-weight: 600;
+}
+
+.badge.changed {
+  background: #EAF6EC;
+  border: 1px solid #C4DFC0;
+  color: #2E6125;
+  font-weight: 600;
+}
+
+.badge.suspended {
+  background: #FDEEEC;
+  border: 1px solid #F5C2B8;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.changed-by-tag {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.branch-code-pill {
+  font-size: 10.5px;
+  background: var(--paper-3);
+  padding: 1px 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: monospace;
+  margin-left: 4px;
+}
+
+/* Action pills in table */
+.btn-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-action-pill:hover {
+  background: var(--paper-3);
+  border-color: var(--gold);
+}
+
+.btn-action-pill.btn-danger-pill {
+  color: var(--danger);
+  border-color: rgba(179,57,39,0.25);
+  background: #FFF5F3;
+}
+
+.btn-action-pill.btn-danger-pill:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-action-pill.btn-success-pill {
+  color: var(--sage);
+  border-color: rgba(78,112,68,0.25);
+  background: #F2F8F0;
+}
+
+.btn-action-pill.btn-success-pill:hover {
+  background: var(--sage);
+  color: #fff;
+}
+
+/* Audit Log Action Badges */
+.audit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.audit-badge.account_created { background: var(--blue-light); color: var(--blue); }
+.audit-badge.password_reset { background: #FFF8E6; color: #975A16; }
+.audit-badge.password_changed { background: var(--sage-light); color: var(--sage); }
+.audit-badge.account_suspended,
+.audit-badge.branch_suspended,
+.audit-badge.tenant_suspended { background: var(--danger-light); color: var(--danger); }
+.audit-badge.account_reactivated,
+.audit-badge.branch_reactivated,
+.audit-badge.tenant_reactivated { background: var(--sage-light); color: var(--sage); }
+
 /* ---------------- Responsive ---------------- */
 @media (max-width: 900px) {
   .app { flex-direction: column; }

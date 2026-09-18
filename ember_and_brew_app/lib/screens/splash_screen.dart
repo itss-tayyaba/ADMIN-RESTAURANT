@@ -82,6 +82,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       ),
                       child: Image.asset(
                         'assets/images/app-splash.png',
+                        package: 'ember_and_brew_app',
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Icon(Icons.restaurant, size: 80, color: AppTheme.gold),
                       ),
@@ -108,6 +109,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: ClipOval(
                   child: Image.asset(
                     'assets/images/app-logo.png',
+                    package: 'ember_and_brew_app',
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const Icon(Icons.coffee, color: AppTheme.gold),
                   ),

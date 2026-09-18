@@ -1,10 +1,12 @@
 # Ember & Brew — Android Mobile Application (Flutter)
 
-Standalone, lightweight Android mobile application for **Ember & Brew Artisan Culinary & Café**.
+Standalone native Flutter Android application for **Ember & Brew Artisan Culinary & Café**.
 
-- **Target URL**: `https://admin-restaurant-six.vercel.app/`
+- **App experience**: Native menu, cart, order tracking, reservations, and profile screens.
 - **Application ID / Package**: `com.restaurant.app`
 - **Branding**: Official Ember & Brew logo emblem and dark luxury theme.
+
+The Android project launches the native Flutter experience from `../ember_and_brew_app`; it does not wrap the website in a WebView.
 
 ---
 
@@ -47,7 +49,7 @@ flutter build appbundle --release
 
 ---
 
-## 🌐 Hosting the APK for Website "Download App" Button
+## Hosting the APK for Website "Download App" Button
 
 To make the APK downloadable directly from your website:
 1. Copy the generated `app-release.apk` file to your website's public downloads folder:

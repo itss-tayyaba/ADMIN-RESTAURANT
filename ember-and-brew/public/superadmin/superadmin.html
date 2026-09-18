@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="superadmin.css?v=20240917_02">
+<link rel="stylesheet" href="superadmin.css?v=20240918_credentials">
 </head>
 <body>
 
@@ -46,6 +46,11 @@
       <button class="nav-item" data-view="users">
         <span class="ic">👥</span>
         <span class="txt">Users</span>
+      </button>
+
+      <button class="nav-item" data-view="credentials">
+        <span class="ic">🔐</span>
+        <span class="txt">Credentials</span>
       </button>
 
       <button class="nav-item" data-view="orders">
@@ -528,10 +533,188 @@
   </div>
 </div>
 
+<!-- MODAL 6: Reset Password Modal -->
+<div class="modal-overlay hidden" id="resetPasswordModal">
+  <div class="modal-card modal-card-credentials">
+    <div class="credentials-badge-header">
+      <div class="badge-icon-circle" style="background:rgba(182,78,60,0.15);color:var(--danger);border-color:rgba(182,78,60,0.3);"><i class="fa-solid fa-key"></i></div>
+      <h2 id="resetPwdHeading">Reset Admin Password</h2>
+      <p id="resetPwdSub">Generate a new secure temporary password for this account.</p>
+    </div>
+
+    <!-- Confirm State -->
+    <div id="resetPwdConfirmState" style="padding: 20px 24px;">
+      <div class="credentials-alert-box" style="background:#FFF5F3;border-color:#F5C2B8;color:#8F2B1B;margin:0 0 18px;">
+        <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);"></i>
+        <div>
+          <strong>Security Action</strong>
+          <p>This will immediately revoke the current password and generate a 12-character temporary password. The user will be forced to create a new password on their next login.</p>
+        </div>
+      </div>
+      <div style="font-size:13px;line-height:1.6;margin-bottom:20px;color:var(--text);">
+        <p style="margin:4px 0;"><strong>Account:</strong> <code id="resetTargetUsername">—</code> (<span id="resetTargetRole">admin</span>)</p>
+        <p style="margin:4px 0;"><strong>Restaurant:</strong> <span id="resetTargetTenant">—</span></p>
+        <p style="margin:4px 0;"><strong>Branch:</strong> <span id="resetTargetBranch">—</span></p>
+      </div>
+      <input type="hidden" id="resetTargetUserId" value="" />
+      <p class="modal-error" id="resetPwdError" hidden style="margin-bottom:14px;"></p>
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="cancelResetPwdBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="confirmResetPwdBtn" style="background:linear-gradient(135deg,var(--danger),#D9483B);">
+          <i class="fa-solid fa-rotate-right"></i> Generate Temporary Password
+        </button>
+      </div>
+    </div>
+
+    <!-- Display State -->
+    <div id="resetPwdDisplayState" class="hidden" style="padding: 0 0 20px;">
+      <div class="credentials-alert-box">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <strong>Password Reset Successfully!</strong>
+          <p>Please copy and deliver this temporary password to the branch manager now. It will <strong>never</strong> be shown again.</p>
+        </div>
+      </div>
+
+      <div class="credentials-summary-card">
+        <div class="cred-chip-box">
+          <div class="cred-chip-row">
+            <div class="cred-chip-left">
+              <span class="cred-chip-tag">USERNAME</span>
+              <span class="cred-chip-val" id="dispResetUsername">—</span>
+            </div>
+          </div>
+          <div class="cred-chip-row" style="margin-top:10px;">
+            <div class="cred-chip-left">
+              <span class="cred-chip-tag">NEW TEMP PASSWORD</span>
+              <span class="cred-chip-val" id="dispResetTempPwd" style="font-family:monospace;letter-spacing:1px;font-size:15px;color:var(--gold-deep);font-weight:700;">—</span>
+            </div>
+            <button class="btn-chip-copy" id="copyResetTempPwdBtn" title="Copy Temporary Password">
+              <i class="fa-regular fa-copy"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding: 0 24px; text-align: right;">
+        <button type="button" class="btn-primary" id="closeResetDisplayBtn">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 7: Create Branch Admin Modal -->
+<div class="modal-overlay hidden" id="createAdminModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <h2><i class="fa-solid fa-user-shield" style="color:var(--gold);"></i> Add Branch Admin</h2>
+        <p class="modal-subtitle">Provision a new branch admin or manager with temporary credentials.</p>
+      </div>
+      <button class="modal-close-btn" id="closeCreateAdminModal">&times;</button>
+    </div>
+
+    <form id="createAdminForm" class="modal-form">
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Restaurant Tenant *</span>
+          <select id="newAdminTenantSelect" required></select>
+        </label>
+        <label class="form-label">
+          <span>Branch Location</span>
+          <select id="newAdminBranchSelect">
+            <option value="">-- All / Primary Branch --</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Username *</span>
+          <input type="text" id="newAdminUsername" required placeholder="e.g. islamabad_admin" autocomplete="off" />
+        </label>
+        <label class="form-label">
+          <span>Role *</span>
+          <select id="newAdminRole" required>
+            <option value="admin" selected>Branch Admin / Manager</option>
+            <option value="owner">Restaurant Owner</option>
+            <option value="chef">Kitchen Head Chef</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-row-2">
+        <label class="form-label">
+          <span>Full Name</span>
+          <input type="text" id="newAdminName" placeholder="e.g. Asad Khan" />
+        </label>
+        <label class="form-label">
+          <span>Email Address</span>
+          <input type="email" id="newAdminEmail" placeholder="e.g. asad@emberandbrew.co" />
+        </label>
+      </div>
+
+      <div class="notice-info">
+        <i class="fa-solid fa-key" style="color:var(--gold);"></i>
+        <div>
+          <strong>Automatic Temporary Password</strong>
+          <p>A secure temporary password will be generated automatically and shown to you once upon creation. The admin must change it on first login.</p>
+        </div>
+      </div>
+
+      <p class="modal-error" id="createAdminError" hidden></p>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="cancelCreateAdminBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitCreateAdminBtn">
+          <i class="fa-solid fa-plus"></i> Create Admin Account
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL 8: Security Audit Trail Modal -->
+<div class="modal-overlay hidden" id="auditLogsModal">
+  <div class="modal-card" style="max-width: 920px;">
+    <div class="modal-head">
+      <div class="modal-title-wrap">
+        <h2><i class="fa-solid fa-shield-halved" style="color:var(--gold);"></i> Security Audit Trail</h2>
+        <p class="modal-subtitle">Immutable log of account creations, password resets, changes, suspensions, and reactivations.</p>
+      </div>
+      <button class="modal-close-btn" id="closeAuditLogsModal">&times;</button>
+    </div>
+
+    <div style="padding: 18px 24px; max-height: 70vh; overflow-y: auto;">
+      <div class="table-scroll">
+        <table class="data-table" id="auditLogsTable">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>Target Account</th>
+              <th>Restaurant / Branch</th>
+              <th>Performed By</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogsBody">
+            <tr><td colspan="6" class="empty-state">Loading audit history…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal-foot" style="padding: 14px 24px;">
+      <button type="button" class="btn-cancel" id="dismissAuditLogsBtn">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast Feedback Notification -->
 <div id="toastNotification" class="toast hidden"></div>
 
-<script src="superadmin.js?v=20240917_02"></script>
+<script src="superadmin.js?v=20240918_credentials"></script>
 </body>
 </html>
 

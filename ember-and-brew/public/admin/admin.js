@@ -9,6 +9,12 @@
   }
   const user = JSON.parse(localStorage.getItem('eb_admin_user') || '{"username":"Admin","role":"admin"}');
 
+  // Enforce temporary password change before access
+  if (user && user.mustChangePassword) {
+    window.location.href = '/admin/login';
+    return;
+  }
+
   // A superadmin has no home branch of their own, so they can only open
   // this dashboard "as" a specific branch — reached by clicking into a
   // branch from /superadmin, which links here as /admin?branchId=<id>.

@@ -33,6 +33,7 @@ class ProfileScreen extends StatelessWidget {
                     child: ClipOval(
                       child: Image.asset(
                         'assets/images/app-logo.png',
+                        package: 'ember_and_brew_app',
                         fit: BoxFit.cover,
                       ),
                     ),

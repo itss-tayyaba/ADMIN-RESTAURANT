@@ -302,7 +302,7 @@ router.post('/', superAdminOnly, async (req, res) => {
     // Generate strong temporary password if not provided
     const tempPassword = adminPassword ? adminPassword.trim() : generateTempPassword(12);
 
-    // Create Owner User
+    // Create Owner User with temporary password & mustChangePassword flag
     const ownerUser = await AdminUser.create({
       username: finalUsername,
       password: tempPassword,
@@ -310,8 +310,26 @@ router.post('/', superAdminOnly, async (req, res) => {
       email: ownerEmail ? ownerEmail.trim().toLowerCase() : '',
       role: 'owner',
       tenantId: tenant._id,
-      branchId: branch._id
+      branchId: branch._id,
+      mustChangePassword: true,
+      passwordStatus: 'temporary',
+      lastPasswordChange: new Date(),
+      passwordChangedBy: 'Superadmin'
     });
+
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      action: 'account_created',
+      targetUserId: ownerUser._id,
+      targetUsername: ownerUser.username,
+      tenantId: tenant._id,
+      tenantName: tenant.name,
+      branchId: branch._id,
+      branchName: branch.name,
+      details: 'Restaurant tenant owner created by Superadmin with temporary password.',
+      performedBy: req.admin?.username || 'Superadmin',
+      performedByRole: 'superadmin'
+    }).catch(err => console.error('Audit log failed:', err.message));
 
     res.status(201).json({
       message: 'Restaurant tenant created successfully',
