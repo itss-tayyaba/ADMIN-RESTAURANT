@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Our Menu — Ember &amp; Brew</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
@@ -1139,6 +1139,56 @@ h1, h2, h3, h4, .serif {
     font-size: 12.5px !important;
     font-weight: 700 !important;
     border-radius: 14px !important;
+  }
+}
+
+/* Installed-app safe areas and compact phone controls. */
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-header {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+@media (max-width: 640px) {
+  .nav-header {
+    gap: 8px;
+  }
+  .nav-brand {
+    min-width: 0;
+  }
+  .nav-brand-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-actions {
+    gap: 6px;
+  }
+  .pwa-install-btn,
+  .branch-switcher {
+    display: none !important;
+  }
+  .btn-cart,
+  .mobile-nav-toggle {
+    flex: 0 0 36px;
+  }
+  .menu-hero {
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+  .menu-main-container {
+    padding-left: max(12px, env(safe-area-inset-left)) !important;
+    padding-right: max(12px, env(safe-area-inset-right)) !important;
+  }
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+  .nav-header {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .menu-main-container {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
   }
 }
 

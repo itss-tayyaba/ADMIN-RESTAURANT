@@ -528,3 +528,17 @@ input, select, textarea { font-family: inherit; }
   .date-pill { display: none; }
   .topbar h1 { font-size: 17px; }
 }
+
+body { padding-bottom: env(safe-area-inset-bottom); }
+@media (max-width: 768px) {
+  .topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .topbar-right { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .topbar-right .btn-primary { padding: 8px 11px; font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .topbar { align-items: center; }
+  .topbar h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right .btn-primary { width: 38px; height: 38px; padding: 0; gap: 0; font-size: 0; }
+  .topbar-right .btn-primary i { font-size: 14px; }
+  .content { padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
+}
