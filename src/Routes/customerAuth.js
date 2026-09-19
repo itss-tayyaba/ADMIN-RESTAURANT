@@ -147,20 +147,31 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    if (email) {
+    if (email && String(email).trim()) {
+      const cleanEmail = String(email).trim().toLowerCase();
       const existing = await Customer.findOne({
-        tenantId, email: email.toLowerCase()
+        $or: [
+          { tenantId, email: cleanEmail },
+          { tenantId: null, email: cleanEmail },
+          { tenantId: { $exists: false }, email: cleanEmail }
+        ]
       });
 
       if (existing) {
         return res.status(409).json({
-          error: 'An account with that email already exists.'
+          error: 'An account with that email already exists. Please sign in.'
         });
       }
     }
 
     const phoneCandidates = getPhoneVariations(cleanPhone);
-    const existingPhone = await Customer.findOne({ tenantId, phone: { $in: phoneCandidates } });
+    const existingPhone = await Customer.findOne({
+      $or: [
+        { tenantId, phone: { $in: phoneCandidates } },
+        { tenantId: null, phone: { $in: phoneCandidates } },
+        { tenantId: { $exists: false }, phone: { $in: phoneCandidates } }
+      ]
+    });
     if (existingPhone) {
       return res.status(409).json({
         error: 'An account with this phone number already exists. Please sign in.'
@@ -168,8 +179,8 @@ router.post('/register', async (req, res) => {
     }
 
     const customer = new Customer({
-      name,
-      email: email || '',
+      name: name.trim(),
+      email: email && String(email).trim() ? String(email).trim().toLowerCase() : undefined,
       phone: cleanPhone,
       tenantId,
       password
@@ -185,16 +196,38 @@ router.post('/register', async (req, res) => {
       customer: {
         id: customer._id,
         name: customer.name,
-        email: customer.email,
+        email: customer.email || '',
         phone: customer.phone
       }
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Customer registration error:', err);
+
+    if (err.code === 11000) {
+      const keyStr = JSON.stringify(err.keyPattern || err.keyValue || {});
+      if (keyStr.includes('email') || err.message?.includes('email')) {
+        return res.status(409).json({
+          error: 'An account with that email already exists. Please sign in.'
+        });
+      }
+      if (keyStr.includes('phone') || err.message?.includes('phone')) {
+        return res.status(409).json({
+          error: 'An account with this phone number already exists. Please sign in.'
+        });
+      }
+      return res.status(409).json({
+        error: 'An account with these details already exists. Please sign in.'
+      });
+    }
+
+    if (err.name === 'ValidationError') {
+      const firstMsg = Object.values(err.errors || {})[0]?.message || 'Invalid customer details.';
+      return res.status(400).json({ error: firstMsg });
+    }
 
     res.status(500).json({
-      error: 'Could not create account.'
+      error: 'Could not create account. Please try again.'
     });
   }
 });
@@ -214,10 +247,22 @@ router.post('/login', async (req, res) => {
     const cleanId = String(identifier || '').trim();
     let query;
     if (cleanId.includes('@')) {
-      query = { tenantId, email: cleanId.toLowerCase() };
+      query = {
+        $or: [
+          { tenantId, email: cleanId.toLowerCase() },
+          { tenantId: null, email: cleanId.toLowerCase() },
+          { tenantId: { $exists: false }, email: cleanId.toLowerCase() }
+        ]
+      };
     } else {
       const phoneVars = getPhoneVariations(cleanId);
-      query = { tenantId, phone: { $in: phoneVars } };
+      query = {
+        $or: [
+          { tenantId, phone: { $in: phoneVars } },
+          { tenantId: null, phone: { $in: phoneVars } },
+          { tenantId: { $exists: false }, phone: { $in: phoneVars } }
+        ]
+      };
     }
 
     const customer = await Customer.findOne(query);
@@ -236,6 +281,12 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Auto-migrate legacy accounts to the default tenant on login
+    if (!customer.tenantId && tenantId) {
+      customer.tenantId = tenantId;
+      await customer.save().catch(e => console.warn('Could not backfill tenantId on login:', e));
+    }
+
     await claimGuestOrders(customer);
 
     const token = signCustomerToken(customer);
@@ -245,13 +296,13 @@ router.post('/login', async (req, res) => {
       customer: {
         id: customer._id,
         name: customer.name,
-        email: customer.email,
+        email: customer.email || '',
         phone: customer.phone
       }
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Customer login error:', err);
 
     res.status(500).json({
       error: 'Login failed.'

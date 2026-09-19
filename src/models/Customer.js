@@ -4,7 +4,13 @@ const bcrypt = require('bcryptjs');
 const customerSchema = new mongoose.Schema({
   tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', default: null, index: true },
   name: { type: String, required: true, trim: true },
-  email: { type: String, trim: true, lowercase: true, default: '' },
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: undefined,
+    set: v => (v && typeof v === 'string' && v.trim() ? v.trim().toLowerCase() : undefined)
+  },
   branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null, index: true },
   phone: {
     type: String,
@@ -15,7 +21,13 @@ const customerSchema = new mongoose.Schema({
   password: { type: String, required: true }
 }, { timestamps: true });
 
-customerSchema.index({ tenantId: 1, email: 1 }, { unique: true, sparse: true });
+customerSchema.index(
+  { tenantId: 1, email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { email: { $type: 'string' } }
+  }
+);
 customerSchema.index({ tenantId: 1, phone: 1 });
 
 customerSchema.pre('save', async function () {

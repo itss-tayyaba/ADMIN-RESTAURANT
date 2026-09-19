@@ -8,6 +8,7 @@
     "restore:menu": "node scripts/restoreDefaultMenu.js",
     "backfill:branch-data": "node scripts/backfillBranchData.js",
     "migrate:tenant-users": "node scripts/migrateAdminUserTenantIndex.js",
+    "migrate:customer-tenant-index": "node scripts/migrateCustomerTenantIndex.js",
     "seed:london": "node scripts/seedLondonBranch.js",
     "seed:australia": "node scripts/seedAustraliaBranch.js",
     "merge:london-into-uk": "node scripts/mergeLondonIntoUk.js"
