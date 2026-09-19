@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="/pwa-engine.js"></script>
 <style>
 :root {
   --bg: #0F0E0C;
@@ -1200,11 +1201,34 @@ h1, h2, h3, h4, .serif {
 
 
 <style id="splash-styles">
-/* Standalone App Mode */
+/* Standalone & In-Browser App Mode */
+html.app-mode .page-footer,
+html.app-mode #main-footer,
+html.app-mode footer,
+html.app-mode #navInstallAppBtn,
+html.app-mode .pwa-install-btn,
+body.app-mode .page-footer,
+body.app-mode #main-footer,
+body.app-mode footer,
+body.app-mode #navInstallAppBtn,
+body.app-mode .pwa-install-btn,
 @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-  #navInstallAppBtn, #pwaInstallModal, .pwa-install-trigger {
+  .page-footer,
+  #main-footer,
+  footer,
+  #navInstallAppBtn,
+  .pwa-install-btn {
     display: none !important;
     visibility: hidden !important;
+  }
+}
+html.app-mode body,
+body.app-mode {
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+}
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  body {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -1457,8 +1481,8 @@ async function confirmNativeInstall() {
   <a href="/menu.html" class="active">Menu</a>
   <a href="/?view=reservation#reservation-section">Table Reservation</a>
   <a href="/?view=tracking">Track an Order</a>
-  <a href="/customer.html">Customer Portal</a>
-  <a href="#" onclick="triggerPwaInstall();return false;" style="color:#D4A853;"><i class="fa-solid fa-download" style="margin-right:8px;"></i>Download Ember &amp; Brew App</a>
+  <a href="#" onclick="triggerPwaInstall();return false;" class="pwa-install-btn" style="color:#D4A853;"><i class="fa-solid fa-download" style="margin-right:8px;"></i>Download Ember &amp; Brew App</a>
+  <a href="#" onclick="disableAppMode();toggleMenuMobileNav();return false;" class="eb-exit-app-btn" style="color:#8A8478;font-size:12px;display:none;"><i class="fa-solid fa-arrow-right-from-bracket" style="margin-right:8px;"></i>Switch to Web View (with footer)</a>
 </div>
 
 <script>

@@ -313,11 +313,34 @@ textarea.form-input{min-height:80px;resize:vertical}
 <link rel="icon" type="image/svg+xml" href="/images/icon.svg">
 
 <style id="splash-styles">
-/* Standalone App Mode */
+/* Standalone & In-Browser App Mode */
+html.app-mode #main-footer,
+html.app-mode .page-footer,
+html.app-mode footer,
+html.app-mode #navInstallAppBtn,
+html.app-mode .pwa-install-btn,
+body.app-mode #main-footer,
+body.app-mode .page-footer,
+body.app-mode footer,
+body.app-mode #navInstallAppBtn,
+body.app-mode .pwa-install-btn,
 @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-  #navInstallAppBtn, #pwaInstallModal, .pwa-install-trigger {
+  #main-footer,
+  .page-footer,
+  footer,
+  #navInstallAppBtn,
+  .pwa-install-btn {
     display: none !important;
     visibility: hidden !important;
+  }
+}
+html.app-mode body,
+body.app-mode {
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+}
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  body {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -838,6 +861,9 @@ async function confirmNativeInstall() {
     <a href="/customer.html" class="text-sm text-brand-300 hover:text-brand-100 py-2">Customer Portal</a>
     <button onclick="triggerPwaInstall();closeMobileNav()" class="pwa-install-btn flex items-center justify-center gap-2 bg-[#D4A853]/20 border border-[#D4A853]/50 text-[#D4A853] text-sm font-bold py-2.5 px-4 rounded-xl mt-1">
       <i class="fa-solid fa-mobile-screen-button"></i> Download App / Install
+    </button>
+    <button onclick="disableAppMode();closeMobileNav()" class="eb-exit-app-btn flex items-center justify-center gap-2 bg-brand-800/40 border border-brand-700 text-brand-300 hover:text-brand-100 text-xs font-semibold py-2 px-3 rounded-xl mt-1" style="display:none;">
+      <i class="fa-solid fa-arrow-right-from-bracket"></i> Switch to Web View (with footer)
     </button>
   </div>
 </div>
