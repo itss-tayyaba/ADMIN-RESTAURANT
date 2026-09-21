@@ -78,6 +78,55 @@ function injectAppModeStyles() {
       }
     }
 
+    /* Prevent Cart Drawer / Panel from sliding under App Bottom Nav */
+    html.app-mode #cart-panel,
+    body.app-mode #cart-panel,
+    html.app-mode aside[role="dialog"]#cart-panel,
+    body.app-mode aside[role="dialog"]#cart-panel {
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+      height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      max-height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
+    }
+    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+      #cart-panel {
+        bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+        height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
+        max-height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
+      }
+    }
+
+    html.app-mode #cart-footer,
+    body.app-mode #cart-footer {
+      padding-bottom: 24px !important;
+    }
+
+    /* Floating sticky cart bars sit comfortably above bottom nav bar */
+    html.app-mode #mobile-cart-bar,
+    body.app-mode #mobile-cart-bar,
+    html.app-mode .mobile-menu-cart-bar,
+    body.app-mode .mobile-menu-cart-bar {
+      bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+      #mobile-cart-bar,
+      .mobile-menu-cart-bar {
+        bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+    }
+
+    /* Modals & Dialogs (Dish Customization Sheet, Upsell, Auth) above Bottom Nav */
+    #dish3d-modal,
+    #upsell-modal,
+    #customer-auth-modal,
+    .modal-backdrop-wrap,
+    #ebAppBrandModal {
+      z-index: 10000005 !important;
+    }
+    html.app-mode .dish3d-dialog,
+    body.app-mode .dish3d-dialog {
+      margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
     /* Native App Bottom Tab Bar */
     #ebAppBottomNav {
       position: fixed;

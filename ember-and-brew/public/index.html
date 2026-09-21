@@ -48,6 +48,10 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 #cart-panel>*{flex-shrink:0}
 #cart-items{flex:1 1 auto;min-height:0;overflow-y:auto}
 #cart-panel.open{transform:translateX(0)}
+#cart-footer{padding-bottom:max(1.25rem,calc(1.25rem + env(safe-area-inset-bottom,0px)))}
+body.app-mode #cart-panel,html.app-mode #cart-panel{bottom:calc(60px + env(safe-area-inset-bottom,0px))!important;height:calc(100% - 60px - env(safe-area-inset-bottom,0px))!important;max-height:calc(100% - 60px - env(safe-area-inset-bottom,0px))!important}
+body.app-mode #cart-footer,html.app-mode #cart-footer{padding-bottom:24px!important}
+body.app-mode #mobile-cart-bar,html.app-mode #mobile-cart-bar{bottom:calc(70px + env(safe-area-inset-bottom,0px))!important}
 
 /* Menu card */
 .menu-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;perspective:1000px;transition:transform .3s,box-shadow .3s,border-color .3s}
@@ -91,7 +95,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 
 /* Dish detail popup — click a menu photo to open an item customization
    sheet (add-ons, quantity, live total) instead of the old 3D preview. */
-#dish3d-modal{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .22s ease}
+#dish3d-modal{position:fixed;inset:0;z-index:10000005;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .22s ease}
 #dish3d-modal.open{opacity:1;pointer-events:auto}
 .dish3d-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.76);backdrop-filter:blur(7px)}
 .dish3d-dialog{position:relative;width:min(480px,100%);max-height:calc(100vh - 32px);overflow:auto;background:linear-gradient(145deg,#24201a,#151310);border:1px solid rgba(212,168,83,.4);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.55);transform:translateY(12px) scale(.98);transition:transform .22s ease}
@@ -1728,9 +1732,9 @@ async function confirmNativeInstall() {
   </div>
   <div id="cart-items" class="flex-1 overflow-y-auto p-5"></div>
   <div id="cart-footer" class="border-t border-brand-800 p-5">
-    <div class="flex justify-between mb-1 text-sm"><span class="text-brand-300">Subtotal</span><span id="cart-subtotal" class="font-medium">$0.00</span></div>
-    <div class="flex justify-between mb-4 text-sm"><span class="text-brand-300">Tax (8%)</span><span id="cart-tax" class="font-medium">$0.00</span></div>
-    <div class="flex justify-between mb-5 font-bold"><span>Total</span><span id="cart-total" class="text-brand-400">$0.00</span></div>
+    <div class="flex justify-between mb-1 text-sm"><span class="text-brand-300">Subtotal</span><span id="cart-subtotal" class="font-medium">Rs 0</span></div>
+    <div class="flex justify-between mb-4 text-sm"><span class="text-brand-300">Tax (8%)</span><span id="cart-tax" class="font-medium">Rs 0</span></div>
+    <div class="flex justify-between mb-5 font-bold"><span>Total</span><span id="cart-total" class="text-brand-400">Rs 0</span></div>
     <button onclick="goToCheckout()" class="w-full bg-brand-400 text-brand-950 font-semibold py-3 rounded-xl hover:bg-brand-500 transition-colors text-sm">Checkout</button>
   </div>
 </aside>
@@ -2976,8 +2980,8 @@ function renderCartInto(containerId, footerId, subtotalId, taxId, totalId) {
   const sub = getCartSubtotal();
   const tax = sub * (branchState.info?.taxRate ?? 0.08);
   document.getElementById(subtotalId).textContent = formatMoney(sub);
-  document.getElementById(taxId).textContent = '$' + tax.toFixed(2);
-  document.getElementById(totalId).textContent = '$' + (sub + tax).toFixed(2);
+  document.getElementById(taxId).textContent = formatMoney(tax);
+  document.getElementById(totalId).textContent = formatMoney(sub + tax);
 }
 
 function renderCartItems() {
