@@ -52,6 +52,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-conic-gradien
 body.app-mode #cart-panel,html.app-mode #cart-panel{bottom:calc(60px + env(safe-area-inset-bottom,0px))!important;height:calc(100% - 60px - env(safe-area-inset-bottom,0px))!important;max-height:calc(100% - 60px - env(safe-area-inset-bottom,0px))!important}
 body.app-mode #cart-footer,html.app-mode #cart-footer{padding-bottom:24px!important}
 body.app-mode #mobile-cart-bar,html.app-mode #mobile-cart-bar{bottom:calc(70px + env(safe-area-inset-bottom,0px))!important}
+body.app-mode #toast-container,html.app-mode #toast-container{bottom:calc(72px + env(safe-area-inset-bottom,0px))!important;z-index:10000010!important}
 
 /* Menu card */
 .menu-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;perspective:1000px;transition:transform .3s,box-shadow .3s,border-color .3s}
@@ -4155,6 +4156,10 @@ async function handleCheckout(e) {
       price: cartLineUnitPrice(c)
     }));
 
+    const finalCustomerName = (state.customer?.name) || guestName || 'Customer';
+    const finalCustomerPhone = (state.customer?.phone) || guestPhone || '';
+    const finalCustomerEmail = (state.customer?.email) || guestEmail || '';
+
     const order = await apiFetch('/api/orders', {
       method: 'POST',
       headers: state.customerToken ? authHeaders(state.customerToken) : { 'Content-Type': 'application/json' },
@@ -4165,9 +4170,9 @@ async function handleCheckout(e) {
         deliveryLocation: orderType === 'delivery' ? deliveryLocation : null,
         region: orderType === 'delivery' ? region : '',
         notes,
-        guestName,
-        guestPhone,
-        guestEmail,
+        guestName: finalCustomerName,
+        guestPhone: finalCustomerPhone,
+        guestEmail: finalCustomerEmail,
         pushToken,
         tableNumber: orderType === 'dine-in' ? state.qrTable : null,
         paymentMethod: selectedPaymentMethod,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Order = require('../models/Order');
+const Customer = require('../models/Customer');
 const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
 const { isAdminRole, resolveBranchId } = require('../utils/branchScope');
@@ -65,11 +66,15 @@ router.post('/', async (req, res) => {
     const total = Math.round((subtotal + tax) * 100) / 100;
 
     let customerId = null;
+    let customerRecord = null;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
         customerId = decoded.id;
+        if (customerId) {
+          customerRecord = await Customer.findById(customerId).select('name phone email');
+        }
       } catch (_) {}
     }
 
@@ -77,6 +82,9 @@ router.post('/', async (req, res) => {
     const otp = orderType === 'delivery' ? generateOtp() : undefined;
 
     const safeMethod = paymentMethod || 'cash';
+    const finalCustomerName = guestName || customerRecord?.name || 'Customer';
+    const finalCustomerPhone = guestPhone || customerRecord?.phone || (orderType === 'dine-in' ? (tableNumber ? `Table ${tableNumber}` : 'Dine-in') : 'N/A');
+    const finalCustomerEmail = guestEmail || customerRecord?.email || '';
 
     const order = new Order({
       orderNumber,
@@ -88,9 +96,9 @@ router.post('/', async (req, res) => {
       subtotal,
       tax,
       total,
-      customerName: guestName || 'Customer',
-      customerPhone: guestPhone || '',
-      customerEmail: guestEmail || '',
+      customerName: finalCustomerName,
+      customerPhone: finalCustomerPhone,
+      customerEmail: finalCustomerEmail,
       pushTokens: pushToken ? [pushToken] : [],
       orderType: orderType || 'dine-in',
       tableNumber: tableNumber || '',

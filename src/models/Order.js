@@ -28,8 +28,8 @@ const orderSchema = new mongoose.Schema({
     default: 'pending_admin',
     index: true
   },
-  customerName: { type: String, required: true },
-  customerPhone: { type: String, required: true },
+  customerName: { type: String, default: 'Customer', trim: true },
+  customerPhone: { type: String, default: 'N/A', trim: true },
   customerEmail: { type: String, default: '', trim: true },
   pushTokens: { type: [String], default: [] },
   orderType: { type: String, enum: ['dine-in', 'takeaway', 'delivery'], default: 'dine-in' },

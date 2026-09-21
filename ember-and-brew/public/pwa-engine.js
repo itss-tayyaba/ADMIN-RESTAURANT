@@ -122,9 +122,13 @@ function injectAppModeStyles() {
     #ebAppBrandModal {
       z-index: 10000005 !important;
     }
-    html.app-mode .dish3d-dialog,
-    body.app-mode .dish3d-dialog {
-      margin-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    /* Toast notifications elevated above Bottom Nav */
+    html.app-mode #toast-container,
+    body.app-mode #toast-container,
+    html.app-mode #toast,
+    body.app-mode #toast {
+      bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+      z-index: 10000010 !important;
     }
 
     /* Native App Bottom Tab Bar */
