@@ -4,19 +4,19 @@ const paymentSchema = new mongoose.Schema({
   restaurantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
-    required: true,
+    default: null,
     index: true
   },
   tenantId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
-    required: true,
+    default: null,
     index: true
   },
   branchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch',
-    required: true,
+    default: null,
     index: true
   },
   orderId: {
@@ -56,6 +56,18 @@ const paymentSchema = new mongoose.Schema({
     type: String,
     enum: ['stripe', 'card', 'jazzcash', 'easypaisa', 'raast', 'bank-transfer', 'cod', 'cash'],
     required: true,
+    set: (v) => {
+      if (!v) return 'cash';
+      const s = String(v).toLowerCase().trim();
+      if (s.includes('stripe')) return 'stripe';
+      if (s.includes('card')) return 'card';
+      if (s.includes('jazz')) return 'jazzcash';
+      if (s.includes('easy')) return 'easypaisa';
+      if (s.includes('raast')) return 'raast';
+      if (s.includes('bank')) return 'bank-transfer';
+      if (s.includes('cod')) return 'cod';
+      return 'cash';
+    },
     index: true
   },
   provider: {

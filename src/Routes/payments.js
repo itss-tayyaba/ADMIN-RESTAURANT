@@ -73,27 +73,39 @@ async function upsertPaymentRecord({
   verifiedBy = '',
   notes = ''
 }) {
+  let updateData = null;
   try {
-    const tenantId = order.tenantId?._id || order.tenantId;
-    const branchId = order.branchId?._id || order.branchId;
-    const finalAmount = amount !== null ? amount : order.total;
-    const finalCurrency = currency || order.paymentDetails?.currency || order.tenantId?.currency || 'PKR';
+    let tenantId = toObjectId(order.tenantId?._id || order.tenantId);
+    if (!tenantId) {
+      const fallbackTenant = await Tenant.findOne();
+      if (fallbackTenant) tenantId = fallbackTenant._id;
+    }
 
-    const updateData = {
+    let branchId = toObjectId(order.branchId?._id || order.branchId);
+    if (!branchId && tenantId) {
+      const fallbackBranch = (await Branch.findOne({ tenantId, isActive: true })) || (await Branch.findOne({ tenantId }));
+      if (fallbackBranch) branchId = fallbackBranch._id;
+    }
+
+    const finalAmount = !isNaN(Number(amount)) && amount !== null ? Number(amount) : (Number(order.total) || 0);
+    const finalCurrency = currency || order.paymentDetails?.currency || order.tenantId?.currency || 'PKR';
+    const customerId = toObjectId(order.customer?._id || order.customer);
+
+    updateData = {
       restaurantId: tenantId,
       tenantId,
       branchId,
       orderId: order._id,
       orderNumber: order.orderNumber,
-      customerId: order.customer || null,
+      customerId: customerId || null,
       customerName: order.customerName || '',
       customerEmail: order.customerEmail || '',
       customerPhone: order.customerPhone || '',
-      paymentMethod,
-      provider,
+      paymentMethod: paymentMethod || order.paymentMethod || 'cash',
+      provider: provider || order.paymentDetails?.provider || 'cash',
       amount: finalAmount,
       currency: String(finalCurrency).toUpperCase(),
-      status: String(status).toUpperCase()
+      status: String(status || 'PENDING').toUpperCase()
     };
 
     if (transactionId) updateData.transactionId = transactionId;
@@ -109,11 +121,25 @@ async function upsertPaymentRecord({
     const payment = await Payment.findOneAndUpdate(
       { orderId: order._id },
       { $set: updateData },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     return payment;
   } catch (err) {
-    console.error('Error upserting payment record:', err.message);
+    console.error('Error upserting payment record:', err);
+    if (err.code === 11000 && idempotencyKey && updateData) {
+      try {
+        const updateWithoutKey = { ...updateData };
+        delete updateWithoutKey.idempotencyKey;
+        const fallbackPayment = await Payment.findOneAndUpdate(
+          { orderId: order._id },
+          { $set: updateWithoutKey },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        return fallbackPayment;
+      } catch (retryErr) {
+        console.error('Retry upsert payment record failed:', retryErr);
+      }
+    }
     return null;
   }
 }
