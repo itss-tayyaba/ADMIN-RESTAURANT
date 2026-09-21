@@ -728,16 +728,24 @@
             <span style="font-size:20px;">🌐</span>
             <div>
               <strong style="font-size:14px;color:var(--ink);display:block;">Gateway Callback &amp; IPN Endpoints</strong>
-              <span style="font-size:12px;color:var(--text-muted);">Paste these callback URLs into your JazzCash or Easypaisa Merchant Portals:</span>
+              <span style="font-size:12px;color:var(--text-muted);">Paste these callback URLs into your JazzCash, Easypaisa, and Stripe merchant portals so orders automatically update from PENDING to PAID:</span>
             </div>
           </div>
           <div class="webhook-row">
-            <div><strong>JazzCash IPN Webhook:</strong> <code id="wh_jazzcash_url">https://admin-restaurant-six.vercel.app/api/payments/ipn/jazzcash</code></div>
-            <button type="button" class="btn-copy" onclick="copyWebhookText('https://admin-restaurant-six.vercel.app/api/payments/ipn/jazzcash', this)">Copy URL</button>
+            <div><strong>JazzCash IPN / Callback URL:</strong> <code id="wh_jazzcash_url">https://admin-restaurant-six.vercel.app/api/payments/ipn/jazzcash</code></div>
+            <button type="button" class="btn-copy" onclick="copyWebhookText('wh_jazzcash_url', this)">Copy URL</button>
           </div>
           <div class="webhook-row">
-            <div><strong>Checkout Return URL:</strong> <code id="wh_return_url">https://admin-restaurant-six.vercel.app/customer</code></div>
-            <button type="button" class="btn-copy" onclick="copyWebhookText(window.location.origin + '/customer', this)">Copy URL</button>
+            <div><strong>Easypaisa IPN / Callback URL:</strong> <code id="wh_easypaisa_url">https://admin-restaurant-six.vercel.app/api/payments/ipn/easypaisa</code></div>
+            <button type="button" class="btn-copy" onclick="copyWebhookText('wh_easypaisa_url', this)">Copy URL</button>
+          </div>
+          <div class="webhook-row">
+            <div><strong>Stripe Webhook URL:</strong> <code id="wh_stripe_url">https://admin-restaurant-six.vercel.app/api/payments/stripe/webhook</code></div>
+            <button type="button" class="btn-copy" onclick="copyWebhookText('wh_stripe_url', this)">Copy URL</button>
+          </div>
+          <div class="webhook-row">
+            <div><strong>Customer Checkout Return URL:</strong> <code id="wh_return_url">https://admin-restaurant-six.vercel.app/customer</code></div>
+            <button type="button" class="btn-copy" onclick="copyWebhookText('wh_return_url', this)">Copy URL</button>
           </div>
         </div>
         </div> <!-- End of #paySubViewGateways -->

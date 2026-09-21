@@ -2287,6 +2287,10 @@
       // Populate Webhook URLs dynamically with current host
       const jcUrlEl = document.getElementById('wh_jazzcash_url');
       if (jcUrlEl) jcUrlEl.textContent = `${window.location.origin}/api/payments/ipn/jazzcash`;
+      const epUrlEl = document.getElementById('wh_easypaisa_url');
+      if (epUrlEl) epUrlEl.textContent = `${window.location.origin}/api/payments/ipn/easypaisa`;
+      const strUrlEl = document.getElementById('wh_stripe_url');
+      if (strUrlEl) strUrlEl.textContent = `${window.location.origin}/api/payments/stripe/webhook`;
       const retUrlEl = document.getElementById('wh_return_url');
       if (retUrlEl) retUrlEl.textContent = `${window.location.origin}/customer`;
     } catch (err) {

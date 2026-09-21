@@ -692,7 +692,7 @@ router.get('/stripe/return', async (req, res) => {
 });
 
 /**
- * 5. POST & GET /api/payments/jazzcash/callback
+ * 5. POST & GET /api/payments/jazzcash/callback AND /api/payments/ipn/jazzcash
  * Official JazzCash server callback / redirect IPN with HMAC check
  */
 async function handleJazzCashCallback(req, res) {
@@ -701,16 +701,29 @@ async function handleJazzCashCallback(req, res) {
     const orderId = data.ppmpf_1;
     const tenantId = data.ppmpf_2;
 
+    const isBrowserRequest = Boolean(
+      (req.headers.accept && req.headers.accept.includes('text/html')) ||
+      req.headers['sec-fetch-dest'] === 'document'
+    );
+
     let order = null;
     if (orderId) {
       order = await Order.findById(orderId).populate('tenantId').populate('branchId');
     }
     if (!order && data.pp_BillReference) {
-      order = await Order.findOne({ orderNumber: new RegExp(data.pp_BillReference, 'i') }).populate('tenantId').populate('branchId');
+      const billRef = data.pp_BillReference;
+      order = await Order.findOne({ orderNumber: new RegExp(billRef, 'i') }).populate('tenantId').populate('branchId');
+      if (!order && billRef.toUpperCase().startsWith('EB')) {
+        const withHyphen = 'EB-' + billRef.slice(2);
+        order = await Order.findOne({ orderNumber: new RegExp('^' + withHyphen + '$', 'i') }).populate('tenantId').populate('branchId');
+      }
     }
 
     if (!order) {
-      return res.status(404).send('Order not found for JazzCash payment notification.');
+      if (isBrowserRequest) {
+        return res.status(404).send('Order not found for JazzCash payment notification.');
+      }
+      return res.status(404).json({ error: 'Order not found for JazzCash payment notification.' });
     }
 
     const tenant = order.tenantId || (await Tenant.findById(tenantId));
@@ -748,7 +761,16 @@ async function handleJazzCashCallback(req, res) {
         notes: 'Verified via JazzCash IPN callback'
       });
 
-      return res.redirect(`${redirectPath}&payment=success`);
+      if (isBrowserRequest) {
+        return res.redirect(`${redirectPath}&payment=success`);
+      } else {
+        return res.status(200).json({
+          pp_ResponseCode: '000',
+          pp_ResponseMessage: 'Success',
+          orderNumber: order.orderNumber,
+          status: order.paymentStatus
+        });
+      }
     } else {
       order.paymentStatus = 'FAILED';
       order.paymentDetails = {
@@ -770,7 +792,16 @@ async function handleJazzCashCallback(req, res) {
         notes: result.responseMessage || 'JazzCash payment rejected'
       });
 
-      return res.redirect(`${redirectPath}&payment=failed&msg=${encodeURIComponent(result.responseMessage || 'Transaction failed')}`);
+      if (isBrowserRequest) {
+        return res.redirect(`${redirectPath}&payment=failed&msg=${encodeURIComponent(result.responseMessage || 'Transaction failed')}`);
+      } else {
+        return res.status(200).json({
+          pp_ResponseCode: result.responseCode || '999',
+          pp_ResponseMessage: result.responseMessage || 'JazzCash payment rejected',
+          orderNumber: order.orderNumber,
+          status: order.paymentStatus
+        });
+      }
     }
   } catch (err) {
     console.error('JazzCash callback error:', err);
@@ -780,9 +811,11 @@ async function handleJazzCashCallback(req, res) {
 
 router.post('/jazzcash/callback', handleJazzCashCallback);
 router.get('/jazzcash/callback', handleJazzCashCallback);
+router.post('/ipn/jazzcash', handleJazzCashCallback);
+router.get('/ipn/jazzcash', handleJazzCashCallback);
 
 /**
- * 6. POST & GET /api/payments/easypaisa/callback
+ * 6. POST & GET /api/payments/easypaisa/callback AND /api/payments/ipn/easypaisa
  * Official Easypaisa IPN / return callback
  */
 async function handleEasypaisaCallback(req, res) {
@@ -790,14 +823,29 @@ async function handleEasypaisaCallback(req, res) {
     const data = { ...req.query, ...req.body };
     const orderRef = data.orderRefNumber || data.orderRefNum;
 
+    const isBrowserRequest = Boolean(
+      (req.headers.accept && req.headers.accept.includes('text/html')) ||
+      req.headers['sec-fetch-dest'] === 'document'
+    );
+
     let order = null;
     if (orderRef) {
-      const cleanRef = orderRef.split('-').slice(0, 2).join('-');
-      order = await Order.findOne({ orderNumber: new RegExp(cleanRef, 'i') }).populate('tenantId').populate('branchId');
+      order = await Order.findOne({ orderNumber: new RegExp(orderRef, 'i') }).populate('tenantId').populate('branchId');
+      if (!order && orderRef.toUpperCase().startsWith('EB')) {
+        const withHyphen = 'EB-' + orderRef.slice(2);
+        order = await Order.findOne({ orderNumber: new RegExp('^' + withHyphen + '$', 'i') }).populate('tenantId').populate('branchId');
+      }
+      if (!order) {
+        const cleanRef = orderRef.split('-').slice(0, 2).join('-');
+        order = await Order.findOne({ orderNumber: new RegExp(cleanRef, 'i') }).populate('tenantId').populate('branchId');
+      }
     }
 
     if (!order) {
-      return res.status(404).send('Order not found for Easypaisa callback.');
+      if (isBrowserRequest) {
+        return res.status(404).send('Order not found for Easypaisa callback.');
+      }
+      return res.status(404).json({ error: 'Order not found for Easypaisa callback.' });
     }
 
     const tenant = order.tenantId;
@@ -834,7 +882,16 @@ async function handleEasypaisaCallback(req, res) {
         notes: 'Verified via Easypaisa callback'
       });
 
-      return res.redirect(`${redirectPath}&payment=success`);
+      if (isBrowserRequest) {
+        return res.redirect(`${redirectPath}&payment=success`);
+      } else {
+        return res.status(200).json({
+          responseCode: '0000',
+          message: 'Success',
+          orderNumber: order.orderNumber,
+          status: order.paymentStatus
+        });
+      }
     } else {
       order.paymentStatus = 'FAILED';
       order.paymentDetails = {
@@ -855,7 +912,16 @@ async function handleEasypaisaCallback(req, res) {
         notes: result.responseMessage || 'Easypaisa payment rejected'
       });
 
-      return res.redirect(`${redirectPath}&payment=failed`);
+      if (isBrowserRequest) {
+        return res.redirect(`${redirectPath}&payment=failed`);
+      } else {
+        return res.status(200).json({
+          responseCode: result.responseCode || '9999',
+          message: result.responseMessage || 'Easypaisa payment rejected',
+          orderNumber: order.orderNumber,
+          status: order.paymentStatus
+        });
+      }
     }
   } catch (err) {
     console.error('Easypaisa callback error:', err);
@@ -865,6 +931,8 @@ async function handleEasypaisaCallback(req, res) {
 
 router.post('/easypaisa/callback', handleEasypaisaCallback);
 router.get('/easypaisa/callback', handleEasypaisaCallback);
+router.post('/ipn/easypaisa', handleEasypaisaCallback);
+router.get('/ipn/easypaisa', handleEasypaisaCallback);
 
 /**
  * 7. PUT /api/payments/orders/:id/verify-manual
