@@ -181,11 +181,11 @@ router.post('/initiate', async (req, res) => {
     const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
     const baseUrl = `${protocol}://${host}`;
 
+    const branchCode = order.branchId?.code || 'default';
+
     // A. JazzCash Hosted Checkout
     if (paymentMethod === 'jazzcash') {
-      const callbackUrl = returnUrl || `${baseUrl}/api/payments/jazzcash/callback`;
-      const payload = paymentService.generateJazzCashPayload(order, tenant, callbackUrl);
-
+      const creds = paymentService.getTenantCredentials(tenant, 'jazzcash');
       order.paymentMethod = 'jazzcash';
       order.paymentStatus = 'PROCESSING';
       order.paymentDetails = {
@@ -196,13 +196,33 @@ router.post('/initiate', async (req, res) => {
       };
       await order.save();
 
+      // If in sandbox mode, use the interactive simulation gateway to avoid F5 WAF blocking
+      if (creds.mode === 'sandbox') {
+        await upsertPaymentRecord({
+          order,
+          paymentMethod: 'jazzcash',
+          provider: 'jazzcash',
+          status: 'PROCESSING',
+          notes: 'Redirecting to JazzCash Sandbox Simulator'
+        });
+
+        return res.json({
+          type: 'redirect',
+          redirectUrl: `/sandbox-payment.html?orderId=${order._id}&orderNumber=${order.orderNumber}&provider=jazzcash&amount=${order.total}&branchCode=${branchCode}`
+        });
+      }
+
+      // Live mode
+      const callbackUrl = `${baseUrl}/api/payments/jazzcash/callback`;
+      const payload = paymentService.generateJazzCashPayload(order, tenant, callbackUrl);
+
       await upsertPaymentRecord({
         order,
         paymentMethod: 'jazzcash',
         provider: 'jazzcash',
         status: 'PROCESSING',
         transactionId: payload.txnRefNo,
-        notes: 'JazzCash payment form generated'
+        notes: 'JazzCash live payment form generated'
       });
 
       return res.json({
@@ -217,9 +237,7 @@ router.post('/initiate', async (req, res) => {
 
     // B. Easypaisa Hosted Checkout
     if (paymentMethod === 'easypaisa') {
-      const callbackUrl = returnUrl || `${baseUrl}/api/payments/easypaisa/callback`;
-      const payload = paymentService.generateEasypaisaPayload(order, tenant, callbackUrl);
-
+      const creds = paymentService.getTenantCredentials(tenant, 'easypaisa');
       order.paymentMethod = 'easypaisa';
       order.paymentStatus = 'PROCESSING';
       order.paymentDetails = {
@@ -230,13 +248,33 @@ router.post('/initiate', async (req, res) => {
       };
       await order.save();
 
+      // If in sandbox mode, use the interactive simulation gateway
+      if (creds.mode === 'sandbox') {
+        await upsertPaymentRecord({
+          order,
+          paymentMethod: 'easypaisa',
+          provider: 'easypaisa',
+          status: 'PROCESSING',
+          notes: 'Redirecting to Easypaisa Sandbox Simulator'
+        });
+
+        return res.json({
+          type: 'redirect',
+          redirectUrl: `/sandbox-payment.html?orderId=${order._id}&orderNumber=${order.orderNumber}&provider=easypaisa&amount=${order.total}&branchCode=${branchCode}`
+        });
+      }
+
+      // Live mode
+      const callbackUrl = `${baseUrl}/api/payments/easypaisa/callback`;
+      const payload = paymentService.generateEasypaisaPayload(order, tenant, callbackUrl);
+
       await upsertPaymentRecord({
         order,
         paymentMethod: 'easypaisa',
         provider: 'easypaisa',
         status: 'PROCESSING',
         transactionId: payload.orderRefNum,
-        notes: 'Easypaisa payment form generated'
+        notes: 'Easypaisa live payment form generated'
       });
 
       return res.json({
@@ -352,6 +390,84 @@ router.post('/initiate', async (req, res) => {
   } catch (err) {
     console.error('Payment initiation error:', err);
     res.status(500).json({ error: err.message || 'Payment initiation failed' });
+  }
+});
+
+/**
+ * 2b. POST /api/payments/sandbox-complete
+ * Handles sandbox simulation actions (approval / failure) for JazzCash and Easypaisa
+ */
+router.post('/sandbox-complete', async (req, res) => {
+  try {
+    const { orderId, provider, action } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'orderId is required' });
+    }
+
+    const order = await Order.findById(orderId).populate('tenantId').populate('branchId');
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const branchCode = order.branchId?.code || 'default';
+    const redirectPath = `/order/${branchCode}?orderNumber=${order.orderNumber}`;
+
+    if (action === 'success') {
+      const txnId = `${(provider || 'JC').toUpperCase()}-TEST-${Date.now()}`;
+      order.paymentStatus = 'PAID';
+      order.transactionId = txnId;
+      order.paymentDetails = {
+        provider: provider || 'jazzcash',
+        amountPaid: order.total,
+        currency: 'PKR',
+        paidAt: new Date(),
+        referenceId: txnId,
+        rawResponse: { mode: 'sandbox', simulated: true, action: 'approved' }
+      };
+      await order.save();
+      emitOrderUpdate(req, order);
+
+      await upsertPaymentRecord({
+        order,
+        paymentMethod: provider || 'jazzcash',
+        provider: provider || 'jazzcash',
+        transactionId: txnId,
+        status: 'PAID',
+        amount: order.total,
+        currency: 'PKR',
+        paidAt: new Date(),
+        notes: `Simulated ${provider} sandbox payment approved`
+      });
+
+      return res.json({
+        success: true,
+        redirectUrl: `${redirectPath}&payment=success`
+      });
+    } else {
+      order.paymentStatus = 'FAILED';
+      order.paymentDetails = {
+        provider: provider || 'jazzcash',
+        failureReason: 'Customer cancelled or simulated transaction decline in sandbox'
+      };
+      await order.save();
+      emitOrderUpdate(req, order);
+
+      await upsertPaymentRecord({
+        order,
+        paymentMethod: provider || 'jazzcash',
+        provider: provider || 'jazzcash',
+        status: 'FAILED',
+        notes: `Simulated ${provider} sandbox payment failed/cancelled`
+      });
+
+      return res.json({
+        success: false,
+        redirectUrl: `${redirectPath}&payment=failed`
+      });
+    }
+  } catch (err) {
+    console.error('sandbox-complete error:', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
   }
 });
 

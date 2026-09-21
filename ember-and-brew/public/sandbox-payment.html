@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sandbox Payment Portal — Ember &amp; Brew</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0F0E0C;
+      --surface: #1A1917;
+      --border: #2E2C28;
+      --gold: #D4A853;
+      --gold-light: #F5F0E8;
+      --text: #F5F0E8;
+      --text-muted: #8A8478;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0F0E0C;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .payment-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 24px;
+      max-width: 440px;
+      width: 100%;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    .sandbox-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(212, 168, 83, 0.12);
+      border: 1px solid rgba(212, 168, 83, 0.35);
+      color: var(--gold);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .provider-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .provider-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .provider-icon.jazzcash {
+      background: rgba(220, 38, 38, 0.15);
+      color: #EF4444;
+      border: 1px solid rgba(220, 38, 38, 0.3);
+    }
+    .provider-icon.easypaisa {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10B981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .order-summary-box {
+      background: #0F0E0C;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .summary-row:last-child {
+      margin-bottom: 0;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      background: #151412;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus {
+      border-color: var(--gold);
+    }
+    .btn-pay {
+      width: 100%;
+      background: linear-gradient(135deg, #D4A853, #C4923A);
+      color: #0F0E0C;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      margin-bottom: 10px;
+    }
+    .btn-pay:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .btn-pay:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-fail {
+      width: 100%;
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      color: #EF4444;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: background 0.2s;
+    }
+    .btn-fail:hover {
+      background: rgba(220, 38, 38, 0.2);
+    }
+    .btn-cancel {
+      display: block;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="payment-card">
+    <div class="sandbox-badge">
+      <i class="fa-solid fa-flask"></i> Sandbox Test Mode
+    </div>
+
+    <div class="provider-header">
+      <div id="providerIcon" class="provider-icon jazzcash">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
+      <div>
+        <h2 id="providerTitle" style="font-family:'Playfair Display',serif;font-size:20px;color:#F5F0E8;">JazzCash Gateway</h2>
+        <p style="font-size:12px;color:var(--text-muted);">Ember &amp; Brew Café · Official Checkout</p>
+      </div>
+    </div>
+
+    <div class="order-summary-box">
+      <div class="summary-row">
+        <span style="color:var(--text-muted);">Order Number:</span>
+        <span id="summaryOrderNo" style="font-family:monospace;font-weight:700;color:var(--gold);">#ORD-1001</span>
+      </div>
+      <div class="summary-row">
+        <span style="color:var(--text-muted);">Payment Method:</span>
+        <span id="summaryProvider" style="text-transform:capitalize;">JazzCash</span>
+      </div>
+      <div class="summary-row">
+        <span>Total Payable:</span>
+        <span id="summaryAmount" style="color:var(--gold);">Rs 0.00</span>
+      </div>
+    </div>
+
+    <form id="sandboxPayForm" onsubmit="submitSandboxPayment(event, 'success')">
+      <div class="form-group">
+        <label id="phoneLabel">JazzCash Mobile Account Number</label>
+        <input type="text" id="phoneInput" class="form-input" placeholder="e.g. 03001234567" value="03001234567" required>
+      </div>
+
+      <div class="form-group">
+        <label>Account MPIN (Simulation)</label>
+        <input type="password" class="form-input" placeholder="••••" value="1234" maxlength="6" required>
+      </div>
+
+      <button type="submit" id="btnSubmit" class="btn-pay">
+        <i class="fa-solid fa-lock"></i>
+        <span id="btnPayText">Authorize &amp; Pay</span>
+      </button>
+
+      <button type="button" class="btn-fail" onclick="submitSandboxPayment(event, 'fail')">
+        Simulate Transaction Failure
+      </button>
+
+      <button type="button" class="btn-cancel" onclick="cancelPayment()">
+        Cancel and return to order
+      </button>
+    </form>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('orderId') || '';
+    const orderNumber = params.get('orderNumber') || 'N/A';
+    const provider = (params.get('provider') || 'jazzcash').toLowerCase();
+    const amount = Number(params.get('amount') || 0);
+    const branchCode = params.get('branchCode') || 'default';
+
+    document.getElementById('summaryOrderNo').textContent = '#' + orderNumber;
+    document.getElementById('summaryProvider').textContent = provider === 'easypaisa' ? 'Easypaisa' : 'JazzCash';
+    document.getElementById('summaryAmount').textContent = 'Rs ' + amount.toFixed(2);
+    document.getElementById('btnPayText').textContent = `Authorize & Pay Rs ${amount.toFixed(2)}`;
+
+    const iconEl = document.getElementById('providerIcon');
+    const titleEl = document.getElementById('providerTitle');
+    const phoneLabel = document.getElementById('phoneLabel');
+
+    if (provider === 'easypaisa') {
+      iconEl.className = 'provider-icon easypaisa';
+      iconEl.innerHTML = '<i class="fa-solid fa-mobile-screen-button"></i>';
+      titleEl.textContent = 'Easypaisa Gateway';
+      phoneLabel.textContent = 'Easypaisa Mobile Account Number';
+    } else {
+      iconEl.className = 'provider-icon jazzcash';
+      iconEl.innerHTML = '<i class="fa-solid fa-bolt"></i>';
+      titleEl.textContent = 'JazzCash Gateway';
+      phoneLabel.textContent = 'JazzCash Mobile Account Number';
+    }
+
+    async function submitSandboxPayment(e, action) {
+      if (e && e.preventDefault) e.preventDefault();
+      const btn = document.getElementById('btnSubmit');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Transaction…';
+
+      try {
+        const res = await fetch('/api/payments/sandbox-complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            provider,
+            action
+          })
+        });
+
+        const data = await res.json();
+        if (data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+        } else {
+          window.location.href = `/order/${branchCode}?orderNumber=${encodeURIComponent(orderNumber)}&payment=${action === 'success' ? 'success' : 'failed'}`;
+        }
+      } catch (err) {
+        alert('Payment simulation error: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-lock"></i> Authorize &amp; Pay';
+      }
+    }
+
+    function cancelPayment() {
+      submitSandboxPayment(null, 'fail');
+    }
+  </script>
+</body>
+</html>

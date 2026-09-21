@@ -241,6 +241,12 @@ function generateJazzCashPayload(order, tenant, returnUrl) {
   // Safe alphanumeric txn ref (max 20 chars)
   const txnRef = `T${Date.now()}${Math.floor(100 + Math.random() * 900)}`;
 
+  // Sanitize pp_Description to alphanumeric and spaces only to satisfy JazzCash F5 BIG-IP WAF
+  const cleanTenantName = (tenant?.name || 'Restaurant').replace(/&/g, 'and').replace(/[^a-zA-Z0-9 ]/g, ' ');
+  const cleanDesc = `Order ${order.orderNumber} ${cleanTenantName}`.replace(/\s+/g, ' ').trim().slice(0, 50);
+  const cleanBillRef = order.orderNumber.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+  const cleanReturnUrl = returnUrl && returnUrl.includes('?') ? returnUrl.split('?')[0] : returnUrl;
+
   const params = {
     pp_Version: '1.1',
     pp_TxnType: 'MPAY',
@@ -251,10 +257,10 @@ function generateJazzCashPayload(order, tenant, returnUrl) {
     pp_Amount: amountInPaisas,
     pp_TxnCurrency: 'PKR',
     pp_TxnDateTime: formatJazzCashDateTime(now),
-    pp_BillReference: order.orderNumber.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20),
-    pp_Description: `Order ${order.orderNumber} - ${tenant?.name || 'Restaurant'}`.slice(0, 50),
+    pp_BillReference: cleanBillRef,
+    pp_Description: cleanDesc,
     pp_TxnExpiryDateTime: formatJazzCashDateTime(expiry),
-    pp_ReturnURL: returnUrl,
+    pp_ReturnURL: cleanReturnUrl,
     ppmpf_1: order._id.toString(), // Pass order ID safely in merchant user fields
     ppmpf_2: tenant?._id ? tenant._id.toString() : ''
   };
@@ -317,17 +323,17 @@ function generateEasypaisaPayload(order, tenant, returnUrl) {
       : 'https://easypaystg.easypaisa.com.pk/easypay/Index.jsf';
 
   const expiry = new Date(Date.now() + 60 * 60 * 1000);
-  const amountStr = order.total.toFixed(1);
-  const orderRefNum = `${order.orderNumber}-${Date.now().toString().slice(-4)}`;
+  const cleanPostBackUrl = returnUrl && returnUrl.includes('?') ? returnUrl.split('?')[0] : returnUrl;
+  const orderRefNum = order.orderNumber.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
 
   // Easypaisa standard hash signature
-  const hashString = `${amountStr}&${orderRefNum}&${returnUrl}&${creds.storeId}&${formatEasypaisaDateTime(expiry)}`;
+  const hashString = `${amountStr}&${orderRefNum}&${cleanPostBackUrl}&${creds.storeId}&${formatEasypaisaDateTime(expiry)}`;
   const hash = crypto.createHmac('sha256', creds.hashKey).update(hashString).digest('hex');
 
   const fields = {
     storeId: creds.storeId,
     amount: amountStr,
-    postBackURL: returnUrl,
+    postBackURL: cleanPostBackUrl,
     orderRefNum: orderRefNum,
     expiryDate: formatEasypaisaDateTime(expiry),
     merchantHashedReq: hash,
