@@ -6,7 +6,7 @@
 <title>Admin Dashboard — Ember & Brew</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin.css?v=payments-revamp-v1">
+<link rel="stylesheet" href="admin.css?v=fintech-revamp-v3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
@@ -334,115 +334,140 @@
 
       <!-- PAYMENTS VIEW -->
       <div class="view" id="view-payments" hidden>
-        <div class="view-head" style="margin-bottom:18px;">
-          <div>
-            <p style="margin:0; font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:var(--ink);">Payments &amp; Revenue Management</p>
-            <p style="margin:4px 0 0; font-size:13px; color:var(--text-muted);">Real-time payment transactions ledger, verified handoffs, automated refunds, and gateway credentials.</p>
+        <!-- Header & Segmented Subtab Navigation -->
+        <div class="pay-hub-header">
+          <div class="pay-hub-title-wrap">
+            <h2 class="pay-hub-title"><span>💳</span> Payments &amp; Revenue Hub</h2>
+            <p class="pay-hub-sub">Real-time payment ledger, multi-gateway configurations, verified settlements, and automated refunds.</p>
           </div>
-          <div id="payGatewaysActionWrap" style="display:none;gap:10px;align-items:center;">
-            <button class="btn-primary" id="savePaymentSettingsBtn" style="display:inline-flex;align-items:center;gap:8px;padding:11px 24px;font-size:13.5px;font-weight:700;box-shadow:0 6px 18px rgba(196,146,58,0.35);">
-              <span>💾</span> Save Payment Settings
-            </button>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div class="pay-segmented-nav">
+              <button type="button" class="pay-tab-btn active" id="paySubTabTransactions">
+                <span>📊</span> Transactions Ledger
+                <span class="tab-badge" id="payTxBadge">Live</span>
+              </button>
+              <button type="button" class="pay-tab-btn" id="paySubTabGateways">
+                <span>⚙️</span> Gateway Credentials
+              </button>
+            </div>
+            <div id="payGatewaysActionWrap" style="display:none;align-items:center;">
+              <button type="button" class="btn-primary" id="savePaymentSettingsBtn" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(196,146,58,0.35);">
+                <span>💾</span> Save Settings
+              </button>
+            </div>
           </div>
-        </div>
-
-        <!-- Payment Subtabs Navigation -->
-        <div class="payment-subtabs-bar" style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;">
-          <button type="button" class="btn-subtab active" id="paySubTabTransactions" style="display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;border:1px solid var(--border);background:var(--ink);color:#fff;cursor:pointer;">
-            <span>📊</span> Transactions &amp; Revenue
-          </button>
-          <button type="button" class="btn-subtab" id="paySubTabGateways" style="display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--paper-2);color:var(--text);cursor:pointer;">
-            <span>⚙️</span> Gateway Credentials
-          </button>
         </div>
 
         <!-- 1. TRANSACTIONS & REVENUE SUB-VIEW -->
         <div id="paySubViewTransactions">
-          <div class="stat-grid" style="margin-bottom:22px;">
-            <div class="stat-card gold">
-              <div class="label">Total Revenue</div>
-              <div class="value" id="payStatRevenue">Rs 0.00</div>
-              <div class="sub" id="payStatRevenueSub">Paid orders</div>
+          <div class="pay-metrics-grid">
+            <div class="pay-metric-card gold">
+              <div class="pay-metric-head">
+                <span class="pay-metric-label">Total Net Revenue</span>
+                <span class="pay-metric-icon">💰</span>
+              </div>
+              <div class="pay-metric-value" id="payStatRevenue">Rs 0.00</div>
+              <div class="pay-metric-sub">
+                <span>●</span>
+                <span id="payStatRevenueSub">0 completed orders</span>
+              </div>
             </div>
-            <div class="stat-card sage">
-              <div class="label">Paid Payments</div>
-              <div class="value" id="payStatPaid">0</div>
-              <div class="sub">Completed &amp; verified</div>
+            <div class="pay-metric-card sage">
+              <div class="pay-metric-head">
+                <span class="pay-metric-label">Paid &amp; Settled</span>
+                <span class="pay-metric-icon">✓</span>
+              </div>
+              <div class="pay-metric-value" id="payStatPaid">0</div>
+              <div class="pay-metric-sub">
+                <span>●</span>
+                <span>Instant gateway &amp; verified</span>
+              </div>
             </div>
-            <div class="stat-card ember">
-              <div class="label">Pending Payments</div>
-              <div class="value" id="payStatPending">0</div>
-              <div class="sub">Awaiting confirmation</div>
+            <div class="pay-metric-card amber">
+              <div class="pay-metric-head">
+                <span class="pay-metric-label">Pending Review</span>
+                <span class="pay-metric-icon">⏳</span>
+              </div>
+              <div class="pay-metric-value" id="payStatPending">0</div>
+              <div class="pay-metric-sub">
+                <span>●</span>
+                <span>Awaiting bank/slip approval</span>
+              </div>
             </div>
-            <div class="stat-card" style="background:#FFF5F3;border:1px solid #F5C2B8;">
-              <div class="label" style="color:#B33927;">Failed Payments</div>
-              <div class="value" id="payStatFailed" style="color:#B33927;">0</div>
-              <div class="sub">Declined / Expired</div>
+            <div class="pay-metric-card indigo">
+              <div class="pay-metric-head">
+                <span class="pay-metric-label">Total Refunded</span>
+                <span class="pay-metric-icon">↩</span>
+              </div>
+              <div class="pay-metric-value" id="payStatRefunds">Rs 0.00</div>
+              <div class="pay-metric-sub">
+                <span>●</span>
+                <span id="payStatRefundCount">0 refunded</span>
+              </div>
             </div>
-            <div class="stat-card" style="background:#F0F4FA;border:1px solid #D2E0F2;">
-              <div class="label" style="color:#2E62A6;">Refunds</div>
-              <div class="value" id="payStatRefunds" style="color:#2E62A6;">Rs 0.00</div>
-              <div class="sub" id="payStatRefundCount">0 refunded</div>
-            </div>
+            <!-- Keep hidden failed counter element for script compatibility -->
+            <span id="payStatFailed" hidden>0</span>
           </div>
 
-          <!-- Filter Toolbar -->
-          <div class="panel" style="margin-bottom:24px;">
-            <div class="panel-head" style="flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-right:4px;">Method:</span>
-                <button type="button" class="pay-filter-pill active" data-pay-method="all">All</button>
-                <button type="button" class="pay-filter-pill" data-pay-method="stripe">Stripe</button>
-                <button type="button" class="pay-filter-pill" data-pay-method="jazzcash">JazzCash</button>
-                <button type="button" class="pay-filter-pill" data-pay-method="easypaisa">Easypaisa</button>
-                <button type="button" class="pay-filter-pill" data-pay-method="raast">Raast</button>
-                <button type="button" class="pay-filter-pill" data-pay-method="cod">COD</button>
+          <!-- Filter Toolbar & Table Container -->
+          <div class="pay-panel">
+            <div class="pay-toolbar-filters">
+              <div class="pay-filter-group">
+                <span class="pay-filter-title">Method:</span>
+                <button type="button" class="pay-chip active" data-pay-method="all">All</button>
+                <button type="button" class="pay-chip" data-pay-method="stripe">Stripe</button>
+                <button type="button" class="pay-chip" data-pay-method="jazzcash">JazzCash</button>
+                <button type="button" class="pay-chip" data-pay-method="easypaisa">Easypaisa</button>
+                <button type="button" class="pay-chip" data-pay-method="raast">Raast</button>
+                <button type="button" class="pay-chip" data-pay-method="banktransfer">Bank Transfer</button>
+                <button type="button" class="pay-chip" data-pay-method="cod">COD</button>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-right:4px;">Status:</span>
-                <button type="button" class="pay-status-pill active" data-pay-status="all">All</button>
-                <button type="button" class="pay-status-pill" data-pay-status="PAID">Paid</button>
-                <button type="button" class="pay-status-pill" data-pay-status="PENDING">Pending</button>
-                <button type="button" class="pay-status-pill" data-pay-status="FAILED">Failed</button>
-                <button type="button" class="pay-status-pill" data-pay-status="REFUNDED">Refunded</button>
+              <div class="pay-filter-group">
+                <span class="pay-filter-title">Status:</span>
+                <button type="button" class="pay-chip active" data-pay-status="all">All</button>
+                <button type="button" class="pay-chip" data-pay-status="PAID">Paid</button>
+                <button type="button" class="pay-chip" data-pay-status="PENDING">Pending</button>
+                <button type="button" class="pay-chip" data-pay-status="FAILED">Failed</button>
+                <button type="button" class="pay-chip" data-pay-status="REFUNDED">Refunded</button>
               </div>
             </div>
-            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-              <div style="position:relative;flex:1;min-width:240px;">
-                <input type="text" id="paySearchInput" placeholder="Search by Order #, Transaction ID, customer name or phone…" style="width:100%;padding:9px 12px 9px 34px;border-radius:8px;border:1px solid var(--border);background:var(--paper);font-size:13px;color:var(--text);" />
-                <span style="position:absolute;left:11px;top:9px;color:var(--text-muted);">🔍</span>
+
+            <div class="pay-toolbar-search">
+              <div class="pay-search-box">
+                <span class="pay-search-icon">🔍</span>
+                <input type="text" id="paySearchInput" placeholder="Search by Order #, Transaction ID, customer name or phone…" autocomplete="off" />
               </div>
-              <button type="button" class="btn-ghost" id="payRefreshBtn" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;font-size:12.5px;font-weight:600;">
+              <button type="button" class="btn-ghost" id="payRefreshBtn" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;font-size:13px;font-weight:600;border-radius:8px;">
                 <span>🔄</span> Refresh
               </button>
             </div>
 
             <!-- Table -->
             <div class="table-scroll">
-              <table class="data-table">
+              <table class="pay-data-table">
                 <thead>
                   <tr>
                     <th>Method</th>
-                    <th>Order</th>
+                    <th>Order #</th>
                     <th>Customer</th>
                     <th>Amount</th>
                     <th>Transaction ID</th>
                     <th>Date &amp; Time</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th style="text-align:right;">Actions</th>
                   </tr>
                 </thead>
-                <tbody id="payTransactionsTableBody">
-                  <tr><td colspan="8" class="empty-state">Loading payment transactions…</td></tr>
+                <tbody id="payTransactionsTbody">
+                  <tr><td colspan="8" style="text-align:center;padding:36px;color:var(--text-muted);font-size:13px;">Loading transactions…</td></tr>
                 </tbody>
               </table>
             </div>
 
-            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;" id="payPaginationWrap">
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--paper);" id="payPaginationWrap">
               <span style="font-size:12.5px;color:var(--text-muted);" id="payPaginationInfo">Showing 0 transactions</span>
               <div style="display:flex;gap:8px;">
-                <button type="button" class="btn-ghost" id="payPrevPageBtn" disabled style="padding:6px 14px;font-size:12px;">Previous</button>
-                <button type="button" class="btn-ghost" id="payNextPageBtn" disabled style="padding:6px 14px;font-size:12px;">Next</button>
+                <button type="button" class="btn-ghost" id="payPrevPageBtn" disabled style="padding:6px 14px;font-size:12px;border-radius:6px;">Previous</button>
+                <button type="button" class="btn-ghost" id="payNextPageBtn" disabled style="padding:6px 14px;font-size:12px;border-radius:6px;">Next</button>
               </div>
             </div>
           </div>
@@ -1002,7 +1027,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="admin.js?v=20240918_payments_v2"></script>
+<script src="admin.js?v=20240921_fintech_v3"></script>
 
 <script>
 window.EB_CHATBOT_CONFIG = {

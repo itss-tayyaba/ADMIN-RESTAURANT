@@ -797,7 +797,10 @@
     if (name === 'complaints') loadComplaints();
     if (name === 'riders') refreshRidersView();
     if (name === 'chefs') refreshChefsView();
-    if (name === 'payments') initPaymentsView();
+    if (name === 'payments') {
+      initPaymentsView();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
   els.navItems.forEach(btn => btn.addEventListener('click', () => { switchView(btn.dataset.view); closeSidebar(); }));
   document.querySelectorAll('[data-goto]').forEach(btn => {
@@ -2406,32 +2409,32 @@
       if (tab === 'transactions') {
         if (subTabTx) {
           subTabTx.classList.add('active');
-          subTabTx.style.background = 'var(--ink)';
-          subTabTx.style.color = '#fff';
+          subTabTx.style.background = '';
+          subTabTx.style.color = '';
         }
         if (subTabGw) {
           subTabGw.classList.remove('active');
-          subTabGw.style.background = 'var(--paper-2)';
-          subTabGw.style.color = 'var(--text)';
+          subTabGw.style.background = '';
+          subTabGw.style.color = '';
         }
-        if (viewTx) viewTx.style.display = 'block';
-        if (viewGw) viewGw.style.display = 'none';
+        if (viewTx) { viewTx.hidden = false; viewTx.style.display = 'block'; }
+        if (viewGw) { viewGw.hidden = true; viewGw.style.display = 'none'; }
         if (gwActionWrap) gwActionWrap.style.display = 'none';
         loadPaymentTransactions(1);
       } else {
         if (subTabGw) {
           subTabGw.classList.add('active');
-          subTabGw.style.background = 'var(--ink)';
-          subTabGw.style.color = '#fff';
+          subTabGw.style.background = '';
+          subTabGw.style.color = '';
         }
         if (subTabTx) {
           subTabTx.classList.remove('active');
-          subTabTx.style.background = 'var(--paper-2)';
-          subTabTx.style.color = 'var(--text)';
+          subTabTx.style.background = '';
+          subTabTx.style.color = '';
         }
-        if (viewTx) viewTx.style.display = 'none';
-        if (viewGw) viewGw.style.display = 'block';
-        if (gwActionWrap) gwActionWrap.style.display = 'flex';
+        if (viewTx) { viewTx.hidden = true; viewTx.style.display = 'none'; }
+        if (viewGw) { viewGw.hidden = false; viewGw.style.display = 'block'; }
+        if (gwActionWrap) gwActionWrap.style.display = 'inline-flex';
         loadPaymentSettings();
       }
     }
@@ -2439,31 +2442,42 @@
     if (subTabTx) subTabTx.addEventListener('click', () => switchSubTab('transactions'));
     if (subTabGw) subTabGw.addEventListener('click', () => switchSubTab('gateways'));
 
-    // Method filter pills
-    document.querySelectorAll('.pay-filter-pill[data-pay-method]').forEach(btn => {
+    // Method filter chips
+    document.querySelectorAll('[data-pay-method]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.pay-filter-pill[data-pay-method]').forEach(b => {
+        document.querySelectorAll('[data-pay-method]').forEach(b => {
           b.classList.toggle('active', b === btn);
-          b.style.background = b === btn ? 'var(--ink)' : 'var(--paper-2)';
-          b.style.color = b === btn ? '#fff' : 'var(--text)';
+          b.style.background = '';
+          b.style.color = '';
         });
         currentPaymentMethodFilter = btn.dataset.payMethod || 'all';
         loadPaymentTransactions(1);
       });
     });
 
-    // Status filter pills
-    document.querySelectorAll('.pay-status-pill[data-pay-status]').forEach(btn => {
+    // Status filter chips
+    document.querySelectorAll('[data-pay-status]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.pay-status-pill[data-pay-status]').forEach(b => {
+        document.querySelectorAll('[data-pay-status]').forEach(b => {
           b.classList.toggle('active', b === btn);
-          b.style.background = b === btn ? 'var(--ink)' : 'var(--paper-2)';
-          b.style.color = b === btn ? '#fff' : 'var(--text)';
+          b.style.background = '';
+          b.style.color = '';
         });
         currentPaymentStatusFilter = btn.dataset.payStatus || 'all';
         loadPaymentTransactions(1);
       });
     });
+
+    // Refresh button
+    const payRefreshBtn = document.getElementById('payRefreshBtn');
+    if (payRefreshBtn) {
+      payRefreshBtn.addEventListener('click', () => {
+        payRefreshBtn.style.transform = 'rotate(180deg)';
+        payRefreshBtn.style.transition = 'transform 0.3s ease';
+        setTimeout(() => { payRefreshBtn.style.transform = 'none'; }, 350);
+        loadPaymentTransactions(currentPaymentPage);
+      });
+    }
 
     // Search input with debounce
     const paySearchInput = document.getElementById('paySearchInput');
@@ -2565,11 +2579,11 @@
   }
 
   async function loadPaymentTransactions(page = 1) {
-    const tbody = document.getElementById('payTransactionsTbody');
+    const tbody = document.getElementById('payTransactionsTbody') || document.getElementById('payTransactionsTableBody');
     if (!tbody) return;
 
     currentPaymentPage = page;
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading transactions…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--text-muted);font-size:13px;"><span class="spinner"></span> Loading payment transactions…</td></tr>';
 
     try {
       const qParams = new URLSearchParams({
@@ -2599,24 +2613,32 @@
       const statPending = document.getElementById('payStatPending');
       const statFailed = document.getElementById('payStatFailed');
       const statRefunds = document.getElementById('payStatRefunds');
+      const statRefundCount = document.getElementById('payStatRefundCount');
 
       if (statRevEl) statRevEl.textContent = money(stats.totalRevenue);
       if (statRevSub) statRevSub.textContent = `${stats.paidCount || 0} completed orders`;
       if (statPaid) statPaid.textContent = stats.paidCount || 0;
       if (statPending) statPending.textContent = stats.pendingCount || 0;
       if (statFailed) statFailed.textContent = stats.failedCount || 0;
-      if (statRefunds) {
-        statRefunds.textContent = `${stats.refundCount || 0} (${money(stats.refundAmount || 0)})`;
+      if (statRefunds) statRefunds.textContent = money(stats.refundAmount || 0);
+      if (statRefundCount) statRefundCount.textContent = `${stats.refundCount || 0} refunded`;
+
+      // Update badge in subtab
+      const payTxBadge = document.getElementById('payTxBadge');
+      if (payTxBadge && pagination.total != null) {
+        payTxBadge.textContent = pagination.total;
       }
 
       // 2. Render Table
       if (cachedPaymentTransactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">No payment transactions found matching the selected criteria.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:48px 20px;color:var(--text-muted);font-size:13.5px;"><div style="font-size:26px;margin-bottom:8px;">🧾</div>No payment transactions found matching the selected criteria.</td></tr>';
       } else {
         tbody.innerHTML = cachedPaymentTransactions.map(tx => {
-          const dtStr = new Date(tx.createdAt).toLocaleDateString(undefined, {
+          const dt = new Date(tx.createdAt);
+          const dateStr = dt.toLocaleDateString(undefined, {
             month: 'short', day: 'numeric', year: 'numeric'
-          }) + ' ' + new Date(tx.createdAt).toLocaleTimeString(undefined, {
+          });
+          const timeStr = dt.toLocaleTimeString(undefined, {
             hour: '2-digit', minute: '2-digit'
           });
 
@@ -2635,44 +2657,50 @@
             ? `<div style="font-size:11px;color:#c5221f;font-weight:600;margin-top:2px;">↩ Refunded: ${sym}${Number(tx.refundAmount).toLocaleString(undefined, {minimumFractionDigits:2})}</div>`
             : '';
 
+          const orderTypeStr = tx.orderId?.orderType || tx.orderType || '';
+
           return `
-            <tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:12px 14px;font-size:13px;">
+            <tr>
+              <td>${methodBadge}</td>
+              <td>
                 <div style="font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;">
                   <span>#${escapeHtml(tx.orderNumber)}</span>
                 </div>
-                <div style="font-family:monospace;font-size:11px;color:var(--text-muted);margin-top:2px;" title="Transaction / Reference ID">
-                  ${escapeHtml(tx.transactionId || '—')}
-                </div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${dtStr}</div>
+                ${orderTypeStr ? `<div style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">${escapeHtml(orderTypeStr)}</div>` : ''}
               </td>
-              <td style="padding:12px 14px;font-size:13px;">
+              <td>
                 <div style="font-weight:600;color:var(--ink);">${escapeHtml(customerName)}</div>
                 ${contact ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(contact)}</div>` : ''}
               </td>
-              <td style="padding:12px 14px;font-size:13px;">
-                ${methodBadge}
-              </td>
-              <td style="padding:12px 14px;font-size:13.5px;font-weight:700;color:var(--ink);">
-                ${formattedAmt}
+              <td>
+                <div style="font-weight:700;font-size:13.5px;color:var(--ink);">${formattedAmt}</div>
                 ${refundNote}
               </td>
-              <td style="padding:12px 14px;font-size:13px;">
-                ${statusBadge}
+              <td>
+                ${tx.transactionId ? `
+                  <span class="pay-code-chip" title="Click to copy Transaction ID" onclick="copyWebhookText('${escapeHtml(tx.transactionId)}', this)" style="cursor:pointer;">
+                    📋 ${escapeHtml(tx.transactionId.length > 16 ? tx.transactionId.substring(0, 14) + '…' : tx.transactionId)}
+                  </span>
+                ` : '<span style="color:var(--text-muted);font-size:12px;">—</span>'}
               </td>
-              <td style="padding:12px 14px;font-size:13px;text-align:right;">
+              <td>
+                <div style="font-size:12.5px;color:var(--ink);">${dateStr}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:1px;">${timeStr}</div>
+              </td>
+              <td>${statusBadge}</td>
+              <td style="text-align:right;">
                 <div style="display:inline-flex;gap:6px;align-items:center;justify-content:flex-end;">
-                  <button type="button" class="btn-ghost btn-sm pay-btn-details" data-id="${tx._id}" style="padding:5px 10px;font-size:12px;border:1px solid var(--border);border-radius:6px;background:var(--paper);cursor:pointer;">
-                    Details
+                  <button type="button" class="pay-action-btn pay-btn-details" data-id="${tx._id}">
+                    <span>👁</span> Details
                   </button>
-                  ${tx.status === 'PAID' ? `
-                    <button type="button" class="btn-ghost btn-sm pay-btn-refund" data-id="${tx._id}" style="padding:5px 10px;font-size:12px;border:1px solid rgba(179,57,39,0.3);color:#B33927;border-radius:6px;background:rgba(179,57,39,0.05);cursor:pointer;">
-                      Refund
+                  ${(tx.status === 'PAID' && (!tx.refundAmount || tx.refundAmount < tx.amount)) ? `
+                    <button type="button" class="pay-action-btn danger pay-btn-refund" data-id="${tx._id}">
+                      <span>↩</span> Refund
                     </button>
                   ` : ''}
                   ${(tx.status === 'PENDING' && (tx.paymentMethod === 'raast' || tx.paymentMethod === 'bankTransfer')) ? `
-                    <button type="button" class="btn-primary btn-sm pay-btn-verify" data-id="${tx._id}" style="padding:5px 10px;font-size:12px;border-radius:6px;cursor:pointer;">
-                      Verify
+                    <button type="button" class="pay-action-btn verify pay-btn-verify" data-id="${tx._id}">
+                      <span>✓</span> Verify
                     </button>
                   ` : ''}
                 </div>
@@ -2708,19 +2736,24 @@
       }
 
       // 3. Update Pagination
-      const pageInfo = document.getElementById('payPageInfo');
+      const pageInfo = document.getElementById('payPaginationInfo') || document.getElementById('payPageInfo');
       const prevBtn = document.getElementById('payPrevPageBtn');
       const nextBtn = document.getElementById('payNextPageBtn');
 
       if (pageInfo) {
-        pageInfo.textContent = `Page ${pagination.page || 1} of ${pagination.pages || 1} (${pagination.total || 0} total)`;
+        const total = pagination.total || 0;
+        const page = pagination.page || 1;
+        const limit = pagination.limit || 15;
+        const start = total === 0 ? 0 : (page - 1) * limit + 1;
+        const end = Math.min(page * limit, total);
+        pageInfo.textContent = `Showing ${start}–${end} of ${total} transactions (Page ${page} of ${pagination.pages || 1})`;
       }
       if (prevBtn) prevBtn.disabled = (pagination.page || 1) <= 1;
       if (nextBtn) nextBtn.disabled = (pagination.page || 1) >= (pagination.pages || 1);
 
     } catch (err) {
       console.error('loadPaymentTransactions error:', err);
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:#c5221f;font-size:13px;">Error loading transactions: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:#c5221f;font-size:13px;">Error loading transactions: ${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
@@ -2729,38 +2762,38 @@
     const p = (provider || '').toLowerCase();
 
     if (m === 'stripe' || m === 'card' || p.includes('stripe')) {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#EBF3FE;color:#185ABC;border:1px solid #C2D7FA;">💳 Stripe</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#EDE7F6;color:#5E35B1;border:1px solid #D1C4E9;">💳 Stripe</span>';
     }
     if (m === 'jazzcash' || p.includes('jazzcash')) {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#FDE8E8;color:#C81E1E;border:1px solid #F8B4B4;">📱 JazzCash</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#FFF3E0;color:#D84315;border:1px solid #FFE0B2;"><span style="background:#D84315;color:#fff;border-radius:4px;padding:1px 4px;font-size:9.5px;font-weight:900;">JC</span> JazzCash</span>';
     }
     if (m === 'easypaisa' || p.includes('easypaisa')) {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#DEF7EC;color:#03543F;border:1px solid #BCF0DA;">🟢 Easypaisa</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#E8F5E9;color:#2E7D32;border:1px solid #C8E6C9;"><span style="background:#2E7D32;color:#fff;border-radius:4px;padding:1px 4px;font-size:9.5px;font-weight:900;">EP</span> Easypaisa</span>';
     }
     if (m === 'raast' || p.includes('raast')) {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#FEF08A;color:#854D0E;border:1px solid #FDE047;">⚡ Raast</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#FEF9C3;color:#854D0E;border:1px solid #FDE047;">⚡ Raast</span>';
     }
     if (m === 'banktransfer' || m === 'bank') {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#F3F4F6;color:#374151;border:1px solid #E5E7EB;">🏦 Bank Transfer</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#F1F5F9;color:#334155;border:1px solid #CBD5E1;">🏛️ Bank</span>';
     }
-    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:12px;font-size:11.5px;font-weight:600;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;">💵 COD</span>';
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;">💵 COD</span>';
   }
 
   function getPaymentStatusBadge(status) {
     const s = (status || '').toUpperCase();
     if (s === 'PAID') {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#DEF7EC;color:#03543F;border:1px solid #BCF0DA;">● PAID</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#DCFCE7;color:#166534;border:1px solid #BBF7D0;">● PAID</span>';
     }
     if (s === 'PROCESSING') {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#FEF08A;color:#854D0E;border:1px solid #FDE047;">● PROCESSING</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#EFF6FF;color:#1E40AF;border:1px solid #DBEAFE;">⚙ PROCESSING</span>';
     }
     if (s === 'PENDING') {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#FFFBEB;color:#B45309;border:1px solid #FDE68A;">● PENDING</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;">⏳ PENDING</span>';
     }
     if (s === 'REFUNDED') {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#F3E8FF;color:#6B21A8;border:1px solid #E9D5FF;">● REFUNDED</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#F3E8FF;color:#6B21A8;border:1px solid #E9D5FF;">↩ REFUNDED</span>';
     }
-    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;background:#FDE8E8;color:#9B1C1C;border:1px solid #F8B4B4;">● FAILED</span>';
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;">✖ FAILED</span>';
   }
 
   function openRefundModal(tx) {

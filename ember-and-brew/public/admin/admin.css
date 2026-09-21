@@ -1122,3 +1122,341 @@ tbody tr:hover{ background:rgba(196,146,58,0.05); }
   color: #fff;
   border-color: var(--gold);
 }
+
+/* ==========================================================================
+   Fintech Payment Hub & Revenue Dashboard (Luxury Overhaul)
+   ========================================================================== */
+.pay-hub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.pay-hub-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.pay-hub-title {
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pay-hub-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.pay-segmented-nav {
+  display: inline-flex;
+  background: var(--paper-2);
+  padding: 4px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  gap: 6px;
+  box-shadow: 0 3px 12px rgba(26, 25, 23, 0.05);
+}
+.pay-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .2s cubic-bezier(.22,.61,.36,1);
+}
+.pay-tab-btn:hover {
+  color: var(--ink);
+  background: rgba(196, 146, 58, 0.08);
+}
+.pay-tab-btn.active {
+  background: var(--ink);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(26, 25, 23, 0.2);
+}
+.pay-tab-btn .tab-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(196, 146, 58, 0.2);
+  color: var(--gold-deep);
+}
+.pay-tab-btn.active .tab-badge {
+  background: var(--gold);
+  color: #FFFFFF;
+}
+
+/* KPI Cards Grid */
+.pay-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+@media (max-width: 1100px) {
+  .pay-metrics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .pay-metrics-grid { grid-template-columns: 1fr; }
+}
+
+.pay-metric-card {
+  background: var(--paper-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+.pay-metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(26, 25, 23, 0.09);
+}
+.pay-metric-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+.pay-metric-card.gold::before { background: linear-gradient(90deg, #C4923A, #F5D28A); }
+.pay-metric-card.sage::before { background: linear-gradient(90deg, #10B981, #6EE7B7); }
+.pay-metric-card.amber::before { background: linear-gradient(90deg, #F59E0B, #FDE68A); }
+.pay-metric-card.indigo::before { background: linear-gradient(90deg, #6366F1, #A5B4FC); }
+
+.pay-metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.pay-metric-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.pay-metric-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.pay-metric-card.gold .pay-metric-icon { background: rgba(196, 146, 58, 0.12); color: #C4923A; }
+.pay-metric-card.sage .pay-metric-icon { background: rgba(16, 185, 129, 0.12); color: #10B981; }
+.pay-metric-card.amber .pay-metric-icon { background: rgba(245, 158, 11, 0.12); color: #F59E0B; }
+.pay-metric-card.indigo .pay-metric-icon { background: rgba(99, 102, 241, 0.12); color: #6366F1; }
+
+.pay-metric-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+.pay-metric-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Filter Toolbar */
+.pay-panel {
+  background: var(--paper-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.pay-toolbar-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+}
+.pay-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pay-filter-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: .06em;
+  margin-right: 4px;
+}
+.pay-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--paper-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pay-chip:hover {
+  background: rgba(196, 146, 58, 0.1);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+.pay-chip.active {
+  background: var(--ink);
+  color: #FFFFFF;
+  border-color: var(--ink);
+  box-shadow: 0 2px 8px rgba(26, 25, 23, 0.18);
+}
+
+.pay-toolbar-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.pay-search-box {
+  position: relative;
+  flex: 1;
+}
+.pay-search-box input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: var(--paper);
+  font-size: 13.5px;
+  color: var(--ink);
+  outline: none;
+  transition: all .15s ease;
+}
+.pay-search-box input:focus {
+  border-color: var(--gold);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(196, 146, 58, 0.15);
+}
+.pay-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* Data Table Overhaul */
+.pay-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pay-data-table th {
+  padding: 12px 18px;
+  background: var(--paper);
+  border-bottom: 1.5px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  text-align: left;
+  white-space: nowrap;
+}
+.pay-data-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  font-size: 13px;
+}
+.pay-data-table tbody tr {
+  transition: background .15s ease;
+}
+.pay-data-table tbody tr:hover {
+  background: rgba(196, 146, 58, 0.04);
+}
+.pay-code-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  background: rgba(0,0,0,0.04);
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+}
+.pay-action-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.pay-action-btn:hover {
+  background: var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+}
+.pay-action-btn.danger {
+  border-color: rgba(179, 57, 39, 0.3);
+  color: #B33927;
+  background: rgba(179, 57, 39, 0.05);
+}
+.pay-action-btn.danger:hover {
+  background: #B33927;
+  color: #fff;
+}
+.pay-action-btn.verify {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.pay-action-btn.verify:hover {
+  background: #059669;
+  color: #fff;
+}
