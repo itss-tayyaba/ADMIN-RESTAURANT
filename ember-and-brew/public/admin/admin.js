@@ -2243,19 +2243,27 @@
       updatePaymentCardUI('card_jazzcash', 'jc_status_tag', jc.enabled);
       setVal('jc_mode', jc.mode || 'sandbox');
       setVal('jc_merchantId', jc.merchantId);
-      setVal('jc_password', jc.isConfigured ? '********' : '');
-      setVal('jc_integritySalt', jc.isConfigured ? '********' : '');
+      setVal('jc_password', '');
+      const jcPassEl = document.getElementById('jc_password');
+      if (jcPassEl) jcPassEl.placeholder = jc.isConfigured ? '•••••••• (Configured — leave blank to keep)' : 'Enter Merchant Password';
+      setVal('jc_integritySalt', '');
+      const jcSaltEl = document.getElementById('jc_integritySalt');
+      if (jcSaltEl) jcSaltEl.placeholder = jc.isConfigured ? '•••••••• (Configured — leave blank to keep)' : 'Enter Integrity Salt';
 
       setChecked('ep_enabled', ep.enabled);
       updatePaymentCardUI('card_easypaisa', 'ep_status_tag', ep.enabled);
       setVal('ep_mode', ep.mode || 'sandbox');
       setVal('ep_storeId', ep.storeId);
-      setVal('ep_hashKey', ep.isConfigured ? '********' : '');
+      setVal('ep_hashKey', '');
+      const epHashEl = document.getElementById('ep_hashKey');
+      if (epHashEl) epHashEl.placeholder = ep.isConfigured ? '•••••••• (Configured — leave blank to keep)' : 'Enter Hash Key';
 
       setChecked('st_enabled', st.enabled);
       updatePaymentCardUI('card_stripe', 'st_status_tag', st.enabled);
       setVal('st_publishableKey', st.publishableKey);
-      setVal('st_secretKey', st.isConfigured ? '********' : '');
+      setVal('st_secretKey', '');
+      const stSecEl = document.getElementById('st_secretKey');
+      if (stSecEl) stSecEl.placeholder = st.isConfigured ? '•••••••• (Configured — leave blank to keep)' : 'Enter Secret Key (sk_...)';
 
       const isBt = bt.enabled !== false;
       setChecked('bt_enabled', isBt);
