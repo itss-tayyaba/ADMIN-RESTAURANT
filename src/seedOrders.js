@@ -36,7 +36,7 @@ const CUSTOMER_NAMES = [
   ['Ayesha Khan', '03001234567'],
   ['Bilal Ahmed', '03011234567'],
   ['Sara Malik', '03021234567'],
-  ['Usman Tariq', '03031234567'],
+  ['Usman Ali', '03031234567'],
   ['Hina Raza', '03041234567'],
   ['Zain Abbas', '03051234567'],
   ['Mahnoor Fatima', '03061234567'],
