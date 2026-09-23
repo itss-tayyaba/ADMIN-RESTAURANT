@@ -303,8 +303,8 @@ textarea.form-input{min-height:80px;resize:vertical}
   })();
 </script>
 <style>
-  html.preload-checkout #view-menu { display: none !important; }
-  html.preload-checkout #view-checkout { display: block !important; }
+  html.preload-checkout:not(.view-tracking-active) #view-menu { display: none !important; }
+  html.preload-checkout:not(.view-tracking-active) #view-checkout { display: block !important; }
 </style>
 
 <!-- PWA & Mobile Web App Meta -->
@@ -2079,15 +2079,22 @@ function updateAccountNavLabel() {
 // ============================================
 function forceScrollTop() {
   try {
+    document.documentElement.style.scrollBehavior = 'auto';
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   } catch(e) {
     window.scrollTo(0, 0);
   }
   if (document.documentElement) document.documentElement.scrollTop = 0;
   if (document.body) document.body.scrollTop = 0;
+  setTimeout(() => {
+    try { document.documentElement.style.scrollBehavior = ''; } catch(e) {}
+  }, 100);
 }
 
 function navigate(view, data) {
+  // Always remove preload-checkout class so checkout never overrides target view
+  document.documentElement.classList.remove('preload-checkout');
+
   // Close cart if open
   closeCart();
   // Send customer login/account views to the dedicated portal page
@@ -2107,6 +2114,25 @@ function navigate(view, data) {
     target.classList.add('active');
     state.currentView = view;
   }
+
+  // Update browser URL query params without reloading so URL always reflects active view
+  try {
+    const url = new URL(window.location.href);
+    if (view === 'tracking') {
+      url.searchParams.set('view', 'tracking');
+      if (data) url.searchParams.set('orderNumber', data);
+      window.history.replaceState({}, '', url.toString());
+    } else if (view === 'checkout') {
+      url.searchParams.set('view', 'checkout');
+      url.searchParams.delete('orderNumber');
+      window.history.replaceState({}, '', url.toString());
+    } else if (view === 'menu') {
+      url.searchParams.delete('view');
+      url.searchParams.delete('orderNumber');
+      window.history.replaceState({}, '', url.toString());
+    }
+  } catch (_) {}
+
   // Stop any live-tracking poll when leaving the tracking view
   if (view !== 'tracking' && state.trackingPoll) {
     clearInterval(state.trackingPoll);
@@ -2122,6 +2148,11 @@ function navigate(view, data) {
   forceScrollTop();
   requestAnimationFrame(forceScrollTop);
   setTimeout(forceScrollTop, 50);
+
+  // Sync PWA bottom nav if mobile app bottom bar exists
+  if (typeof renderAppBottomNav === 'function') {
+    renderAppBottomNav();
+  }
 }
 
 // ============================================
@@ -4184,6 +4215,10 @@ async function handleCheckout(e) {
     updateCartBadge();
     renderCartItems();
     localStorage.removeItem('eb_return_to_checkout');
+    if (order && order.orderNumber) {
+      localStorage.setItem('eb_last_order', order.orderNumber);
+    }
+    document.documentElement.classList.remove('preload-checkout');
     form.reset();
 
     // Check if online gateway redirection is required (JazzCash, Easypaisa, Stripe Card)
@@ -4399,20 +4434,29 @@ async function renderTracking(orderNumber) {
   const privateTracking = Boolean(state.customerToken);
   const trackingEndpoint = privateTracking
     ? '/api/orders/mine/' + encodeURIComponent(lookupId)
-    : '/api/orders/' + encodeURIComponent(lookupId);
+    : '/api/orders/track/' + encodeURIComponent(lookupId);
   const trackingOptions = privateTracking ? { headers: authHeaders(state.customerToken) } : undefined;
   try {
     order = await apiFetch(trackingEndpoint, trackingOptions);
   } catch (err) {
-    container.innerHTML = `
-      <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
-      <div class="text-center py-16">
-        <i class="fa-solid fa-circle-exclamation text-4xl text-terra-400 mb-4"></i>
-        <h2 class="font-display text-2xl font-bold mb-2">Order Not Found</h2>
-        <p class="text-brand-800 text-sm mb-6">${err.message || 'Double check the order number and try again.'}</p>
-        <button onclick="localStorage.removeItem('eb_last_order');navigate('tracking')" class="bg-brand-400 text-brand-950 font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-brand-500 transition-colors">Try Again</button>
-      </div>`;
-    return;
+    try {
+      order = await apiFetch('/api/orders/track/' + encodeURIComponent(lookupId));
+    } catch (_) {
+      try {
+        order = await apiFetch('/api/orders/' + encodeURIComponent(lookupId));
+      } catch (_) {}
+    }
+    if (!order) {
+      container.innerHTML = `
+        <button onclick="navigate('menu')" class="text-brand-400 text-sm mb-3 inline-flex items-center gap-2 hover:text-brand-300 transition-colors"><i class="fa-solid fa-arrow-left text-xs"></i> Back to Menu</button>
+        <div class="text-center py-16">
+          <i class="fa-solid fa-circle-exclamation text-4xl text-terra-400 mb-4"></i>
+          <h2 class="font-display text-2xl font-bold mb-2">Order Not Found</h2>
+          <p class="text-brand-800 text-sm mb-6">${err.message || 'Double check the order number and try again.'}</p>
+          <button onclick="localStorage.removeItem('eb_last_order');navigate('tracking')" class="bg-brand-400 text-brand-950 font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-brand-500 transition-colors">Try Again</button>
+        </div>`;
+      return;
+    }
   }
 
   localStorage.setItem('eb_last_order', order.orderNumber);
@@ -4926,20 +4970,24 @@ async function init() {
     const msg = urlParams.get('msg') || 'Payment could not be verified.';
     showToast(msg, 'error');
   }
-  if (orderNumberParam) {
-    navigate('tracking', orderNumberParam);
-  }
-
   const urlView = urlParams.get('view');
-  if (urlView === 'checkout' || localStorage.getItem('eb_return_to_checkout') === '1') {
+  if (urlView === 'tracking' || orderNumberParam) {
+    const numToTrack = orderNumberParam || localStorage.getItem('eb_last_order');
+    navigate('tracking', numToTrack);
+  } else if (urlView === 'checkout' || localStorage.getItem('eb_return_to_checkout') === '1') {
     localStorage.removeItem('eb_return_to_checkout');
     if (state.cart.length > 0) {
       navigate('checkout');
+    } else {
+      navigate('menu');
     }
   } else if (urlView === 'reservation' || window.location.hash === '#reservation-section') {
     setTimeout(() => scrollToReservation(), 300);
     setTimeout(() => scrollToReservation(), 800);
   }
+
+  // Always remove preload-checkout when init routing finishes
+  document.documentElement.classList.remove('preload-checkout');
 }
 
 // ============================================

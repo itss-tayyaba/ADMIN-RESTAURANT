@@ -7,6 +7,7 @@ const Branch = require('../models/Branch');
 const jwt = require('jsonwebtoken');
 const { isAdminRole, resolveBranchId } = require('../utils/branchScope');
 const { resolveTenant, addTenantScope } = require('../utils/tenantScope');
+const { customerAuth } = require('./customerAuth');
 
 function adminAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -42,25 +43,38 @@ router.post('/', async (req, res) => {
     const {
       items, orderType, deliveryAddress, deliveryLocation, region, notes,
       guestName, guestPhone, guestEmail, pushToken, tableNumber, branchId,
-      paymentMethod, paymentDetails
+      paymentMethod, paymentDetails,
+      customerName, customerPhone, customerEmail, table, address
     } = req.body;
 
     if (!items || !items.length) {
       return res.status(400).json({ error: 'Order must contain at least one item' });
     }
 
+    const sanitizedItems = items.map(it => {
+      const rawId = it.menuItem || it.menuItemId || it.id || it._id;
+      return {
+        menuItem: mongoose.isValidObjectId(rawId) ? new mongoose.Types.ObjectId(rawId) : (rawId ? String(rawId) : null),
+        name: String(it.name || 'Item'),
+        qty: Math.max(1, Number(it.qty) || 1),
+        price: Number(it.price) || 0
+      };
+    });
+
     const requestedTenantId = await resolveTenant(req);
     let resolvedBranch = null;
-    if (branchId) {
-      resolvedBranch = await Branch.findOne({ _id: branchId, tenantId: requestedTenantId, isActive: true });
+    if (branchId && mongoose.isValidObjectId(branchId)) {
+      resolvedBranch = await Branch.findOne({ _id: branchId, isActive: true });
+    }
+    if (!resolvedBranch && requestedTenantId) {
+      resolvedBranch = await Branch.findOne({ tenantId: requestedTenantId, isActive: true }).sort({ createdAt: 1 });
     }
     if (!resolvedBranch) {
-      resolvedBranch = await Branch.findOne({ tenantId: requestedTenantId, isActive: true }).sort({ createdAt: 1 });
+      resolvedBranch = await Branch.findOne({ isActive: true }).sort({ createdAt: 1 });
     }
 
     const tenantId = resolvedBranch?.tenantId || requestedTenantId;
-    if (!resolvedBranch) return res.status(400).json({ error: 'Choose an active branch for this restaurant.' });
-    const subtotal = items.reduce((sum, it) => sum + it.price * it.qty, 0);
+    const subtotal = sanitizedItems.reduce((sum, it) => sum + it.price * it.qty, 0);
     const taxRate = resolvedBranch?.taxRate ?? 0.08;
     const tax = Math.round(subtotal * taxRate * 100) / 100;
     const total = Math.round((subtotal + tax) * 100) / 100;
@@ -79,12 +93,15 @@ router.post('/', async (req, res) => {
     }
 
     const orderNumber = generateOrderNumber();
-    const otp = orderType === 'delivery' ? generateOtp() : undefined;
+    const finalOrderType = orderType || 'dine-in';
+    const otp = finalOrderType === 'delivery' ? generateOtp() : undefined;
 
     const safeMethod = paymentMethod || 'cash';
-    const finalCustomerName = guestName || customerRecord?.name || 'Customer';
-    const finalCustomerPhone = guestPhone || customerRecord?.phone || (orderType === 'dine-in' ? (tableNumber ? `Table ${tableNumber}` : 'Dine-in') : 'N/A');
-    const finalCustomerEmail = guestEmail || customerRecord?.email || '';
+    const finalTable = tableNumber || table || '';
+    const finalAddress = deliveryAddress || address || '';
+    const finalCustomerName = guestName || customerName || req.body.name || customerRecord?.name || 'Customer';
+    const finalCustomerPhone = guestPhone || customerPhone || req.body.phone || customerRecord?.phone || (finalOrderType === 'dine-in' ? (finalTable ? `Table ${finalTable}` : 'Dine-in') : 'N/A');
+    const finalCustomerEmail = guestEmail || customerEmail || req.body.email || customerRecord?.email || '';
 
     const order = new Order({
       orderNumber,
@@ -92,7 +109,7 @@ router.post('/', async (req, res) => {
       branchId: resolvedBranch?._id || null,
       customer: customerId,
       isGuestOrder: !customerId,
-      items,
+      items: sanitizedItems,
       subtotal,
       tax,
       total,
@@ -100,9 +117,9 @@ router.post('/', async (req, res) => {
       customerPhone: finalCustomerPhone,
       customerEmail: finalCustomerEmail,
       pushTokens: pushToken ? [pushToken] : [],
-      orderType: orderType || 'dine-in',
-      tableNumber: tableNumber || '',
-      deliveryAddress: deliveryAddress || '',
+      orderType: finalOrderType,
+      tableNumber: finalTable,
+      deliveryAddress: finalAddress,
       deliveryLocation: deliveryLocation || null,
       region: region || '',
       notes: notes || '',
@@ -189,10 +206,79 @@ router.get('/stats/summary', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/orders/track/:orderNumber — Dedicated public order tracking
+router.get('/track/:orderNumber', async (req, res) => {
+  try {
+    const raw = String(req.params.orderNumber || '').trim().toUpperCase();
+    const order = await Order.findOne({ orderNumber: raw })
+      .select('+otp')
+      .populate('branchId', 'name code city address phone')
+      .lean();
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to track order' });
+  }
+});
+
+// GET /api/orders/mine/list — Logged-in customer orders list
+router.get('/mine/list', customerAuth, async (req, res) => {
+  try {
+    let customerEmail = req.customer.email;
+    let customerPhone = req.customer.phone;
+
+    if (!customerEmail || !customerPhone) {
+      const cust = await Customer.findById(req.customer.id).select('email phone');
+      if (cust) {
+        customerEmail = cust.email || customerEmail;
+        customerPhone = cust.phone || customerPhone;
+      }
+    }
+
+    const orClauses = [{ customer: req.customer.id }];
+    if (customerEmail) orClauses.push({ customerEmail });
+    if (customerPhone) orClauses.push({ customerPhone });
+
+    const filter = { $or: orClauses };
+    const branchId = req.query.branchId;
+    if (branchId && mongoose.isValidObjectId(branchId)) {
+      filter.branchId = branchId;
+    }
+
+    const orders = await Order.find(filter)
+      .select('+otp')
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch customer orders' });
+  }
+});
+
+// GET /api/orders/mine/:orderNumber — Logged-in customer order tracking lookup
+router.get('/mine/:orderNumber', customerAuth, async (req, res) => {
+  try {
+    const raw = String(req.params.orderNumber || '').trim().toUpperCase();
+    const order = await Order.findOne({ orderNumber: raw })
+      .select('+otp')
+      .populate('branchId', 'name code city address phone')
+      .lean();
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to track order' });
+  }
+});
+
+// GET /api/orders/:orderNumber — public order tracking lookup
 router.get('/:orderNumber', async (req, res) => {
   try {
-    const order = await Order.findOne({ orderNumber: req.params.orderNumber.toUpperCase() })
+    const raw = String(req.params.orderNumber || '').trim().toUpperCase();
+    const order = await Order.findOne({ orderNumber: raw })
       .select('+otp')
+      .populate('branchId', 'name code city address phone')
       .lean();
     if (!order) return res.status(404).json({ error: 'Order not found' });
     res.json(order);

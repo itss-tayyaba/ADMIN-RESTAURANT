@@ -199,7 +199,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     setState(() => _isSubmitting = false);
 
-    if (order != null) {
+    if (order != null && order.orderNumber.isNotEmpty) {
       cart.clearCart();
       if (mounted) {
         Navigator.pushReplacement(
@@ -210,12 +210,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order placed successfully! Generated tracking.')),
-        );
-        cart.clearCart();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => TrackingScreen(orderNumber: 'EB-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}')),
+          const SnackBar(
+            content: Text('Could not place order. Please check your connection and try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }

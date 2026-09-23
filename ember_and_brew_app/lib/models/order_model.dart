@@ -20,12 +20,24 @@ class OrderModel {
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    String rawStatus = (json['status'] ?? 'pending').toString().toLowerCase().trim();
+    String normalizedStatus = rawStatus;
+    if (rawStatus == 'pending_admin' || rawStatus == 'pending_kitchen') {
+      normalizedStatus = 'pending';
+    } else if (rawStatus == 'received') {
+      normalizedStatus = 'confirmed';
+    } else if (rawStatus == 'out-for-delivery') {
+      normalizedStatus = 'out_for_delivery';
+    } else if (rawStatus == 'completed') {
+      normalizedStatus = 'delivered';
+    }
+
     return OrderModel(
       orderNumber: json['orderNumber'] ?? json['id'] ?? '',
-      status: json['status'] ?? 'pending',
+      status: normalizedStatus,
       orderType: json['orderType'] ?? 'dine-in',
       total: (json['total'] is num) ? (json['total'] as num).toDouble() : 0.0,
-      table: json['table']?.toString(),
+      table: (json['table'] ?? json['tableNumber'])?.toString(),
       otp: json['otp']?.toString(),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()

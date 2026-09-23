@@ -19,15 +19,22 @@ class ApiService {
         'orderType': orderType,
         'customerName': customerName,
         'customerPhone': customerPhone,
+        'guestName': customerName,
+        'guestPhone': customerPhone,
         'table': table,
+        'tableNumber': table,
         'address': address,
+        'deliveryAddress': address,
         'items': items,
         'total': total,
       });
 
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: body,
       );
 
@@ -41,8 +48,12 @@ class ApiService {
 
   static Future<OrderModel?> trackOrder(String orderNumber) async {
     try {
-      final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.trackOrderEndpoint}/$orderNumber');
-      final response = await http.get(url);
+      final cleanNum = orderNumber.trim();
+      final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.trackOrderEndpoint}/$cleanNum');
+      final response = await http.get(
+        url,
+        headers: {'Accept': 'application/json'},
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return OrderModel.fromJson(data);

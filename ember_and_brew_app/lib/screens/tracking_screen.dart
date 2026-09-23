@@ -53,17 +53,16 @@ class _TrackingScreenState extends State<TrackingScreen> {
     setState(() => _isLoading = true);
     final order = await ApiService.trackOrder(orderNum);
     setState(() {
-      _currentOrder = order ?? OrderModel(
-        orderNumber: orderNum,
-        status: 'preparing',
-        orderType: 'delivery',
-        total: 1850,
-        otp: '4829',
-        createdAt: DateTime.now(),
-        items: [],
-      );
+      _currentOrder = order;
       _isLoading = false;
     });
+    if (order == null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order not found. Please verify the order number.'),
+        ),
+      );
+    }
   }
 
   @override

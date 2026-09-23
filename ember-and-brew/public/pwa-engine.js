@@ -17,7 +17,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Check Standalone Mode (if user is already running the installed app)
+// Check Standalone Mode (if user is running the installed PWA on mobile or desktop)
 function isStandaloneMode() {
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
@@ -29,13 +29,25 @@ function isStandaloneMode() {
   );
 }
 
-// Check if user is in App Mode (either installed or toggled via Install button)
+// Check if viewport is mobile sized (< 768px)
+function isMobileScreen() {
+  return window.innerWidth < 768;
+}
+
+// Check if user is in Mobile App Mode
 function isAppMode() {
+  // If user is on a desktop/laptop web browser (>= 768px and not in a standalone PWA window), ALWAYS use Web View!
+  if (window.innerWidth >= 768 && !isStandaloneMode()) {
+    return false;
+  }
+
   return (
     isStandaloneMode() ||
-    localStorage.getItem('eb_app_mode') === 'true' ||
-    new URLSearchParams(window.location.search).get('view') === 'app' ||
-    new URLSearchParams(window.location.search).get('app') === '1'
+    (isMobileScreen() && (
+      localStorage.getItem('eb_app_mode') === 'true' ||
+      new URLSearchParams(window.location.search).get('view') === 'app' ||
+      new URLSearchParams(window.location.search).get('app') === '1'
+    ))
   );
 }
 
@@ -45,72 +57,93 @@ function injectAppModeStyles() {
   const style = document.createElement('style');
   style.id = 'ebAppModeInjectedStyles';
   style.textContent = `
-    /* App Mode: Hide web footer and web install triggers */
-    html.app-mode #main-footer,
-    html.app-mode .page-footer,
-    html.app-mode footer,
-    html.app-mode #navInstallAppBtn,
-    html.app-mode .pwa-install-btn,
-    body.app-mode #main-footer,
-    body.app-mode .page-footer,
-    body.app-mode footer,
-    body.app-mode #navInstallAppBtn,
-    body.app-mode .pwa-install-btn,
-    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+    /* Enforce Desktop Web View: Hide mobile bottom nav, restore web footer */
+    @media (min-width: 768px) {
+      #ebAppBottomNav {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+      html.app-mode body,
+      body.app-mode,
+      body {
+        padding-bottom: 0 !important;
+      }
       #main-footer,
       .page-footer,
-      footer,
-      #navInstallAppBtn,
-      .pwa-install-btn {
+      footer {
+        display: block !important;
+        visibility: visible !important;
+      }
+    }
+
+    /* Mobile App Mode only (< 768px) */
+    @media (max-width: 767px) {
+      html.app-mode #main-footer,
+      html.app-mode .page-footer,
+      html.app-mode footer,
+      body.app-mode #main-footer,
+      body.app-mode .page-footer,
+      body.app-mode footer {
         display: none !important;
         visibility: hidden !important;
       }
-    }
 
-    /* Content bottom padding to prevent bottom nav collision */
-    html.app-mode body,
-    body.app-mode {
-      padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
-    }
-    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-      body {
+      html.app-mode body,
+      body.app-mode {
         padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
       }
-    }
 
-    /* Prevent Cart Drawer / Panel from sliding under App Bottom Nav */
-    html.app-mode #cart-panel,
-    body.app-mode #cart-panel,
-    html.app-mode aside[role="dialog"]#cart-panel,
-    body.app-mode aside[role="dialog"]#cart-panel {
-      bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
-      height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
-      max-height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
-    }
-    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-      #cart-panel {
+      /* Prevent Cart Drawer / Panel from sliding under App Bottom Nav */
+      html.app-mode #cart-panel,
+      body.app-mode #cart-panel,
+      html.app-mode aside[role="dialog"]#cart-panel,
+      body.app-mode aside[role="dialog"]#cart-panel {
         bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
         height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
         max-height: calc(100% - 60px - env(safe-area-inset-bottom, 0px)) !important;
       }
-    }
 
-    html.app-mode #cart-footer,
-    body.app-mode #cart-footer {
-      padding-bottom: 24px !important;
-    }
+      html.app-mode #cart-footer,
+      body.app-mode #cart-footer {
+        padding-bottom: 24px !important;
+      }
 
-    /* Floating sticky cart bars sit comfortably above bottom nav bar */
-    html.app-mode #mobile-cart-bar,
-    body.app-mode #mobile-cart-bar,
-    html.app-mode .mobile-menu-cart-bar,
-    body.app-mode .mobile-menu-cart-bar {
-      bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
-    }
-    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-      #mobile-cart-bar,
-      .mobile-menu-cart-bar {
+      /* Floating sticky cart bars sit comfortably above bottom nav bar */
+      html.app-mode #mobile-cart-bar,
+      body.app-mode #mobile-cart-bar,
+      html.app-mode .mobile-menu-cart-bar,
+      body.app-mode .mobile-menu-cart-bar {
         bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+      }
+
+      /* Toast notifications elevated above Bottom Nav */
+      html.app-mode #toast-container,
+      body.app-mode #toast-container,
+      html.app-mode #toast,
+      body.app-mode #toast {
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+        z-index: 10000010 !important;
+      }
+
+      /* Native App Bottom Tab Bar */
+      #ebAppBottomNav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: calc(60px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: rgba(18, 17, 15, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(212, 168, 83, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        z-index: 9999999;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7);
+        font-family: -apple-system, BlinkMacSystemFont, "DM Sans", "Segoe UI", Roboto, sans-serif;
       }
     }
 
@@ -121,34 +154,6 @@ function injectAppModeStyles() {
     .modal-backdrop-wrap,
     #ebAppBrandModal {
       z-index: 10000005 !important;
-    }
-    /* Toast notifications elevated above Bottom Nav */
-    html.app-mode #toast-container,
-    body.app-mode #toast-container,
-    html.app-mode #toast,
-    body.app-mode #toast {
-      bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
-      z-index: 10000010 !important;
-    }
-
-    /* Native App Bottom Tab Bar */
-    #ebAppBottomNav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: calc(60px + env(safe-area-inset-bottom, 0px));
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-      background: rgba(18, 17, 15, 0.98);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(212, 168, 83, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      z-index: 9999999;
-      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7);
-      font-family: -apple-system, BlinkMacSystemFont, "DM Sans", "Segoe UI", Roboto, sans-serif;
     }
 
     .eb-app-tab {
@@ -250,8 +255,14 @@ function injectAppModeStyles() {
   }
 }
 
-// Early application of App Mode to avoid visual flicker
-if (isAppMode()) {
+// Early application of App Mode: enforce pure Web View on desktop screens
+if (window.innerWidth >= 768 && !isStandaloneMode()) {
+  localStorage.removeItem('eb_app_mode');
+  document.documentElement.classList.remove('app-mode');
+  if (document.body) {
+    document.body.classList.remove('app-mode');
+  }
+} else if (isAppMode()) {
   document.documentElement.classList.add('app-mode');
   if (document.body) {
     document.body.classList.add('app-mode');
@@ -399,15 +410,16 @@ function onAppTabClick(tab) {
       window.location.href = '/menu.html?view=app';
     }
   } else if (tab === 'track') {
-    if (window.location.pathname === '/' || window.location.pathname.endsWith('/index.html')) {
+    const lastNum = localStorage.getItem('eb_last_order') || '';
+    if (window.location.pathname === '/' || window.location.pathname.endsWith('/index.html') || window.location.pathname === '') {
       if (typeof navigate === 'function') {
-        navigate('tracking');
+        navigate('tracking', lastNum);
         renderAppBottomNav();
       } else {
-        window.location.href = '/?view=tracking&app=1';
+        window.location.href = '/?view=tracking&app=1' + (lastNum ? '&orderNumber=' + encodeURIComponent(lastNum) : '');
       }
     } else {
-      window.location.href = '/customer.html?view=orders&app=1';
+      window.location.href = '/customer.html?view=orders&app=1' + (lastNum ? '&orderNumber=' + encodeURIComponent(lastNum) : '');
     }
   } else if (tab === 'cart') {
     if (typeof toggleCart === 'function') {
@@ -429,7 +441,16 @@ function onAppTabClick(tab) {
 
 // Render Native App Bottom Navigation Bar
 function renderAppBottomNav() {
-  if (!isAppMode()) return;
+  if (window.innerWidth >= 768 && !isStandaloneMode()) {
+    const existing = document.getElementById('ebAppBottomNav');
+    if (existing) existing.style.display = 'none';
+    return;
+  }
+  if (!isAppMode()) {
+    const existing = document.getElementById('ebAppBottomNav');
+    if (existing) existing.style.display = 'none';
+    return;
+  }
   injectAppModeStyles();
 
   let nav = document.getElementById('ebAppBottomNav');
@@ -602,3 +623,16 @@ if (document.readyState === 'loading') {
 } else {
   initPwaEngine();
 }
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 768 && !isStandaloneMode()) {
+    const existing = document.getElementById('ebAppBottomNav');
+    if (existing) existing.style.display = 'none';
+    document.documentElement.classList.remove('app-mode');
+    if (document.body) document.body.classList.remove('app-mode');
+    syncPwaInstallButtons();
+  } else if (isAppMode()) {
+    renderAppBottomNav();
+    syncPwaInstallButtons();
+  }
+});
