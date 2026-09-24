@@ -83,6 +83,34 @@ router.post('/login', async (req, res) => {
       { expiresIn: '8h' }
     );
 
+    // Record login in security audit trail
+    try {
+      const AuditLog = require('../models/AuditLog');
+      let tName = '';
+      let bName = '';
+      if (user.tenantId) {
+        const t = await Tenant.findById(user.tenantId).select('name').lean();
+        if (t) tName = t.name;
+      }
+      if (user.branchId) {
+        const b = await Branch.findById(user.branchId).select('name').lean();
+        if (b) bName = b.name;
+      }
+      await AuditLog.create({
+        action: user.role === 'superadmin' ? 'superadmin_login' : 'login',
+        targetUserId: user._id,
+        targetUsername: user.username,
+        tenantId: user.tenantId || null,
+        tenantName: tName || (user.role === 'superadmin' ? 'Platform Root' : ''),
+        branchId: user.branchId || null,
+        branchName: bName || '',
+        details: `Successful ${user.role} authentication. Session token issued (8h).`,
+        performedBy: user.name || user.username,
+        performedByRole: user.role,
+        ip: req.ip || req.headers['x-forwarded-for'] || ''
+      });
+    } catch (_) {}
+
     res.json({
       token,
       user: {

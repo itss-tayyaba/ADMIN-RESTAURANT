@@ -1080,6 +1080,11 @@ table.data-table tr:last-child td { border-bottom: none; }
   white-space: nowrap;
 }
 
+.audit-badge.login,
+.audit-badge.superadmin_login { background: rgba(56, 161, 105, 0.15); color: #276749; }
+.audit-badge.tenant_created { background: rgba(212, 168, 83, 0.2); color: #8F6B1E; }
+.audit-badge.branch_created { background: rgba(49, 130, 206, 0.15); color: #2B6CB0; }
+.audit-badge.default { background: var(--paper-2); color: var(--text-muted); }
 .audit-badge.account_created { background: var(--blue-light); color: var(--blue); }
 .audit-badge.password_reset { background: #FFF8E6; color: #975A16; }
 .audit-badge.password_changed { background: var(--sage-light); color: var(--sage); }

@@ -304,6 +304,7 @@
     else if (currentView === 'branches') renderBranches();
     else if (currentView === 'users') renderUsers();
     else if (currentView === 'credentials') renderCredentials();
+    else if (currentView === 'audit') renderAuditView();
     else if (currentView === 'orders') renderOrders();
     else if (currentView === 'subscriptions') renderSubscriptions();
     else if (currentView === 'payments') renderPayments();
@@ -1964,9 +1965,7 @@
     }
   }
 
-  // Initial render
-  renderTenants();
-})();
+
 
 
   // ================================================================
@@ -2194,3 +2193,180 @@
       content.innerHTML = '<div class="error-state">Failed to load platform payment ledger: ' + esc(err.message) + '</div>';
     }
   }
+
+  // ================================================================
+  // 8. SECURITY AUDIT TRAIL (First-Class Governance & Provenance View)
+  // ================================================================
+  let saAuditAction = 'all';
+  let saAuditTenant = 'all';
+  let saAuditSearch = '';
+  let saAuditSearchTimer = null;
+  let cachedAuditLogs = [];
+
+  async function renderAuditView() {
+    pageTitle.textContent = 'Security Audit Trail';
+    breadcrumb.textContent = 'Governance Provenance, Account Lifecycles & Security Logs';
+    scopePill.textContent = 'Platform Superadmin';
+    content.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> Loading security audit trail…</div>';
+
+    try {
+      if (!cachedTenants || cachedTenants.length === 0) {
+        const tData = await api('/api/tenants');
+        cachedTenants = tData.tenants || [];
+      }
+
+      const queryParams = new URLSearchParams({
+        limit: 250,
+        action: saAuditAction === 'all' ? '' : saAuditAction,
+        tenantId: saAuditTenant === 'all' ? '' : saAuditTenant,
+        search: saAuditSearch || currentSearchTerm || ''
+      });
+
+      const data = await api('/api/credentials/audit-logs?' + queryParams.toString());
+      cachedAuditLogs = data.auditLogs || [];
+
+      // Calculate KPI Stats
+      const totalEvents = cachedAuditLogs.length;
+      const loginsCount = cachedAuditLogs.filter(l => l.action === 'login' || l.action === 'superadmin_login').length;
+      const provisionCount = cachedAuditLogs.filter(l => ['account_created', 'tenant_created', 'branch_created'].includes(l.action)).length;
+      const pwdCount = cachedAuditLogs.filter(l => ['password_reset', 'password_changed'].includes(l.action)).length;
+      const interventionCount = cachedAuditLogs.filter(l => ['account_suspended', 'account_reactivated', 'branch_suspended', 'branch_reactivated', 'tenant_suspended', 'tenant_reactivated'].includes(l.action)).length;
+
+      // 1. Stat cards
+      const statsHtml = '<div class="stat-grid" style="margin-bottom:24px;">' +
+        statCard('Total Audit Events', totalEvents, 'gold', 'Platform-wide security trail') +
+        statCard('Genesis & Accounts', provisionCount, 'blue', 'Tenants, branches & users') +
+        statCard('Admin Sessions', loginsCount, 'sage', 'Authenticated logins') +
+        statCard('Password Actions', pwdCount, 'ember', 'Resets & policy changes') +
+        statCard('Interventions', interventionCount, interventionCount > 0 ? 'danger' : '', 'Suspensions & activations') +
+      '</div>';
+
+      // 2. Filter tabs
+      const filterTabsHtml = '<div class="cred-filter-tabs" style="margin-bottom:16px;">' +
+        '<button class="cred-filter-tab ' + (saAuditAction === 'all' ? 'active' : '') + '" data-action="all">' +
+          'All Events <span class="badge-count">' + totalEvents + '</span>' +
+        '</button>' +
+        '<button class="cred-filter-tab ' + (saAuditAction === 'login' ? 'active' : '') + '" data-action="login">' +
+          '<i class="fa-solid fa-right-to-bracket" style="font-size:11px;"></i> Logins' +
+        '</button>' +
+        '<button class="cred-filter-tab ' + (saAuditAction === 'account_created' ? 'active' : '') + '" data-action="account_created">' +
+          '<i class="fa-solid fa-user-plus" style="font-size:11px;"></i> Accounts Created' +
+        '</button>' +
+        '<button class="cred-filter-tab ' + (saAuditAction === 'tenant_created' ? 'active' : '') + '" data-action="tenant_created">' +
+          '<i class="fa-solid fa-store" style="font-size:11px;"></i> Tenants & Branches' +
+        '</button>' +
+        '<button class="cred-filter-tab ' + (saAuditAction === 'password_reset' ? 'active' : '') + '" data-action="password_reset">' +
+          '<i class="fa-solid fa-key" style="font-size:11px;"></i> Password Resets' +
+        '</button>' +
+        '<button class="cred-filter-tab ' + (saAuditAction === 'account_suspended' ? 'active' : '') + '" data-action="account_suspended">' +
+          '<i class="fa-solid fa-ban" style="font-size:11px;"></i> Suspensions' +
+        '</button>' +
+      '</div>';
+
+      // 3. Dropdown filters & search bar
+      const tenantOptions = '<option value="all"' + (saAuditTenant === 'all' ? ' selected' : '') + '>All Restaurant Tenants</option>' +
+        cachedTenants.map(t => '<option value="' + t._id + '"' + (saAuditTenant === t._id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
+
+      const controlsHtml = '<div style="background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">' +
+        '<div style="flex:1;min-width:200px;">' +
+          '<label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Filter Restaurant</label>' +
+          '<select id="saAuditTenantSelect" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--paper-2);color:var(--text);font-size:12.5px;">' +
+            tenantOptions +
+          '</select>' +
+        '</div>' +
+        '<div style="flex:2;min-width:240px;">' +
+          '<label style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:4px;">Search Audit Records</label>' +
+          '<input type="text" id="saAuditSearchInput" placeholder="Filter by username, actor, IP, details…" value="' + esc(saAuditSearch) + '" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--paper-2);color:var(--text);font-size:12.5px;" />' +
+        '</div>' +
+        '<div style="margin-top:auto;">' +
+          '<button id="saAuditRefreshBtn" class="btn-primary-action" style="padding:8px 16px;height:36px;font-size:12.5px;"><i class="fa-solid fa-rotate"></i> Refresh Logs</button>' +
+        '</div>' +
+      '</div>';
+
+      // 4. Data rows
+      let list = cachedAuditLogs;
+      const rowsHtml = list.length ? list.map(l => {
+        const actionTag = (l.action || 'default').toLowerCase();
+        let actionIcon = '🛡️';
+        if (actionTag.includes('login')) actionIcon = '🔑';
+        else if (actionTag.includes('created')) actionIcon = '✨';
+        else if (actionTag.includes('reset')) actionIcon = '🔄';
+        else if (actionTag.includes('suspend')) actionIcon = '⛔';
+        else if (actionTag.includes('reactivat')) actionIcon = '✅';
+
+        const actionLabel = actionIcon + ' ' + (l.action || '').replace(/_/g, ' ');
+        const restaurantBranch = [l.tenantName, l.branchName].filter(Boolean).join(' / ') || 'Platform Root';
+        const actor = esc(l.performedBy || 'Superadmin') +
+          '<br><small style="color:var(--text-muted);">' + esc(l.performedByRole || 'superadmin') + '</small>';
+
+        const ipBadge = l.ip ? '<br><small style="font-family:monospace;color:var(--text-dim);font-size:10.5px;">IP: ' + esc(l.ip) + '</small>' : '';
+
+        return '<tr>' +
+          '<td><small style="white-space:nowrap;color:var(--text-muted);font-weight:600;">' + formatDateTime(l.createdAt) + '</small></td>' +
+          '<td><span class="audit-badge ' + esc(actionTag) + '">' + esc(actionLabel) + '</span></td>' +
+          '<td><code>@' + esc(l.targetUsername || '—') + '</code></td>' +
+          '<td><strong>' + esc(restaurantBranch) + '</strong></td>' +
+          '<td>' + actor + ipBadge + '</td>' +
+          '<td><small style="line-height:1.45;display:block;color:var(--text);">' + esc(l.details || '—') + '</small></td>' +
+        '</tr>';
+      }).join('') : '<tr><td colspan="6" class="empty-state" style="padding:40px;text-align:center;">No audit trail events match the selected criteria.</td></tr>';
+
+      content.innerHTML = statsHtml + filterTabsHtml + controlsHtml +
+        '<div class="panel">' +
+          '<div class="panel-head">' +
+            '<h3>Security Audit Logs (' + list.length + ' Recorded Events)</h3>' +
+          '</div>' +
+          '<div class="table-scroll">' +
+            '<table class="data-table">' +
+              '<thead>' +
+                '<tr>' +
+                  '<th>Timestamp</th>' +
+                  '<th>Action</th>' +
+                  '<th>Target Identifier</th>' +
+                  '<th>Restaurant / Scope</th>' +
+                  '<th>Initiator</th>' +
+                  '<th>Audit Details</th>' +
+                '</tr>' +
+              '</thead>' +
+              '<tbody>' + rowsHtml + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>';
+
+      // Wire up tab clicks
+      content.querySelectorAll('.cred-filter-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          saAuditAction = btn.dataset.action;
+          renderAuditView();
+        });
+      });
+
+      // Wire up tenant filter
+      document.getElementById('saAuditTenantSelect')?.addEventListener('change', (e) => {
+        saAuditTenant = e.target.value;
+        renderAuditView();
+      });
+
+      // Wire up search
+      document.getElementById('saAuditSearchInput')?.addEventListener('input', (e) => {
+        clearTimeout(saAuditSearchTimer);
+        saAuditSearchTimer = setTimeout(() => {
+          saAuditSearch = e.target.value.trim();
+          renderAuditView();
+        }, 350);
+      });
+
+      // Wire up refresh
+      document.getElementById('saAuditRefreshBtn')?.addEventListener('click', () => {
+        renderAuditView();
+      });
+
+    } catch (err) {
+      console.error('renderAuditView error:', err);
+      content.innerHTML = '<div class="error-state">Failed to load security audit trail: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  // Initial render
+  renderTenants();
+})();

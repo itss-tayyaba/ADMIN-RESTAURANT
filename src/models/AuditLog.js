@@ -4,17 +4,7 @@ const auditLogSchema = new mongoose.Schema({
   action: {
     type: String,
     required: true,
-    enum: [
-      'account_created',
-      'password_changed',
-      'password_reset',
-      'account_suspended',
-      'account_reactivated',
-      'branch_suspended',
-      'branch_reactivated',
-      'tenant_suspended',
-      'tenant_reactivated'
-    ],
+    trim: true,
     index: true
   },
   targetUserId: {

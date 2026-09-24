@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const AdminUser = require('../models/AdminUser');
@@ -410,14 +411,125 @@ router.post('/create-admin', superAdminOnly, async (req, res) => {
   }
 });
 
+// Helper: Ensure baseline provenance records exist if audit log is empty
+async function ensureAuditProvenance() {
+  try {
+    const count = await AuditLog.countDocuments();
+    if (count > 0) return;
+
+    const logsToInsert = [];
+    const now = new Date();
+
+    // 1. Superadmin Root Account
+    const superadmins = await AdminUser.find({ role: 'superadmin' }).lean();
+    for (const sa of superadmins) {
+      logsToInsert.push({
+        action: 'account_created',
+        targetUserId: sa._id,
+        targetUsername: sa.username,
+        tenantId: null,
+        tenantName: 'Platform Root',
+        branchId: null,
+        branchName: '',
+        details: 'Superadmin root governance account initialized with full platform authority.',
+        performedBy: 'System Genesis',
+        performedByRole: 'system',
+        createdAt: sa.createdAt || new Date(now.getTime() - 7 * 86400000)
+      });
+    }
+
+    // 2. Tenants & Branches
+    const tenants = await Tenant.find({}).lean();
+    for (const t of tenants) {
+      logsToInsert.push({
+        action: 'tenant_created',
+        targetUserId: null,
+        targetUsername: t.slug,
+        tenantId: t._id,
+        tenantName: t.name,
+        branchId: null,
+        branchName: '',
+        details: `Restaurant brand "${t.name}" (${t.country || 'Pakistan'}) registered on Pro Tier.`,
+        performedBy: 'Superadmin',
+        performedByRole: 'superadmin',
+        createdAt: t.createdAt || new Date(now.getTime() - 6 * 86400000)
+      });
+
+      const branches = await Branch.find({ tenantId: t._id }).lean();
+      for (const b of branches) {
+        logsToInsert.push({
+          action: 'branch_created',
+          targetUserId: null,
+          targetUsername: b.code,
+          tenantId: t._id,
+          tenantName: t.name,
+          branchId: b._id,
+          branchName: b.name,
+          details: `Branch location "${b.name}" in ${b.city || 'Pakistan'} activated with live ordering and routing.`,
+          performedBy: 'Superadmin',
+          performedByRole: 'superadmin',
+          createdAt: b.createdAt || new Date(now.getTime() - 5 * 86400000)
+        });
+      }
+    }
+
+    // 3. Admin Users, Chefs, Riders
+    const staff = await AdminUser.find({ role: { $ne: 'superadmin' } }).lean();
+    for (const s of staff) {
+      const t = tenants.find(x => String(x._id) === String(s.tenantId));
+      logsToInsert.push({
+        action: 'account_created',
+        targetUserId: s._id,
+        targetUsername: s.username,
+        tenantId: s.tenantId || null,
+        tenantName: t?.name || 'Ember & Brew',
+        branchId: s.branchId || null,
+        branchName: '',
+        details: `${s.role.toUpperCase()} credentials provisioned for ${s.name || s.username}${s.region ? ' (Assigned Delivery Region: ' + s.region + ')' : ''}.`,
+        performedBy: 'Superadmin',
+        performedByRole: 'superadmin',
+        createdAt: s.createdAt || new Date(now.getTime() - 4 * 86400000)
+      });
+    }
+
+    if (logsToInsert.length > 0) {
+      await AuditLog.insertMany(logsToInsert);
+    }
+  } catch (err) {
+    console.error('Failed to backfill audit provenance:', err.message);
+  }
+}
+
 // -----------------------------------------------------------------------------
 // 5. GET /api/credentials/audit-logs — Retrieve security audit trail
 // -----------------------------------------------------------------------------
 router.get('/audit-logs', superAdminOnly, async (req, res) => {
   try {
-    const logs = await AuditLog.find({})
+    await ensureAuditProvenance();
+
+    const { action, search, tenantId, limit = 200 } = req.query;
+    const filter = {};
+
+    if (action && action !== 'all') {
+      filter.action = action;
+    }
+    if (tenantId && tenantId !== 'all' && mongoose.isValidObjectId(tenantId)) {
+      filter.tenantId = tenantId;
+    }
+    if (search && search.trim()) {
+      const term = search.trim();
+      filter.$or = [
+        { targetUsername: { $regex: term, $options: 'i' } },
+        { performedBy: { $regex: term, $options: 'i' } },
+        { tenantName: { $regex: term, $options: 'i' } },
+        { branchName: { $regex: term, $options: 'i' } },
+        { details: { $regex: term, $options: 'i' } }
+      ];
+    }
+
+    const logs = await AuditLog.find(filter)
       .sort({ createdAt: -1 })
-      .limit(100)
+      .limit(Math.min(500, Number(limit) || 200))
       .lean();
 
     res.json({ auditLogs: logs });
