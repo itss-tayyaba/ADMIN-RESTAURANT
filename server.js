@@ -93,6 +93,7 @@ app.use(express.static(path.join(__dirname, "ember-and-brew", "public")));
 app.use("/admin", express.static(path.join(__dirname, "ember-and-brew", "public", "admin")));
 app.use("/kitchen", express.static(path.join(__dirname, "ember-and-brew", "public", "kitchen")));
 app.use("/delivery", express.static(path.join(__dirname, "ember-and-brew", "public", "delivery")));
+app.use("/rider", express.static(path.join(__dirname, "ember-and-brew", "public", "delivery")));
 app.use("/superadmin", (req, res, next) => {
   res.set("Cache-Control", "no-cache, no-store, must-revalidate");
   res.set("Pragma", "no-cache");
@@ -153,7 +154,7 @@ app.get("/admin", (req, res) => {
 app.get("/kitchen", (req, res) => {
   res.sendFile(path.join(__dirname, "ember-and-brew", "public", "kitchen", "kitchen.html"));
 });
-app.get("/delivery", (req, res) => {
+app.get(["/delivery", "/delivery/delivery.html", "/rider", "/rider/rider.html"], (req, res) => {
   res.sendFile(path.join(__dirname, "ember-and-brew", "public", "delivery", "delivery.html"));
 });
 app.get("/superadmin", (req, res) => {
