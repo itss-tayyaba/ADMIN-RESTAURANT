@@ -1819,6 +1819,7 @@ async function confirmNativeInstall() {
 <!-- Toast container -->
 <div id="toast-container" class="fixed bottom-6 right-6 z-[400] flex flex-col gap-3" aria-live="polite"></div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script src="/order-notifications.js"></script>
 <script>
 // ============================================
@@ -3169,9 +3170,16 @@ async function submitComplaint(e) {
 
 
 // ============================================
-// CHECKOUT
-// ============================================
-let cachedRegions = null;
+const DEFAULT_DELIVERY_REGIONS = [
+  "D Ground",
+  "Susan Road",
+  "Jinnah Colony",
+  "Madina Town",
+  "Peoples Colony",
+  "Samanabad",
+  "Gulberg"
+];
+let cachedRegions = [...DEFAULT_DELIVERY_REGIONS];
 let confirmedDeliveryLocation = null;
 let deliveryMap = null;
 let deliveryMarker = null;
@@ -3374,19 +3382,30 @@ function openDeliveryLocationPicker() {
 async function populateMapDeliveryRegions() {
   const mapSelect = document.getElementById('delivery-map-region');
   if (!mapSelect) return;
-  if (!cachedRegions) {
-    try {
-      const data = await apiFetch('/api/orders/meta/regions');
-      cachedRegions = data.regions || [];
-    } catch (_) {
-      cachedRegions = [];
-    }
+  if (!cachedRegions || cachedRegions.length === 0) {
+    cachedRegions = [...DEFAULT_DELIVERY_REGIONS];
   }
+  try {
+    const data = await apiFetch('/api/orders/meta/regions');
+    if (Array.isArray(data.regions) && data.regions.length > 0) {
+      cachedRegions = data.regions;
+    }
+  } catch (_) {}
+
   const checkoutRegion = document.querySelector('select[name="region"]')?.value || '';
   mapSelect.innerHTML = '<option value="">Select delivery region</option>'
     + cachedRegions.map(region => `<option value="${region}">${region}</option>`).join('');
-  if (checkoutRegion && cachedRegions.includes(checkoutRegion)) setMapDeliveryRegion(checkoutRegion);
-  else setMapDeliveryRegion('', false);
+
+  if (checkoutRegion && cachedRegions.includes(checkoutRegion)) {
+    setMapDeliveryRegion(checkoutRegion);
+  } else if (confirmedDeliveryLocation?.address) {
+    const normalised = confirmedDeliveryLocation.address.toLowerCase();
+    const matched = cachedRegions.find(r => normalised.includes(r.toLowerCase()));
+    if (matched) setMapDeliveryRegion(matched);
+    else setMapDeliveryRegion('', false);
+  } else {
+    setMapDeliveryRegion('', false);
+  }
   if (confirmedDeliveryLocation?.address) setOpenStreetMapDeliveryAddress(confirmedDeliveryLocation.address);
 }
 
@@ -3969,14 +3988,15 @@ function useCurrentDeliveryLocation() {
 async function loadRegionsIntoSelect() {
   const select = document.querySelector('select[name="region"]');
   if (!select) return;
-  if (!cachedRegions) {
-    try {
-      const data = await apiFetch('/api/orders/meta/regions');
-      cachedRegions = data.regions || [];
-    } catch (e) {
-      cachedRegions = [];
-    }
+  if (!cachedRegions || cachedRegions.length === 0) {
+    cachedRegions = [...DEFAULT_DELIVERY_REGIONS];
   }
+  try {
+    const data = await apiFetch('/api/orders/meta/regions');
+    if (Array.isArray(data.regions) && data.regions.length > 0) {
+      cachedRegions = data.regions;
+    }
+  } catch (e) {}
   select.innerHTML = '<option value="">Select your region…</option>' +
     cachedRegions.map(r => `<option value="${r}">${r}</option>`).join('');
 }
@@ -4217,6 +4237,13 @@ async function handleCheckout(e) {
     localStorage.removeItem('eb_return_to_checkout');
     if (order && order.orderNumber) {
       localStorage.setItem('eb_last_order', order.orderNumber);
+      localStorage.setItem('eb_last_order_status', order.status || 'pending_admin');
+      if (typeof window.requestNotificationPermission === 'function') {
+        window.requestNotificationPermission();
+      }
+      if (typeof window.startOrderLiveWatcher === 'function') {
+        window.startOrderLiveWatcher(order.orderNumber);
+      }
     }
     document.documentElement.classList.remove('preload-checkout');
     form.reset();
@@ -4627,12 +4654,22 @@ async function renderTracking(orderNumber) {
       try {
         const fresh = await apiFetch(trackingEndpoint, trackingOptions);
         if (fresh.status !== order.status || fresh.updatedAt !== order.updatedAt) {
-          if (fresh.status === 'ready') showToast(`Order ${order.orderNumber} is ready!`, 'info');
-          if (fresh.status === 'completed') showToast(`Order ${order.orderNumber} completed. Enjoy!`, 'success');
+          if (typeof window.notifyMobileOrderStatus === 'function' && fresh.status !== order.status) {
+            window.notifyMobileOrderStatus(fresh, order.status, fresh.status);
+          }
           renderTracking(order.orderNumber);
         }
       } catch { /* ignore transient poll errors */ }
-    }, 8000);
+    }, 6000);
+  }
+
+  if (!window._ebOrderStatusListenerBound) {
+    window._ebOrderStatusListenerBound = true;
+    window.addEventListener('eb:order-status-changed', e => {
+      if (state.currentView === 'tracking' && e.detail?.order?.orderNumber) {
+        renderTracking(e.detail.order.orderNumber);
+      }
+    });
   }
 }
 

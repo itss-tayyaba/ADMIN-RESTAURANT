@@ -5,6 +5,8 @@ class OrderModel {
   final double total;
   final String? table;
   final String? otp;
+  final String? deliveryBoyName;
+  final String? deliveryBoyPhone;
   final DateTime createdAt;
   final List<dynamic> items;
 
@@ -15,6 +17,8 @@ class OrderModel {
     required this.total,
     this.table,
     this.otp,
+    this.deliveryBoyName,
+    this.deliveryBoyPhone,
     required this.createdAt,
     required this.items,
   });
@@ -39,6 +43,8 @@ class OrderModel {
       total: (json['total'] is num) ? (json['total'] as num).toDouble() : 0.0,
       table: (json['table'] ?? json['tableNumber'])?.toString(),
       otp: json['otp']?.toString(),
+      deliveryBoyName: json['deliveryBoyName']?.toString(),
+      deliveryBoyPhone: json['deliveryBoyPhone']?.toString(),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
           : DateTime.now(),

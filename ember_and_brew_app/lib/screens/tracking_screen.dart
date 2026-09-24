@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../config/app_theme.dart';
 import '../models/order_model.dart';
 import '../services/api_service.dart';
@@ -34,10 +35,10 @@ class _TrackingScreenState extends State<TrackingScreen> {
     super.initState();
     if (widget.orderNumber != null) {
       _searchController.text = widget.orderNumber!;
-      _fetchOrder(widget.orderNumber!);
-      _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _fetchOrder(widget.orderNumber!, isBackground: false);
+      _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
         if (_searchController.text.isNotEmpty) {
-          _fetchOrder(_searchController.text.trim());
+          _fetchOrder(_searchController.text.trim(), isBackground: true);
         }
       });
     }
@@ -49,20 +50,74 @@ class _TrackingScreenState extends State<TrackingScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchOrder(String orderNum) async {
-    setState(() => _isLoading = true);
-    final order = await ApiService.trackOrder(orderNum);
-    setState(() {
-      _currentOrder = order;
-      _isLoading = false;
-    });
-    if (order == null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order not found. Please verify the order number.'),
-        ),
-      );
+  Future<void> _fetchOrder(String orderNum, {bool isBackground = false}) async {
+    if (!isBackground) {
+      setState(() => _isLoading = true);
     }
+    final order = await ApiService.trackOrder(orderNum);
+    if (!mounted) return;
+
+    if (order != null) {
+      final oldStatus = _currentOrder?.status;
+      final newStatus = order.status;
+
+      setState(() {
+        _currentOrder = order;
+        _isLoading = false;
+      });
+
+      // Status change notification & haptic feedback on mobile
+      if (oldStatus != null && oldStatus != newStatus) {
+        HapticFeedback.heavyImpact();
+        _showStatusAlert(order, oldStatus, newStatus);
+      }
+    } else {
+      setState(() => _isLoading = false);
+      if (!isBackground) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order not found. Please verify the order number.'),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showStatusAlert(OrderModel order, String oldStatus, String newStatus) {
+    final title = _stageLabels[newStatus] ?? newStatus;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF1A1917),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppTheme.gold, width: 1.5),
+        ),
+        duration: const Duration(seconds: 5),
+        content: Row(
+          children: [
+            const Icon(Icons.notifications_active, color: AppTheme.gold, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Order Update: $title',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textLight, fontSize: 13),
+                  ),
+                  Text(
+                    'Order #${order.orderNumber} status changed to $title.',
+                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -93,7 +148,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     icon: const Icon(Icons.arrow_forward, color: AppTheme.gold),
                     onPressed: () {
                       if (_searchController.text.trim().isNotEmpty) {
-                        _fetchOrder(_searchController.text.trim());
+                        _fetchOrder(_searchController.text.trim(), isBackground: false);
                       }
                     },
                   ),
@@ -102,7 +157,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
             ),
             const SizedBox(height: 20),
 
-            if (_isLoading)
+            if (_isLoading && _currentOrder == null)
               const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: AppTheme.gold)))
             else if (_currentOrder != null) ...[
               // Order Number Banner
@@ -161,6 +216,44 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: 8, color: AppTheme.textLight),
                       ),
                       const Text('Show this code to your delivery rider upon arrival.', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+
+              // Assigned Rider Card
+              if (_currentOrder!.deliveryBoyName != null && _currentOrder!.deliveryBoyName!.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppTheme.gold.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.two_wheeler, color: AppTheme.gold),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Assigned Rider', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                            Text(_currentOrder!.deliveryBoyName!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textLight)),
+                            if (_currentOrder!.deliveryBoyPhone != null)
+                              Text('Phone: ${_currentOrder!.deliveryBoyPhone!}', style: const TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),

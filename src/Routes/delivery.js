@@ -154,7 +154,11 @@ async function autoAssignOrder(order, io) {
     await rider.save();
 
     try {
-        if (io) io.emit('order:update', order);
+        if (io) {
+            io.emit('order:update', order);
+            io.to('order:' + order.orderNumber).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+            if (order.branchId) io.to('branch:' + order.branchId).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+        }
     } catch (e) { /* ignore emit errors */ }
 
     return rider;
@@ -520,8 +524,12 @@ router.put("/:id/assign", adminAuth, async (req, res) => {
         await rider.save();
 
         try {
-            const io = req.app && req.app.locals && req.app.locals.io;
-            if (io) io.emit('order:update', order);
+            const io = (req.app && typeof req.app.get === 'function' && req.app.get('io')) || (req.app && req.app.locals && req.app.locals.io);
+            if (io) {
+                io.emit('order:update', order);
+                io.to('order:' + order.orderNumber).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+                if (order.branchId) io.to('branch:' + order.branchId).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+            }
         } catch (e) { /* ignore emit errors */ }
 
         res.json({
@@ -725,8 +733,12 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
         delete safeOrder.otp;
 
         try {
-            const io = req.app && req.app.locals && req.app.locals.io;
-            if (io) io.emit('order:update', safeOrder);
+            const io = (req.app && typeof req.app.get === 'function' && req.app.get('io')) || (req.app && req.app.locals && req.app.locals.io);
+            if (io) {
+                io.emit('order:update', safeOrder);
+                io.to('order:' + safeOrder.orderNumber).emit('order:status', { orderNumber: safeOrder.orderNumber, status: safeOrder.status, order: safeOrder });
+                if (safeOrder.branchId) io.to('branch:' + safeOrder.branchId).emit('order:status', { orderNumber: safeOrder.orderNumber, status: safeOrder.status, order: safeOrder });
+            }
         } catch (e) { /* ignore emit errors */ }
 
         res.json({

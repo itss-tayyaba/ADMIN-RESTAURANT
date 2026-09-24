@@ -95,6 +95,14 @@ self.addEventListener('fetch', event => {
   );
 });
 
+// Client-triggered notifications via Service Worker
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data;
+    event.waitUntil(self.registration.showNotification(title || 'Ember & Brew', options || {}));
+  }
+});
+
 // Push Notifications
 self.addEventListener('push', event => {
   let payload = { title: 'Ember & Brew', body: 'Your order update is ready!', url: '/?view=tracking' };
@@ -106,7 +114,7 @@ self.addEventListener('push', event => {
     body: payload.body || 'Track your order in real-time.',
     icon: '/images/icon-192.png',
     badge: '/images/icon-192.png',
-    vibrate: [100, 50, 100],
+    vibrate: [200, 100, 200, 100, 200],
     data: { url: payload.url || '/?view=tracking' }
   };
   event.waitUntil(self.registration.showNotification(payload.title || 'Ember & Brew', options));
@@ -114,11 +122,14 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = event.notification.data?.url || '/?view=tracking';
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(clientList => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
-        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
+        if ('focus' in client) {
+          if ('navigate' in client) client.navigate(targetUrl);
+          return client.focus();
+        }
       }
       if (clients.openWindow) return clients.openWindow(targetUrl);
     })

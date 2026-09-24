@@ -170,6 +170,7 @@ const io = new Server(server, {
   }
 });
 app.set("io", io);
+app.locals.io = io;
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
@@ -178,6 +179,9 @@ io.on("connection", (socket) => {
   });
   socket.on("join-tenant", (tenantId) => {
     if (tenantId) socket.join('tenant:' + tenantId);
+  });
+  socket.on("join-order", (orderNumber) => {
+    if (orderNumber) socket.join('order:' + String(orderNumber).trim().toUpperCase());
   });
 });
 

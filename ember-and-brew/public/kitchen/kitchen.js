@@ -267,7 +267,14 @@ function cleanupLocalState() {
 // =====================================
 
 function renderOrders() {
-  let filtered = orders.filter(o => !dismissedIds.has(o._id));
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  let filtered = orders.filter(o => {
+    if (dismissedIds.has(o._id)) return false;
+    // Remove orders older than 1 day (24 hours) from the kitchen board
+    if (o.createdAt && (now - new Date(o.createdAt).getTime()) >= ONE_DAY_MS) return false;
+    return true;
+  });
 
   if (activeStation !== 'all') {
     filtered = filtered.filter(o => getOrderCategories(o).has(activeStation));

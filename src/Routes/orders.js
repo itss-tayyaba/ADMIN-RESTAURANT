@@ -4,10 +4,14 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Branch = require('../models/Branch');
+const AdminUser = require('../models/AdminUser');
+const REGIONS = require('../data/regions');
+const REGION_CENTERS = require('../data/regionCenters');
 const jwt = require('jsonwebtoken');
 const { isAdminRole, resolveBranchId } = require('../utils/branchScope');
 const { resolveTenant, addTenantScope } = require('../utils/tenantScope');
 const { customerAuth } = require('./customerAuth');
+const { notifyCustomer } = require('../services/notificationService');
 
 function adminAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -206,6 +210,28 @@ router.get('/stats/summary', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/orders/meta/regions — Public delivery regions list
+router.get('/meta/regions', async (req, res) => {
+  try {
+    const regionSet = new Set(REGIONS);
+    try {
+      const riderFilter = { role: 'delivery', active: true };
+      if (req.query.branchId && mongoose.isValidObjectId(req.query.branchId)) {
+        riderFilter.branchId = req.query.branchId;
+      }
+      const riders = await AdminUser.find(riderFilter).select('region').lean();
+      riders.forEach(r => {
+        if (r.region && r.region.trim()) regionSet.add(r.region.trim());
+      });
+    } catch (_) {}
+
+    const regions = Array.from(regionSet);
+    res.json({ success: true, regions, regionCenters: REGION_CENTERS });
+  } catch (err) {
+    res.json({ success: true, regions: REGIONS, regionCenters: REGION_CENTERS });
+  }
+});
+
 // GET /api/orders/track/:orderNumber — Dedicated public order tracking
 router.get('/track/:orderNumber', async (req, res) => {
   try {
@@ -306,6 +332,25 @@ const updateOrderStatus = async (req, res) => {
     order.status = status;
     order.statusLog.push({ status, time: new Date() });
     await order.save();
+
+    // Trigger push notification, SMS, WhatsApp, and email to customer
+    try {
+      await notifyCustomer(order, status);
+    } catch (notifErr) {
+      console.warn('Customer notification failed:', notifErr.message);
+    }
+
+    // Broadcast real-time status update to all connected clients
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('order:update', order);
+        io.to('order:' + order.orderNumber).emit('order:status', { orderNumber: order.orderNumber, status, order });
+        if (order.branchId) io.to('branch:' + order.branchId).emit('order:status', { orderNumber: order.orderNumber, status, order });
+        if (order.tenantId) io.to('tenant:' + order.tenantId).emit('order:status', { orderNumber: order.orderNumber, status, order });
+      }
+    } catch (_) {}
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update order status' });

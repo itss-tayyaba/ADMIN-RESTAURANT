@@ -196,6 +196,7 @@ router.get("/orders", kitchenAuth, async (req, res) => {
 
 
         const filter = {
+            createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
             branchId: req.user.branchId,
             status: {
                 $in: [
@@ -304,8 +305,12 @@ order.status = "preparing";
 
         // emit real-time update to connected clients
         try {
-            const io = req.app && req.app.locals && req.app.locals.io;
-            if (io) io.emit('order:update', order);
+            const io = (req.app && typeof req.app.get === 'function' && req.app.get('io')) || (req.app && req.app.locals && req.app.locals.io);
+            if (io) {
+                io.emit('order:update', order);
+                io.to('order:' + order.orderNumber).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+                if (order.branchId) io.to('branch:' + order.branchId).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+            }
         } catch (e) { /* ignore emit errors */ }
 
         res.json({
@@ -391,11 +396,15 @@ order.status = "ready";
         await order.save();
         await notifyCustomer(order, "ready");
 
-        const io = req.app && req.app.locals && req.app.locals.io;
+        const io = (req.app && typeof req.app.get === 'function' && req.app.get('io')) || (req.app && req.app.locals && req.app.locals.io);
 
         // emit real-time update to connected clients
         try {
-            if (io) io.emit('order:update', order);
+            if (io) {
+                io.emit('order:update', order);
+                io.to('order:' + order.orderNumber).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+                if (order.branchId) io.to('branch:' + order.branchId).emit('order:status', { orderNumber: order.orderNumber, status: order.status, order });
+            }
         } catch (e) { /* ignore emit errors */ }
 
         // Delivery orders auto-assign a rider the moment they're ready,

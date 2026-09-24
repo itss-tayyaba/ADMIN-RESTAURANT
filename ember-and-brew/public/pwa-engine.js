@@ -547,6 +547,11 @@ async function triggerPwaInstall() {
   // 1. Immediately switch into App Mode (Removes web footer & activates native app tab bar!)
   enableAppMode({ announce: true });
 
+  // 1b. Proactively request mobile notification permission for live order status
+  if (typeof window.requestNotificationPermission === 'function') {
+    window.requestNotificationPermission();
+  }
+
   // 2. If Android/Chrome native install prompt is captured, trigger it immediately
   if (deferredPwaPrompt) {
     deferredPwaPrompt.prompt();
