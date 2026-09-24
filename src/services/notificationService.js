@@ -162,7 +162,7 @@ function buildOrderEmailHtml(order, message) {
       <div style="font-family: monospace; font-size: 36px; font-weight: 800; letter-spacing: 6px; color: #FFFFFF; text-shadow: 0 0 12px rgba(212,168,83,0.5);">
         ${escapeHtml(order.otp)}
       </div>
-      <p style="margin: 10px 0 0 0; color: #C4BCB0; font-size: 13px;">Please give this 6-digit OTP code to your rider to verify and receive your food.</p>
+      <p style="margin: 10px 0 0 0; color: #C4BCB0; font-size: 13px;">Please give this delivery OTP code to your rider to verify and receive your food.</p>
     </div>
   ` : '';
 

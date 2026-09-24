@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const Branch = require('../models/Branch');
@@ -38,7 +39,7 @@ function generateOrderNumber() {
 }
 
 function generateOtp() {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 // POST /api/orders — place an order

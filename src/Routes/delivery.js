@@ -622,10 +622,10 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
     try {
 
         const otp = String(req.body?.otp || '').trim();
-        if (!/^\d{6}$/.test(otp)) {
+        if (!/^\d{4,6}$/.test(otp)) {
             return res.status(400).json({
                 success: false,
-                message: "Enter the 6-digit OTP provided by the customer."
+                message: "Please enter the numeric delivery OTP provided by the customer."
             });
         }
 
@@ -650,12 +650,36 @@ router.put("/:id/delivered", deliveryAuth, async (req, res) => {
             });
         }
 
+        // Brute-force lockout protection: lock out after 5 consecutive failed attempts for 2 minutes
+        if (order.otpFailures >= 5 && order.lastOtpAttempt) {
+            const timeSinceLast = Date.now() - new Date(order.lastOtpAttempt).getTime();
+            if (timeSinceLast < 120000) {
+                const waitSec = Math.ceil((120000 - timeSinceLast) / 1000);
+                return res.status(429).json({
+                    success: false,
+                    message: `Security Lockout: Too many invalid attempts. Please wait ${waitSec}s before retrying.`
+                });
+            } else {
+                order.otpFailures = 0;
+            }
+        }
+
         if (!order.otp || order.otp !== otp) {
+            order.otpFailures = (order.otpFailures || 0) + 1;
+            order.lastOtpAttempt = new Date();
+            await order.save();
+            const attemptsLeft = Math.max(0, 5 - order.otpFailures);
             return res.status(400).json({
                 success: false,
-                message: "Invalid OTP. Please ask the customer to confirm the code."
+                message: attemptsLeft > 0
+                    ? `Invalid OTP. Please ask the customer to confirm the code (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining).`
+                    : "Security Lockout: 5 failed OTP attempts. Please wait 2 minutes."
             });
         }
+
+        // OTP verification succeeded! Reset failure count and proceed
+        order.otpFailures = 0;
+        order.lastOtpAttempt = undefined;
 
         // OTP verification is the proof of handoff. Record the delivery,
         // then complete the customer journey immediately.

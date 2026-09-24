@@ -98,6 +98,8 @@ const orderSchema = new mongoose.Schema({
   deliveredAt: Date,
   otp: { type: String, select: false },
   otpVerified: { type: Boolean, default: false },
+  otpFailures: { type: Number, default: 0 },
+  lastOtpAttempt: Date,
   statusLog: [statusLogSchema]
 }, { timestamps: true });
 

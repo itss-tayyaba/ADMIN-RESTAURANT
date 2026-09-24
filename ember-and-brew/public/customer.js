@@ -706,7 +706,7 @@ function renderOrderCardHtml(order) {
         <div class="otp-card">
           <div class="otp-title"><i class="fa-solid fa-shield-halved mr-1"></i> Delivery OTP Code</div>
           <div class="otp-code">${escapeHtml(order.otp)}</div>
-          <p class="otp-hint">Give this secret 6-digit OTP code to the rider when they arrive to complete your delivery.</p>
+          <p class="otp-hint">Give this secret delivery OTP code to the rider when they arrive to complete your delivery.</p>
         </div>
       ` : ''}
 
@@ -851,7 +851,7 @@ async function loadLiveTrackingData(orderNumber) {
           <div class="otp-card" style="margin:20px 0;">
             <div class="otp-title"><i class="fa-solid fa-shield-halved mr-1"></i> Delivery Confirmation OTP</div>
             <div class="otp-code">${escapeHtml(order.otp)}</div>
-            <p class="otp-hint">Show or read this 6-digit code to your delivery rider upon doorstep arrival.</p>
+            <p class="otp-hint">Show or read this delivery code to your delivery rider upon doorstep arrival.</p>
           </div>
         ` : ''}
 

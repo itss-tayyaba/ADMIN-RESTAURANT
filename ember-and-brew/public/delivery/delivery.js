@@ -531,7 +531,7 @@ function renderActiveDelivery(assigned) {
                 <button id="liveLocationButton" class="btn" onclick="startLiveLocationSharing()">Start Live Location</button>
                 <div class="otp-verification">
                     <label for="otp-active-${activeOrder._id}">Customer OTP</label>
-                    <input id="otp-active-${activeOrder._id}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit OTP">
+                    <input id="otp-active-${activeOrder._id}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{4,6}" placeholder="Customer OTP">
                     <button class="btn deliver-btn" onclick="verifyOtp('${activeOrder._id}', 'otp-active-${activeOrder._id}')">Verify</button>
                 </div>
             </div>
@@ -851,7 +851,7 @@ function createCard(order) {
                 ${callBtn}
                 <div class="otp-verification">
                     <label for="otp-card-${order._id}">Enter Customer OTP</label>
-                    <input id="otp-card-${order._id}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit OTP">
+                    <input id="otp-card-${order._id}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{4,6}" placeholder="Customer OTP">
                     <button class="btn deliver-btn" onclick="verifyOtp('${order._id}', 'otp-card-${order._id}')">Verify</button>
                 </div>
             </div>
@@ -894,8 +894,8 @@ function verifyOtp(id, inputId) {
 
     const input = document.getElementById(inputId);
     const otp = input ? input.value.trim() : '';
-    if (!/^\d{6}$/.test(otp)) {
-        alert('Enter the 6-digit OTP provided by the customer.');
+    if (!/^\d{4,6}$/.test(otp)) {
+        alert('Please enter the delivery OTP code provided by the customer.');
         if (input) input.focus();
         return;
     }
