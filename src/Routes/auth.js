@@ -14,7 +14,9 @@ router.post('/login', async (req, res) => {
 
     let tenantRecord = null;
     if (tenant && role !== 'superadmin') {
-      const tenantValue = String(tenant).trim().toLowerCase();
+      let tenantValue = String(tenant).trim().toLowerCase();
+      // Strip domain, protocol, leading /r/ or r/, and trailing slashes
+      tenantValue = tenantValue.replace(/^(?:https?:\/\/[^\/]+)?\/?(?:r\/)?/, '').replace(/\/+$/, '').trim();
       tenantRecord = await Tenant.findOne({
         $or: [{ slug: tenantValue }, ...(mongoose.isValidObjectId(tenantValue) ? [{ _id: tenantValue }] : [])]
       });
